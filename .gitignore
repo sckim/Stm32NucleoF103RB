@@ -1,10 +1,18 @@
-# lectures
-*.pio
-*.settings
-*.vscode
-.cproject
-.mxproject
-.project
+# Build artifacts
+Debug/
+Release/
+
+# Toolchain / IDE outputs
+*.map
+*.elf
+*.bin
+*.hex
+*.list
+*.cyclo
+
+# OS metadata
+.DS_Store
+Thumbs.db
 
 # Prerequisites
 *.d

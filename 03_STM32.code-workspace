@@ -2,7 +2,8 @@
     "settings": {},
     "folders": [
         {
-            "path": "Examples/00_Blink"
-        }
+            "name": "00_Blink",
+            "path": "./Examples/00_Blink"
+        },
     ],
 }

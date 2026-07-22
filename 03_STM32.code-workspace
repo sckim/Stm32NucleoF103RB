@@ -2,8 +2,11 @@
     "settings": {},
     "folders": [
         {
-            "name": "00_Blink",
-            "path": "./Examples/00_Blink"
+            "name": "03_STM32",
+            "path": "."
         },
+        {
+            "path": "Examples/02_BlinkLL"
+        }
     ],
 }

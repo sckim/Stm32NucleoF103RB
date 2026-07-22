@@ -6,7 +6,7 @@
             "path": "."
         },
         {
-            "path": "Examples/02_BlinkLL"
+            "path": "Examples/03_BlinkReg"
         }
     ],
 }

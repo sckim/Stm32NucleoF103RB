@@ -1,0 +1,9 @@
+{
+  "[c]": {
+    "editor.defaultFormatter": "ms-vscode.cpptools"
+  },
+  "C_Cpp.clang_format_path": "C:/Users/spal/AppData/Roaming/Python/Python313/Scripts/clang-format.exe",
+  "C_Cpp.clang_format_style": "file",
+  "C_Cpp.clang_format_fallbackStyle": "LLVM",
+  "C_Cpp.formatting": "clangFormat"
+}

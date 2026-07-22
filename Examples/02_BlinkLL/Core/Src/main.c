@@ -21,13 +21,13 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "stm32f1xx_ll_rcc.h"
 #include "stm32f1xx_ll_bus.h"
-#include "stm32f1xx_ll_system.h"
 #include "stm32f1xx_ll_exti.h"
 #include "stm32f1xx_ll_gpio.h"
-#include "stm32f1xx_ll_utils.h"
 #include "stm32f1xx_ll_pwr.h"
+#include "stm32f1xx_ll_rcc.h"
+#include "stm32f1xx_ll_system.h"
+#include "stm32f1xx_ll_utils.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -64,11 +64,10 @@ static void MX_GPIO_Init(void);
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
-int main(void)
-{
+ * @brief  The application entry point.
+ * @retval int
+ */
+int main(void) {
 
   /* USER CODE BEGIN 1 */
 
@@ -76,7 +75,8 @@ int main(void)
 
   /* MCU Configuration--------------------------------------------------------*/
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick.
+   */
   LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_AFIO);
   LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_PWR);
 
@@ -84,7 +84,7 @@ int main(void)
   NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
 
   /** NOJTAG: JTAG-DP Disabled and SW-DP Enabled
-  */
+   */
   LL_GPIO_AF_Remap_SWJ_NOJTAG();
 
   /* USER CODE BEGIN Init */
@@ -106,63 +106,54 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-	while (1) {
+  while (1) {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
     LL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
     LL_mDelay(1000);
-	}
+  }
   /* USER CODE END 3 */
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
-void SystemClock_Config(void)
-{
+ * @brief System Clock Configuration
+ * @retval None
+ */
+void SystemClock_Config(void) {
   LL_FLASH_SetLatency(LL_FLASH_LATENCY_2);
-  while(LL_FLASH_GetLatency()!= LL_FLASH_LATENCY_2)
-  {
+  while (LL_FLASH_GetLatency() != LL_FLASH_LATENCY_2) {
   }
   LL_RCC_HSE_EnableBypass();
   LL_RCC_HSE_Enable();
 
-   /* Wait till HSE is ready */
-  while(LL_RCC_HSE_IsReady() != 1)
-  {
-
+  /* Wait till HSE is ready */
+  while (LL_RCC_HSE_IsReady() != 1) {
   }
   LL_RCC_PLL_ConfigDomain_SYS(LL_RCC_PLLSOURCE_HSE_DIV_1, LL_RCC_PLL_MUL_8);
   LL_RCC_PLL_Enable();
 
-   /* Wait till PLL is ready */
-  while(LL_RCC_PLL_IsReady() != 1)
-  {
-
+  /* Wait till PLL is ready */
+  while (LL_RCC_PLL_IsReady() != 1) {
   }
   LL_RCC_SetAHBPrescaler(LL_RCC_SYSCLK_DIV_1);
   LL_RCC_SetAPB1Prescaler(LL_RCC_APB1_DIV_2);
   LL_RCC_SetAPB2Prescaler(LL_RCC_APB2_DIV_1);
   LL_RCC_SetSysClkSource(LL_RCC_SYS_CLKSOURCE_PLL);
 
-   /* Wait till System clock is ready */
-  while(LL_RCC_GetSysClkSource() != LL_RCC_SYS_CLKSOURCE_STATUS_PLL)
-  {
-
+  /* Wait till System clock is ready */
+  while (LL_RCC_GetSysClkSource() != LL_RCC_SYS_CLKSOURCE_STATUS_PLL) {
   }
   LL_Init1msTick(64000000);
   LL_SetSystemCoreClock(64000000);
 }
 
 /**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_GPIO_Init(void)
-{
+ * @brief GPIO Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_GPIO_Init(void) {
   LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
   /* USER CODE BEGIN MX_GPIO_Init_1 */
 
@@ -190,31 +181,30 @@ static void MX_GPIO_Init(void)
 /* USER CODE END 4 */
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
-void Error_Handler(void)
-{
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
+void Error_Handler(void) {
   /* USER CODE BEGIN Error_Handler_Debug */
-	/* User can add his own implementation to report the HAL error return state */
-	__disable_irq();
-	while (1) {
-	}
+  /* User can add his own implementation to report the HAL error return state */
+  __disable_irq();
+  while (1) {
+  }
   /* USER CODE END Error_Handler_Debug */
 }
 #ifdef USE_FULL_ASSERT
 /**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
-void assert_failed(uint8_t *file, uint32_t line)
-{
+ * @brief  Reports the name of the source file and the source line number
+ *         where the assert_param error has occurred.
+ * @param  file: pointer to the source file name
+ * @param  line: assert_param error line source number
+ * @retval None
+ */
+void assert_failed(uint8_t *file, uint32_t line) {
   /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+  /* User can add his own implementation to report the file name and line
+     number, ex: printf("Wrong parameters value: file %s on line %d\r\n", file,
+     line) */
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

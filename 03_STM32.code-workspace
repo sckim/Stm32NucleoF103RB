@@ -6,7 +6,7 @@
             "path": "."
         },
         {
-            "path": "Examples/03_BlinkReg"
+            "path": "Examples/04_ReadPin"
         }
     ],
 }

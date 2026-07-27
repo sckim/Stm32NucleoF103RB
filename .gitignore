@@ -1,6 +1,12 @@
 # Build artifacts
 Debug/
 Release/
+Drivers/
+
+.metadata/
+.cproject
+.project
+.xml
 
 # Toolchain / IDE outputs
 *.map

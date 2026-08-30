@@ -4,6 +4,8 @@ Release/
 Drivers/
 .vscode/
 Project Backups/
+*.Soochan Kim.workspace
+.gitignore
 
 .metadata/
 .cproject

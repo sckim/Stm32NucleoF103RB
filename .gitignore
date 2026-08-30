@@ -2,6 +2,8 @@
 Debug/
 Release/
 Drivers/
+.vscode/
+Project Backups/
 
 .metadata/
 .cproject
@@ -75,3 +77,5 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+CLAUDE.MD

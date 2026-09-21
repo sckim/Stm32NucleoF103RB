@@ -21,58 +21,88 @@
 
 | 번호 | 예제 (`그룹/예제`) | 구현 방식 | 내용 |
 |---|---|---|---|
-| 00 | `01_GPIO/00_BlinkArduino` | Arduino 프레임워크(PlatformIO) | `pinMode`/`digitalWrite`로 온보드 LED(PA5) 점멸 |
-| 01 | `01_GPIO/01_BlinkHAL` | HAL 드라이버 | HAL API 기반 LED 점멸 |
-| 02 | `01_GPIO/02_BlinkLL` | LL 드라이버 | LL API 기반 LED 점멸 |
-| 03 | `01_GPIO/03_BlinkReg` | 레지스터 직접 제어 | `RCC`, `GPIOx->CRL` 레지스터를 직접 조작하여 LED 점멸, SysTick 기반 딜레이 구현 |
-| 04 | `01_GPIO/04_ReadPin` | HAL | 사용자 버튼(B1) 폴링 입력으로 LED(LD2) 제어 |
-| 05 | `01_GPIO/05_ExtInt` | HAL, EXTI | 버튼 입력을 EXTI 인터럽트로 처리(`HAL_GPIO_EXTI_Callback`) |
-| 06 | `01_GPIO/06_ReadPinReg` | 레지스터 | `GPIOC->IDR` 직접 읽기로 버튼 폴링 (04_ReadPin의 레지스터 버전) |
-| 07 | `01_GPIO/07_ExternalInt` | HAL, EXTI | 두 개 EXTI 라인(`EXTI9_5`, `EXTI15_10`)의 버튼 B1(PC13)·B2(PA6)를 하나의 `HAL_GPIO_EXTI_Callback`에서 구분 처리 |
-| 08 | `01_GPIO/08_BitBanding_Reg_c` | 레지스터 | (검토 전) Cortex-M3 비트 밴딩 별칭으로 RCC/GPIO/SRAM 비트를 원자적으로 접근 |
-| 10 | `02_USART/10_USART_printf` | HAL, UART | `printf` 출력을 USART로 리다이렉션 |
-| 11 | `02_USART/11_USART_Interrupt_RX_HAL_c` | HAL, UART, NVIC | (검토 전) USART2 수신 인터럽트(`HAL_UART_RxCpltCallback`)로 에코 및 LED 제어 |
-| 12 | `02_USART/12_USART_DMA_IdleLine_HAL_c` | HAL, UART, DMA | (검토 전) DMA 원형 수신 + IDLE 라인 감지로 가변 길이 패킷 처리 |
-| 13 | `02_USART/13_USART_RingBuffer_HAL_c` | HAL, UART | (검토 전) ISR->main 링 버퍼(lock-free), 오버플로 시험(B1로 main 정지) |
-| 14 | `02_USART/14_UART_CLI_HAL_c` | HAL, UART | (검토 전) 명령줄 인터페이스: 줄 편집, 명령 테이블(help/led/uptime/echo/peek/reset) |
-| 20 | `03_ADC/20_ADC_Temperature` | HAL, ADC | 내부 온도 센서 ADC 값을 UART로 출력 |
-| 21 | `03_ADC/21_ADC_DMA_TimTrigger_HAL_c` | HAL, ADC, DMA, TIM | (검토 전) TIM3 TRGO 트리거 1kHz 2채널 스캔, DMA 원형 저장, HT/TC 콜백 |
-| 22 | `03_ADC/22_ADC_AnalogWatchdog_HAL_c` | HAL, ADC, DMA | (검토 전) ADC 아날로그 워치독으로 전압 창(window) 이탈 감지 인터럽트 |
-| 23 | `03_ADC/23_ADC_Vrefint_VDDA_HAL_c` | HAL, ADC | (검토 전) Vrefint 로 실제 VDDA 를 측정해 ADC 값을 보정 |
-| 30 | `04_I2C_Communication/30_PCF8574` | HAL, I2C | PCF8574 I2C 확장 IC를 통한 문자 LCD 제어, I2C 주소 스캐너 포함 |
-| 31 | `04_I2C_Communication/31_I2C_Scan_HAL_c` | HAL, I2C | (검토 전) I2C1 버스 스캐너(0x08~0x77), 흔한 장치 이름 표시 |
-| 32 | `04_I2C_Communication/32_I2C_MPU6050_HAL_c` | HAL, I2C | (검토 전) MPU6050 WHO_AM_I 확인과 가속도/자이로/온도 14바이트 연속 읽기 |
-| 40 | `05_SPI_Communication/40_SPI_Loopback_HAL_c` | HAL, SPI | (검토 전) SPI1 마스터 루프백(MOSI-MISO 점퍼), 분주비별 전송 속도 측정 |
-| 41 | `05_SPI_Communication/41_SPI_DMA_Fullduplex_HAL_c` | HAL, SPI, DMA | (검토 전) SPI1 전이중 DMA 전송, 폴링 방식과 시간/CPU 여유 비교 |
-| 50 | `06_Timers_RTC/50_TIM_TimeBase` | HAL, TIM | 타이머 주기 인터럽트(`HAL_TIM_PeriodElapsedCallback`)로 LED 토글 |
-| 51 | `06_Timers_RTC/51_TIM_PWM_HAL_c` | HAL, TIM | (검토 전) TIM2_CH1(PA0) 1kHz PWM, LED 밝기 왕복 |
-| 52 | `06_Timers_RTC/52_TIM_InputCapture_HAL_c` | HAL, TIM | (검토 전) 입력 캡처로 주기/주파수 측정 (TIM3 PWM 테스트 신호 포함) |
-| 53 | `06_Timers_RTC/53_TIM1_DeadTime_Break_HAL_c` | HAL, TIM1 | (검토 전) 상보 PWM + 데드타임(약 1us) + 브레이크 입력/소프트웨어 브레이크 |
-| 54 | `06_Timers_RTC/54_RTC_Calendar_HAL_c` | HAL+레지스터, RTC | (검토 전) F1 RTC(32비트 카운터)를 Unix 시간으로 쓰는 달력 시계, 1초 인터럽트 |
-| 55 | `06_Timers_RTC/55_TIM_PWMInput_HAL_c` | HAL, TIM | (검토 전) PWM 입력 모드(슬레이브 리셋)로 주파수/듀티 하드웨어 측정 |
-| 56 | `06_Timers_RTC/56_TIM_Encoder_HAL_c` | HAL, TIM | (검토 전) 엔코더 인터페이스 모드(x4), 소프트웨어 직교 신호 시뮬레이션 포함 |
-| 57 | `06_Timers_RTC/57_TIM_OnePulse_HCSR04_HAL_c` | HAL, TIM | (검토 전) 원 펄스 모드 10us 트리거 + 입력 캡처로 HC-SR04 거리 측정 |
-| 60 | `07_DMA/60_DMA_MemToMem_HAL_c` | HAL, DMA | (검토 전) 메모리->메모리 DMA 복사, CPU 복사와 DWT 사이클 비교 |
-| 70 | `08_Clock_System/70_Clock_Config_Reg_c` | 레지스터 | (검토 전) RCC/FLASH 레지스터로 HSI 8MHz <-> PLL 48MHz 전환, MCO 출력 |
-| 71 | `08_Clock_System/71_SysTick_Reg_c` | 레지스터 | (검토 전) SysTick 1ms 틱, `millis()`, 논블로킹 LED/버튼 처리 |
-| 72 | `08_Clock_System/72_NVIC_Priority_HAL_c` | HAL, NVIC | (검토 전) 선점/서브 우선순위와 인터럽트 중첩 실험, B1로 3가지 케이스 전환 |
-| 73 | `08_Clock_System/73_AFIO_Remap_Reg_c` | 레지스터 | (검토 전) AFIO_MAPR로 JTAG 핀(PB3/PB4/PA15) 해방과 TIM2 핀 리맵 |
-| 74 | `08_Clock_System/74_HardFault_Diagnosis_Reg_c` | 레지스터+어셈블리 | (검토 전) 4종 폴트 유발, 스택 프레임/CFSR/BFAR 해석해 UART 출력 |
-| 75 | `08_Clock_System/75_PendSV_ContextSwitch_Reg_c` | 레지스터+어셈블리 | (검토 전) SVC/PendSV/PSP 기반 미니 선점형 RTOS(작업 2개 시분할) |
-| 76 | `08_Clock_System/76_MCO_ClockOut_HAL_c` | HAL, RCC | (검토 전) MCO(PA8)로 HSI/PLL/HSE 클럭 출력, B1로 소스 순환 |
-| 77 | `08_Clock_System/77_DWT_Profiling_Reg_c` | 레지스터 | (검토 전) DWT 사이클 카운터로 연산/함수 실행 시간(사이클) 측정 |
-| 78 | `08_Clock_System/78_NonBlocking_StateMachine_HAL_c` | HAL | (검토 전) HAL_Delay 없는 상태 머신 신호등, 버튼 디바운스/이벤트 |
-| 79 | `08_Clock_System/79_DeviceInfo_UniqueID_Reg_c` | 레지스터 | (검토 전) 96비트 고유 ID, 플래시 크기, DEV_ID, 리셋 원인 출력 |
-| 80 | `09_WatchDog_Sleep/80_WatchdogTimer` | HAL, WWDG | 윈도우 워치독(WWDG) 초기화와 주기적 리프레시 기본 사용 |
-| 81 | `09_WatchDog_Sleep/81_WWDG_HAL_c` | HAL, WWDG | (검토 전) 윈도우 워치독(너무 이른/늦은 리프레시 리셋), 조기 경고 콜백 |
-| 82 | `09_WatchDog_Sleep/82_Sleep_Mode_HAL_c` | HAL, PWR | (검토 전) WFI Sleep 모드, 바쁜 대기와 main 루프 횟수 비교 |
-| 83 | `09_WatchDog_Sleep/83_Stop_Mode_EXTI_HAL_c` | HAL, PWR, EXTI | (검토 전) Stop 모드 진입, 버튼(EXTI) 웨이크업 후 클럭 복구 |
-| 84 | `09_WatchDog_Sleep/84_Standby_RTC_Wakeup_HAL_c` | HAL, PWR, RTC | (검토 전) Standby 진입, RTC 알람(10초) 웨이크업, BKP 부팅 카운터 유지 |
-| 90 | `10_Flash_CRC/90_Flash_Write_HAL_c` | HAL, FLASH | (검토 전) 내부 Flash 페이지에 부팅 횟수 덧붙여 저장(웨어 레벨링) |
-| 91 | `10_Flash_CRC/91_CRC_Unit_HAL_c` | HAL, CRC | (검토 전) 하드웨어 CRC-32/MPEG-2와 소프트웨어 구현 비교, 1비트 오류 검출 |
-| 100 | `11_CAN_Communication/100_CAN_Loopback_HAL_c` | HAL, CAN | (검토 전) bxCAN 500kbps 루프백 송수신(트랜시버 불필요), FIFO0 수신 콜백 |
+| 01 | `01_GPIO/01_BlinkArduino` | Arduino 프레임워크(PlatformIO) | `pinMode`/`digitalWrite`로 온보드 LED(PA5) 점멸 |
+| 02 | `01_GPIO/02_BlinkHAL` | HAL 드라이버 | HAL API 기반 LED 점멸 |
+| 03 | `01_GPIO/03_BlinkLL` | LL 드라이버 | LL API 기반 LED 점멸 |
+| 04 | `01_GPIO/04_BlinkReg` | 레지스터 직접 제어 | `RCC`, `GPIOx->CRL` 레지스터를 직접 조작하여 LED 점멸, SysTick 기반 딜레이 구현 |
+| 05 | `01_GPIO/05_ReadPin` | HAL | 사용자 버튼(B1) 폴링 입력으로 LED(LD2) 제어 |
+| 06 | `01_GPIO/06_ExtInt` | HAL, EXTI | 버튼 입력을 EXTI 인터럽트로 처리(`HAL_GPIO_EXTI_Callback`) |
+| 07 | `01_GPIO/07_ReadPinReg` | 레지스터 | `GPIOC->IDR` 직접 읽기로 버튼 폴링 (05_ReadPin의 레지스터 버전) |
+| 08 | `01_GPIO/08_ExternalInt` | HAL, EXTI | 두 개 EXTI 라인(`EXTI9_5`, `EXTI15_10`)의 버튼 B1(PC13)·B2(PA6)를 하나의 `HAL_GPIO_EXTI_Callback`에서 구분 처리 |
+| 09 | `01_GPIO/09_BitBanding_Reg_c` | 레지스터 | (검토 전) Cortex-M3 비트 밴딩 별칭으로 RCC/GPIO/SRAM 비트를 원자적으로 접근 |
+| 01 | `02_USART/01_USART_printf` | HAL, UART | `printf` 출력을 USART로 리다이렉션 |
+| 02 | `02_USART/02_USART_Interrupt_RX_HAL_c` | HAL, UART, NVIC | (검토 전) USART2 수신 인터럽트(`HAL_UART_RxCpltCallback`)로 에코 및 LED 제어 |
+| 03 | `02_USART/03_USART_DMA_IdleLine_HAL_c` | HAL, UART, DMA | (검토 전) DMA 원형 수신 + IDLE 라인 감지로 가변 길이 패킷 처리 |
+| 04 | `02_USART/04_USART_RingBuffer_HAL_c` | HAL, UART | (검토 전) ISR->main 링 버퍼(lock-free), 오버플로 시험(B1로 main 정지) |
+| 05 | `02_USART/05_UART_CLI_HAL_c` | HAL, UART | (검토 전) 명령줄 인터페이스: 줄 편집, 명령 테이블(help/led/uptime/echo/peek/reset) |
+| 06 | `02_USART/06_USART_HalfDuplex_HAL_c` | HAL, UART | (검토 전) USART 단선 반이중(PA9 한 선), 방향 전환, 오픈드레인 버스 |
+| 01 | `03_ADC/01_ADC_Temperature` | HAL, ADC | 내부 온도 센서 ADC 값을 UART로 출력 |
+| 02 | `03_ADC/02_ADC_DMA_TimTrigger_HAL_c` | HAL, ADC, DMA, TIM | (검토 전) TIM3 TRGO 트리거 1kHz 2채널 스캔, DMA 원형 저장, HT/TC 콜백 |
+| 03 | `03_ADC/03_ADC_AnalogWatchdog_HAL_c` | HAL, ADC, DMA | (검토 전) ADC 아날로그 워치독으로 전압 창(window) 이탈 감지 인터럽트 |
+| 04 | `03_ADC/04_ADC_Vrefint_VDDA_HAL_c` | HAL, ADC | (검토 전) Vrefint 로 실제 VDDA 를 측정해 ADC 값을 보정 |
+| 05 | `03_ADC/05_ADC_Injected_HAL_c` | HAL, ADC, DMA | (검토 전) 주입 채널이 정규 연속 변환에 끼어들어 온도 센서를 읽음 |
+| 06 | `03_ADC/06_ADC_DualMode_HAL_c` | HAL, ADC, DMA | (검토 전) ADC1+ADC2 동시 샘플링(듀얼 모드), 32비트 DMA |
+| 07 | `03_ADC/07_ADC_Potentiometer_PWM_HAL_c` | HAL, ADC, TIM | (검토 전) 가변저항 → 이동평균/히스테리시스/감마 → PWM 밝기 |
+| 01 | `04_I2C_Communication/01_PCF8574` | HAL, I2C | PCF8574 I2C 확장 IC를 통한 문자 LCD 제어, I2C 주소 스캐너 포함 |
+| 02 | `04_I2C_Communication/02_I2C_Scan_HAL_c` | HAL, I2C | (검토 전) I2C1 버스 스캐너(0x08~0x77), 흔한 장치 이름 표시 |
+| 03 | `04_I2C_Communication/03_I2C_MPU6050_HAL_c` | HAL, I2C | (검토 전) MPU6050 WHO_AM_I 확인과 가속도/자이로/온도 14바이트 연속 읽기 |
+| 04 | `04_I2C_Communication/04_I2C_MPU6050_DMA_HAL_c` | HAL, I2C, DMA | (검토 전) 논블로킹 I2C(DMA)로 MPU6050 읽기, 오류 복구 |
+| 05 | `04_I2C_Communication/05_I2C_Slave_Loopback_HAL_c` | HAL, I2C | (검토 전) I2C 슬레이브 모드(I2C1 마스터 ↔ I2C2 슬레이브), 리슨/주소 콜백 |
+| 06 | `04_I2C_Communication/06_I2C_OLED_SSD1306_HAL_c` | HAL, I2C | (검토 전) SSD1306 OLED, 프레임버퍼, 선/숫자/애니메이션 |
+| 07 | `04_I2C_Communication/07_I2C_EEPROM_AT24C_HAL_c` | HAL, I2C | (검토 전) AT24Cxx EEPROM: 16비트 주소, 페이지 경계, ACK 폴링 |
+| 08 | `04_I2C_Communication/08_I2C_DS3231_RTC_HAL_c` | HAL, I2C | (검토 전) 외장 RTC DS3231: BCD 시각, 온도, OSF 플래그 |
+| 01 | `05_SPI_Communication/01_SPI_Loopback_HAL_c` | HAL, SPI | (검토 전) SPI1 마스터 루프백(MOSI-MISO 점퍼), 분주비별 전송 속도 측정 |
+| 02 | `05_SPI_Communication/02_SPI_DMA_Fullduplex_HAL_c` | HAL, SPI, DMA | (검토 전) SPI1 전이중 DMA 전송, 폴링 방식과 시간/CPU 여유 비교 |
+| 03 | `05_SPI_Communication/03_SPI_Slave_Loopback_HAL_c` | HAL, SPI | (검토 전) SPI 슬레이브 모드(SPI1 마스터 ↔ SPI2 슬레이브), 하드웨어 NSS |
+| 04 | `05_SPI_Communication/04_SPI_OLED_SSD1306_HAL_c` | HAL, SPI | (검토 전) SPI 로 SSD1306 OLED (D/C 핀, 8MHz) |
+| 05 | `05_SPI_Communication/05_SPI_SDcard_HAL_c` | HAL, SPI | (검토 전) SPI 모드 SD 카드 초기화, 섹터 읽기(MBR), 용량 계산 |
+| 06 | `05_SPI_Communication/06_SPI_Flash_W25Qxx_HAL_c` | HAL, SPI | (검토 전) SPI NOR Flash(W25Qxx): JEDEC ID, 섹터 소거, 페이지 프로그램 |
+| 07 | `05_SPI_Communication/07_SPI_MAX7219_HAL_c` | HAL, SPI | (검토 전) MAX7219 8x8 LED 매트릭스, 16비트 프레임/LOAD 반영 |
+| 01 | `06_Timers_RTC/01_TIM_TimeBase` | HAL, TIM | 타이머 주기 인터럽트(`HAL_TIM_PeriodElapsedCallback`)로 LED 토글 |
+| 02 | `06_Timers_RTC/02_TIM_PWM_HAL_c` | HAL, TIM | (검토 전) TIM2_CH1(PA0) 1kHz PWM, LED 밝기 왕복 |
+| 03 | `06_Timers_RTC/03_TIM_InputCapture_HAL_c` | HAL, TIM | (검토 전) 입력 캡처로 주기/주파수 측정 (TIM3 PWM 테스트 신호 포함) |
+| 04 | `06_Timers_RTC/04_TIM1_DeadTime_Break_HAL_c` | HAL, TIM1 | (검토 전) 상보 PWM + 데드타임(약 1us) + 브레이크 입력/소프트웨어 브레이크 |
+| 05 | `06_Timers_RTC/05_RTC_Calendar_HAL_c` | HAL+레지스터, RTC | (검토 전) F1 RTC(32비트 카운터)를 Unix 시간으로 쓰는 달력 시계, 1초 인터럽트 |
+| 06 | `06_Timers_RTC/06_TIM_PWMInput_HAL_c` | HAL, TIM | (검토 전) PWM 입력 모드(슬레이브 리셋)로 주파수/듀티 하드웨어 측정 |
+| 07 | `06_Timers_RTC/07_TIM_Encoder_HAL_c` | HAL, TIM | (검토 전) 엔코더 인터페이스 모드(x4), 소프트웨어 직교 신호 시뮬레이션 포함 |
+| 08 | `06_Timers_RTC/08_TIM_OnePulse_HCSR04_HAL_c` | HAL, TIM | (검토 전) 원 펄스 모드 10us 트리거 + 입력 캡처로 HC-SR04 거리 측정 |
+| 09 | `06_Timers_RTC/09_TIM_Servo_HAL_c` | HAL, TIM | (검토 전) RC 서보: 50Hz PWM, 1~2ms = 0~180° |
+| 10 | `06_Timers_RTC/10_TIM_Cascade32_HAL_c` | HAL, TIM | (검토 전) 마스터/슬레이브로 잇는 32비트 카운터(71분), 스톱워치 |
+| 11 | `06_Timers_RTC/11_TIM_MotorDriver_TB6612_HAL_c` | HAL, TIM | (검토 전) H-브리지 모터: 20kHz PWM, 쇼트 브레이크/코스트, 비상 정지 |
+| 01 | `07_DMA/01_DMA_MemToMem_HAL_c` | HAL, DMA | (검토 전) 메모리->메모리 DMA 복사, CPU 복사와 DWT 사이클 비교 |
+| 02 | `07_DMA/02_DMA_Circular_GPIO_HAL_c` | HAL, DMA, TIM | (검토 전) 원형 DMA + 핑퐁 버퍼로 GPIOC 패턴 자동 출력 |
+| 03 | `07_DMA/03_DMA_Priority_HAL_c` | HAL, DMA | (검토 전) DMA 채널 우선순위/중재, 완료 시각 DWT 측정 |
+| 01 | `08_Clock_System/01_Clock_Config_Reg_c` | 레지스터 | (검토 전) RCC/FLASH 레지스터로 HSI 8MHz <-> PLL 48MHz 전환, MCO 출력 |
+| 02 | `08_Clock_System/02_SysTick_Reg_c` | 레지스터 | (검토 전) SysTick 1ms 틱, `millis()`, 논블로킹 LED/버튼 처리 |
+| 03 | `08_Clock_System/03_NVIC_Priority_HAL_c` | HAL, NVIC | (검토 전) 선점/서브 우선순위와 인터럽트 중첩 실험, B1로 3가지 케이스 전환 |
+| 04 | `08_Clock_System/04_AFIO_Remap_Reg_c` | 레지스터 | (검토 전) AFIO_MAPR로 JTAG 핀(PB3/PB4/PA15) 해방과 TIM2 핀 리맵 |
+| 05 | `08_Clock_System/05_HardFault_Diagnosis_Reg_c` | 레지스터+어셈블리 | (검토 전) 4종 폴트 유발, 스택 프레임/CFSR/BFAR 해석해 UART 출력 |
+| 06 | `08_Clock_System/06_PendSV_ContextSwitch_Reg_c` | 레지스터+어셈블리 | (검토 전) SVC/PendSV/PSP 기반 미니 선점형 RTOS(작업 2개 시분할) |
+| 07 | `08_Clock_System/07_MCO_ClockOut_HAL_c` | HAL, RCC | (검토 전) MCO(PA8)로 HSI/PLL/HSE 클럭 출력, B1로 소스 순환 |
+| 08 | `08_Clock_System/08_DWT_Profiling_Reg_c` | 레지스터 | (검토 전) DWT 사이클 카운터로 연산/함수 실행 시간(사이클) 측정 |
+| 09 | `08_Clock_System/09_NonBlocking_StateMachine_HAL_c` | HAL | (검토 전) HAL_Delay 없는 상태 머신 신호등, 버튼 디바운스/이벤트 |
+| 10 | `08_Clock_System/10_DeviceInfo_UniqueID_Reg_c` | 레지스터 | (검토 전) 96비트 고유 ID, 플래시 크기, DEV_ID, 리셋 원인 출력 |
+| 11 | `08_Clock_System/11_HSE_PLL_72MHz_Reg_c` | 레지스터 | (검토 전) HSE(바이패스)+PLL x9 = 72MHz, 실패 시 HSI 로 복귀 |
+| 12 | `08_Clock_System/12_ITM_SWO_Printf_Reg_c` | 레지스터 | (검토 전) ITM/SWO 로 printf (UART 핀 불필요) |
+| 13 | `08_Clock_System/13_StackWatermark_Reg_c` | 레지스터 | (검토 전) 스택 페인팅과 하이 워터마크, 재귀 실험 |
+| 01 | `09_WatchDog_Sleep/01_WatchdogTimer` | HAL, WWDG | 윈도우 워치독(WWDG) 초기화와 주기적 리프레시 기본 사용 |
+| 02 | `09_WatchDog_Sleep/02_WWDG_HAL_c` | HAL, WWDG | (검토 전) 윈도우 워치독(너무 이른/늦은 리프레시 리셋), 조기 경고 콜백 |
+| 03 | `09_WatchDog_Sleep/03_Sleep_Mode_HAL_c` | HAL, PWR | (검토 전) WFI Sleep 모드, 바쁜 대기와 main 루프 횟수 비교 |
+| 04 | `09_WatchDog_Sleep/04_Stop_Mode_EXTI_HAL_c` | HAL, PWR, EXTI | (검토 전) Stop 모드 진입, 버튼(EXTI) 웨이크업 후 클럭 복구 |
+| 05 | `09_WatchDog_Sleep/05_Standby_RTC_Wakeup_HAL_c` | HAL, PWR, RTC | (검토 전) Standby 진입, RTC 알람(10초) 웨이크업, BKP 부팅 카운터 유지 |
+| 06 | `09_WatchDog_Sleep/06_BKP_Tamper_HAL_c` | HAL+레지스터, BKP | (검토 전) 백업 레지스터 유지, TAMPER(PC13) 감지 시 삭제 |
+| 07 | `09_WatchDog_Sleep/07_IWDG_HAL_c` | HAL, IWDG | (검토 전) 독립 워치독(LSI), 타임아웃 계산, 리셋 원인 |
+| 01 | `10_Flash_CRC/01_Flash_Write_HAL_c` | HAL, FLASH | (검토 전) 내부 Flash 페이지에 부팅 횟수 덧붙여 저장(웨어 레벨링) |
+| 02 | `10_Flash_CRC/02_CRC_Unit_HAL_c` | HAL, CRC | (검토 전) 하드웨어 CRC-32/MPEG-2와 소프트웨어 구현 비교, 1비트 오류 검출 |
+| 03 | `10_Flash_CRC/03_IAP_Bootloader_Reg_c` | 레지스터 | (검토 전) IAP 부트로더: 앱 유효성 검사 후 VTOR 교체·점프 (링커 스크립트 포함) |
+| 04 | `10_Flash_CRC/04_IAP_App_Reg_c` | 레지스터 | (검토 전) 0x08008000 에서 도는 IAP 응용 프로그램 (부트로더와 짝) |
+| 05 | `10_Flash_CRC/05_OptionBytes_Read_HAL_c` | HAL, FLASH | (검토 전) 옵션 바이트 읽기(RDP/WRP/USER), 읽기 전용 |
+| 06 | `10_Flash_CRC/06_IAP_Xmodem_Bootloader_Reg_c` | 레지스터 | (검토 전) UART XMODEM-CRC 로 펌웨어 수신·Flash 기록·점프하는 부트로더 |
+| 01 | `11_CAN_Communication/01_CAN_Loopback_HAL_c` | HAL, CAN | (검토 전) bxCAN 500kbps 루프백 송수신(트랜시버 불필요), FIFO0 수신 콜백 |
+| 02 | `11_CAN_Communication/02_CAN_Filter_HAL_c` | HAL, CAN | (검토 전) bxCAN 수신 필터: ID 리스트/마스크, 표준·확장, FIFO0/1 |
+| 03 | `11_CAN_Communication/03_CAN_Normal_2boards_HAL_c` | HAL, CAN | (검토 전) 실제 CAN 버스(2보드): 오류 카운터, 버스오프 복구 |
 
-예제는 기능별 그룹 폴더(`01_GPIO`, `02_USART`, `03_ADC`, `04_I2C_Communication`, `05_SPI_Communication`, `06_Timers_RTC`, `07_DMA`, `08_Clock_System`, `09_WatchDog_Sleep`, `10_Flash_CRC`, `11_CAN_Communication`) 아래에 있으며, 예제 번호는 그룹과 무관하게 유지된다. 폴더명 끝의 `_c`는 Claude가 작성한 예제(검토 전)를 뜻한다.
+예제는 기능별 그룹 폴더 아래에 있고, **예제 폴더 번호는 그룹 안에서 항상 `01`부터 순서대로** 붙인다. 폴더명 끝의 `_c`는 Claude가 작성한 예제(검토 전)를 뜻한다. 그룹별 안내는 [Examples/README.md](Examples/README.md) 참고.
 
 각 예제 폴더는 PlatformIO 프로젝트(`platformio.ini` 포함) 또는 STM32CubeIDE 프로젝트(`.project`/`.cproject`/`.ioc` 포함) 형태이며, VS Code에서 PlatformIO 확장으로 열어 빌드·업로드하는 것을 기본으로 한다.
 

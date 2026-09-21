@@ -4,19 +4,21 @@
 
 | 번호 | 예제 | 계층 | 핵심 |
 |---|---|---|---|
-| 80 | [80_WatchdogTimer](80_WatchdogTimer/README.md) | HAL, WWDG | 윈도우 워치독 기본 사용 (사용자 작성) |
-| 81 | [81_WWDG_HAL_c](81_WWDG_HAL_c/README.md) | HAL, WWDG | 윈도우 타이밍 설계, 조기 경고 콜백 |
-| 82 | [82_Sleep_Mode_HAL_c](82_Sleep_Mode_HAL_c/README.md) | HAL, PWR | WFI Sleep, main 루프 횟수 비교 |
-| 83 | [83_Stop_Mode_EXTI_HAL_c](83_Stop_Mode_EXTI_HAL_c/README.md) | HAL, PWR, EXTI | Stop 진입, 버튼 웨이크업, 클럭 복구 |
-| 84 | [84_Standby_RTC_Wakeup_HAL_c](84_Standby_RTC_Wakeup_HAL_c/README.md) | HAL, PWR, RTC | Standby, RTC 알람 웨이크업, BKP 유지 |
+| 01 | [01_WatchdogTimer](01_WatchdogTimer/README.md) | HAL, WWDG | 윈도우 워치독 기본 사용 (사용자 작성) |
+| 02 | [02_WWDG_HAL_c](02_WWDG_HAL_c/README.md) | HAL, WWDG | 윈도우 타이밍 설계, 조기 경고 콜백 |
+| 03 | [03_Sleep_Mode_HAL_c](03_Sleep_Mode_HAL_c/README.md) | HAL, PWR | WFI Sleep, main 루프 횟수 비교 |
+| 04 | [04_Stop_Mode_EXTI_HAL_c](04_Stop_Mode_EXTI_HAL_c/README.md) | HAL, PWR, EXTI | Stop 진입, 버튼 웨이크업, 클럭 복구 |
+| 05 | [05_Standby_RTC_Wakeup_HAL_c](05_Standby_RTC_Wakeup_HAL_c/README.md) | HAL, PWR, RTC | Standby, RTC 알람 웨이크업, BKP 유지 |
+| 06 | [06_BKP_Tamper_HAL_c](06_BKP_Tamper_HAL_c/README.md) | HAL+레지스터 | 백업 레지스터 유지, 탬퍼 시 삭제 |
+| 07 | [07_IWDG_HAL_c](07_IWDG_HAL_c/README.md) | HAL | 독립 워치독(LSI), 타임아웃 계산, 리셋 원인 |
 
 ## 저전력 모드 비교 (RM0008 5장)
 
 | 모드 | 정지되는 것 | 유지되는 것 | 웨이크업 | 예제 |
 |---|---|---|---|---|
-| Sleep | CPU 클럭만 | 모든 상태 | 임의 인터럽트, 즉시 | 82 |
-| Stop | 고속 클럭/PLL | SRAM/레지스터 | EXTI 등, 이어서 실행 (**클럭 재설정 필요**) | 83 |
-| Standby | 1.8V 도메인 전원 | 백업 도메인(RTC, BKP)만 | WKUP 핀, RTC 알람 등, **리셋과 동일** | 84 |
+| Sleep | CPU 클럭만 | 모든 상태 | 임의 인터럽트, 즉시 | 03 |
+| Stop | 고속 클럭/PLL | SRAM/레지스터 | EXTI 등, 이어서 실행 (**클럭 재설정 필요**) | 04 |
+| Standby | 1.8V 도메인 전원 | 백업 도메인(RTC, BKP)만 | WKUP 핀, RTC 알람 등, **리셋과 동일** | 05 |
 
 ## 이 그룹에서 배우는 것
 
@@ -28,4 +30,4 @@
 
 ## 앞으로 추가 예정
 
-`85_BKP_Registers`, 클럭 보안 시스템(CSS).
+클럭 보안 시스템(CSS): HSE 장애 시 NMI 로 HSI 복귀 (`08_Clock_System/11_HSE_PLL_72MHz_Reg_c`의 다음 단계).

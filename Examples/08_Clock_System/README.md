@@ -4,16 +4,19 @@
 
 | 번호 | 예제 | 계층 | 핵심 |
 |---|---|---|---|
-| 70 | [70_Clock_Config_Reg_c](70_Clock_Config_Reg_c/README.md) | 레지스터 | HSI ↔ PLL 48MHz 전환 순서 |
-| 71 | [71_SysTick_Reg_c](71_SysTick_Reg_c/README.md) | 레지스터 | 1ms 틱, `millis()`, 논블로킹 |
-| 72 | [72_NVIC_Priority_HAL_c](72_NVIC_Priority_HAL_c/README.md) | HAL, NVIC | 선점/서브 우선순위, 인터럽트 중첩 |
-| 73 | [73_AFIO_Remap_Reg_c](73_AFIO_Remap_Reg_c/README.md) | 레지스터 | JTAG 핀 해방, 타이머 핀 리맵 |
-| 74 | [74_HardFault_Diagnosis_Reg_c](74_HardFault_Diagnosis_Reg_c/README.md) | 레지스터+ASM | 폴트 원인 진단(CFSR, 스택 프레임) |
-| 75 | [75_PendSV_ContextSwitch_Reg_c](75_PendSV_ContextSwitch_Reg_c/README.md) | 레지스터+ASM | 미니 선점형 RTOS |
-| 76 | [76_MCO_ClockOut_HAL_c](76_MCO_ClockOut_HAL_c/README.md) | HAL | 클럭을 핀으로 출력 |
-| 77 | [77_DWT_Profiling_Reg_c](77_DWT_Profiling_Reg_c/README.md) | 레지스터 | 사이클 단위 실행 시간 측정 |
-| 78 | [78_NonBlocking_StateMachine_HAL_c](78_NonBlocking_StateMachine_HAL_c/README.md) | HAL | 상태 머신, 디바운스 |
-| 79 | [79_DeviceInfo_UniqueID_Reg_c](79_DeviceInfo_UniqueID_Reg_c/README.md) | 레지스터 | 고유 ID, 리셋 원인 |
+| 01 | [01_Clock_Config_Reg_c](01_Clock_Config_Reg_c/README.md) | 레지스터 | HSI ↔ PLL 48MHz 전환 순서 |
+| 02 | [02_SysTick_Reg_c](02_SysTick_Reg_c/README.md) | 레지스터 | 1ms 틱, `millis()`, 논블로킹 |
+| 03 | [03_NVIC_Priority_HAL_c](03_NVIC_Priority_HAL_c/README.md) | HAL, NVIC | 선점/서브 우선순위, 인터럽트 중첩 |
+| 04 | [04_AFIO_Remap_Reg_c](04_AFIO_Remap_Reg_c/README.md) | 레지스터 | JTAG 핀 해방, 타이머 핀 리맵 |
+| 05 | [05_HardFault_Diagnosis_Reg_c](05_HardFault_Diagnosis_Reg_c/README.md) | 레지스터+ASM | 폴트 원인 진단(CFSR, 스택 프레임) |
+| 06 | [06_PendSV_ContextSwitch_Reg_c](06_PendSV_ContextSwitch_Reg_c/README.md) | 레지스터+ASM | 미니 선점형 RTOS |
+| 07 | [07_MCO_ClockOut_HAL_c](07_MCO_ClockOut_HAL_c/README.md) | HAL | 클럭을 핀으로 출력 |
+| 08 | [08_DWT_Profiling_Reg_c](08_DWT_Profiling_Reg_c/README.md) | 레지스터 | 사이클 단위 실행 시간 측정 |
+| 09 | [09_NonBlocking_StateMachine_HAL_c](09_NonBlocking_StateMachine_HAL_c/README.md) | HAL | 상태 머신, 디바운스 |
+| 10 | [10_DeviceInfo_UniqueID_Reg_c](10_DeviceInfo_UniqueID_Reg_c/README.md) | 레지스터 | 고유 ID, 리셋 원인 |
+| 11 | [11_HSE_PLL_72MHz_Reg_c](11_HSE_PLL_72MHz_Reg_c/README.md) | 레지스터 | HSE+PLL 72MHz, 실패 시 HSI 복귀 |
+| 12 | [12_ITM_SWO_Printf_Reg_c](12_ITM_SWO_Printf_Reg_c/README.md) | 레지스터 | SWO 로 printf (UART 없이) |
+| 13 | [13_StackWatermark_Reg_c](13_StackWatermark_Reg_c/README.md) | 레지스터 | 스택 페인팅, 하이 워터마크, 재귀 실험 |
 
 ## 이 그룹에서 배우는 것
 
@@ -24,4 +27,4 @@
 
 ## 메모
 
-이 번호 대역(70~79)은 가득 찼다. 시스템/디버그 계열 예제를 더 추가하려면 새 그룹을 만든다.
+폴더 번호는 이 그룹 안에서 01부터 순서대로 붙인다. 예제를 더 추가하면 다음 번호를 쓴다.

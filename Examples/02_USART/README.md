@@ -4,11 +4,12 @@ ST-Link 가상 COM 포트(USART2: PA2=TX, PA3=RX)로 PC와 통신한다. 단순 
 
 | 번호 | 예제 | 계층 | 핵심 |
 |---|---|---|---|
-| 10 | [10_USART_printf](10_USART_printf/README.md) | HAL | `printf`를 UART로 리다이렉션 (9600bps) |
-| 11 | [11_USART_Interrupt_RX_HAL_c](11_USART_Interrupt_RX_HAL_c/README.md) | HAL, NVIC | 1바이트 수신 인터럽트, 콜백→플래그→main |
-| 12 | [12_USART_DMA_IdleLine_HAL_c](12_USART_DMA_IdleLine_HAL_c/README.md) | HAL, DMA | DMA 원형 수신 + IDLE 라인으로 가변 길이 패킷 |
-| 13 | [13_USART_RingBuffer_HAL_c](13_USART_RingBuffer_HAL_c/README.md) | HAL | ISR→main lock-free 링 버퍼, 오버플로 실험 |
-| 14 | [14_UART_CLI_HAL_c](14_UART_CLI_HAL_c/README.md) | HAL | 줄 편집, 명령 테이블 파서 |
+| 01 | [01_USART_printf](01_USART_printf/README.md) | HAL | `printf`를 UART로 리다이렉션 (9600bps) |
+| 02 | [02_USART_Interrupt_RX_HAL_c](02_USART_Interrupt_RX_HAL_c/README.md) | HAL, NVIC | 1바이트 수신 인터럽트, 콜백→플래그→main |
+| 03 | [03_USART_DMA_IdleLine_HAL_c](03_USART_DMA_IdleLine_HAL_c/README.md) | HAL, DMA | DMA 원형 수신 + IDLE 라인으로 가변 길이 패킷 |
+| 04 | [04_USART_RingBuffer_HAL_c](04_USART_RingBuffer_HAL_c/README.md) | HAL | ISR→main lock-free 링 버퍼, 오버플로 실험 |
+| 05 | [05_UART_CLI_HAL_c](05_UART_CLI_HAL_c/README.md) | HAL | 줄 편집, 명령 테이블 파서 |
+| 06 | [06_USART_HalfDuplex_HAL_c](06_USART_HalfDuplex_HAL_c/README.md) | HAL | 단선 반이중, 방향 전환, 오픈드레인 버스 |
 
 ## 이 그룹에서 배우는 것
 
@@ -19,4 +20,4 @@ ST-Link 가상 COM 포트(USART2: PA2=TX, PA3=RX)로 PC와 통신한다. 단순 
 
 ## 공통
 
-터미널: 115200 8N1 (`10`만 9600). 별도 배선 없음 (보드 USB로 충분).
+터미널: 115200 8N1 (`01_USART_printf`만 9600). 별도 배선 없음 (보드 USB로 충분).

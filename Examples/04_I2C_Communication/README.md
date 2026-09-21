@@ -4,9 +4,14 @@ I2C1(SCL = PB6, SDA = PB7)로 슬레이브 장치를 찾고(스캔), 문자 LCD�
 
 | 번호 | 예제 | 계층 | 핵심 |
 |---|---|---|---|
-| 30 | [30_PCF8574](30_PCF8574/README.md) | HAL | I2C 확장 IC로 문자 LCD 구동, 주소 스캔 포함 |
-| 31 | [31_I2C_Scan_HAL_c](31_I2C_Scan_HAL_c/README.md) | HAL | 0x08~0x77 버스 스캐너 |
-| 32 | [32_I2C_MPU6050_HAL_c](32_I2C_MPU6050_HAL_c/README.md) | HAL | 레지스터 읽기 시퀀스, 정수 단위 변환 |
+| 01 | [01_PCF8574](01_PCF8574/README.md) | HAL | I2C 확장 IC로 문자 LCD 구동, 주소 스캔 포함 |
+| 02 | [02_I2C_Scan_HAL_c](02_I2C_Scan_HAL_c/README.md) | HAL | 0x08~0x77 버스 스캐너 |
+| 03 | [03_I2C_MPU6050_HAL_c](03_I2C_MPU6050_HAL_c/README.md) | HAL | 레지스터 읽기 시퀀스, 정수 단위 변환 |
+| 04 | [04_I2C_MPU6050_DMA_HAL_c](04_I2C_MPU6050_DMA_HAL_c/README.md) | HAL, DMA | 논블로킹 I2C(DMA), 오류 복구 |
+| 05 | [05_I2C_Slave_Loopback_HAL_c](05_I2C_Slave_Loopback_HAL_c/README.md) | HAL | 슬레이브 모드, 리슨/주소 일치 콜백 |
+| 06 | [06_I2C_OLED_SSD1306_HAL_c](06_I2C_OLED_SSD1306_HAL_c/README.md) | HAL | SSD1306 OLED, 프레임버퍼, 애니메이션 |
+| 07 | [07_I2C_EEPROM_AT24C_HAL_c](07_I2C_EEPROM_AT24C_HAL_c/README.md) | HAL | AT24Cxx: 16비트 주소, 페이지 경계, ACK 폴링 |
+| 08 | [08_I2C_DS3231_RTC_HAL_c](08_I2C_DS3231_RTC_HAL_c/README.md) | HAL | 외장 RTC: BCD 시각, 온도, OSF 플래그 |
 
 ## 이 그룹에서 배우는 것
 

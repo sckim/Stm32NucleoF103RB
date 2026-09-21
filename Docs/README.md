@@ -49,35 +49,35 @@ RM0008 은 여러 밀도를 한 문서에 담아서 **F103RB 에는 없는 장**
 
 | 장 | 제목 | 쪽 | F103RB | 관련 예제 (`../Examples/…`) |
 |---|---|---|---|---|
-| 3 | 메모리와 버스 구조 (3.3.2 비트 밴딩 p.53, 3.3.3 Flash, 3.4 부트 설정) | 47 | ✔ | [08_BitBanding](../Examples/01_GPIO/08_BitBanding_Reg_c), [90_Flash_Write](../Examples/10_Flash_CRC/90_Flash_Write_HAL_c) |
-| 4 | CRC 계산 유닛 | 63 | ✔ | [91_CRC_Unit](../Examples/10_Flash_CRC/91_CRC_Unit_HAL_c) |
-| 5 | 전원 제어(PWR): Sleep p.73 / Stop p.74 / Standby p.76 | 67 | ✔ | [82_Sleep](../Examples/09_WatchDog_Sleep/82_Sleep_Mode_HAL_c), [83_Stop](../Examples/09_WatchDog_Sleep/83_Stop_Mode_EXTI_HAL_c), [84_Standby](../Examples/09_WatchDog_Sleep/84_Standby_RTC_Wakeup_HAL_c) |
-| 6 | 백업 레지스터(BKP) | 81 | ✔ | [84_Standby](../Examples/09_WatchDog_Sleep/84_Standby_RTC_Wakeup_HAL_c), [54_RTC_Calendar](../Examples/06_Timers_RTC/54_RTC_Calendar_HAL_c) |
-| 7 | 리셋과 클럭 제어(RCC), 7.2.7 CSS p.97, 7.3.2 RCC_CFGR p.101 | 90 | ✔ | [70_Clock_Config](../Examples/08_Clock_System/70_Clock_Config_Reg_c), [76_MCO_ClockOut](../Examples/08_Clock_System/76_MCO_ClockOut_HAL_c) |
+| 3 | 메모리와 버스 구조 (3.3.2 비트 밴딩 p.53, 3.3.3 Flash, 3.4 부트 설정) | 47 | ✔ | [09_BitBanding](../Examples/01_GPIO/09_BitBanding_Reg_c), [01_Flash_Write](../Examples/10_Flash_CRC/01_Flash_Write_HAL_c), [03_IAP_Bootloader](../Examples/10_Flash_CRC/03_IAP_Bootloader_Reg_c), [04_IAP_App](../Examples/10_Flash_CRC/04_IAP_App_Reg_c), [05_OptionBytes_Read](../Examples/10_Flash_CRC/05_OptionBytes_Read_HAL_c), [06_IAP_Xmodem_Bootloader](../Examples/10_Flash_CRC/06_IAP_Xmodem_Bootloader_Reg_c) |
+| 4 | CRC 계산 유닛 | 63 | ✔ | [02_CRC_Unit](../Examples/10_Flash_CRC/02_CRC_Unit_HAL_c) |
+| 5 | 전원 제어(PWR): Sleep p.73 / Stop p.74 / Standby p.76 | 67 | ✔ | [03_Sleep_Mode](../Examples/09_WatchDog_Sleep/03_Sleep_Mode_HAL_c), [04_Stop_Mode_EXTI](../Examples/09_WatchDog_Sleep/04_Stop_Mode_EXTI_HAL_c), [05_Standby_RTC_Wakeup](../Examples/09_WatchDog_Sleep/05_Standby_RTC_Wakeup_HAL_c) |
+| 6 | 백업 레지스터(BKP), 6.3.1 탬퍼 p.82 | 81 | ✔ | [05_Standby_RTC_Wakeup](../Examples/09_WatchDog_Sleep/05_Standby_RTC_Wakeup_HAL_c), [05_RTC_Calendar](../Examples/06_Timers_RTC/05_RTC_Calendar_HAL_c), [06_BKP_Tamper](../Examples/09_WatchDog_Sleep/06_BKP_Tamper_HAL_c) |
+| 7 | 리셋과 클럭 제어(RCC), 7.2.7 CSS p.97, 7.3.2 RCC_CFGR p.101 | 90 | ✔ | [01_Clock_Config](../Examples/08_Clock_System/01_Clock_Config_Reg_c), [07_MCO_ClockOut](../Examples/08_Clock_System/07_MCO_ClockOut_HAL_c), [11_HSE_PLL_72MHz](../Examples/08_Clock_System/11_HSE_PLL_72MHz_Reg_c) |
 | 8 | 연결형(F105/F107) RCC | 123 | ✘ | — |
-| 9 | GPIO와 대체 기능(AFIO): 9.3 AFIO p.175, 9.4.2 AFIO_MAPR p.184 | — | ✔ | [01_GPIO 전체](../Examples/01_GPIO), [73_AFIO_Remap](../Examples/08_Clock_System/73_AFIO_Remap_Reg_c) |
-| 10 | 인터럽트와 이벤트(EXTI) | 197 | ✔ | [05_ExtInt](../Examples/01_GPIO/05_ExtInt), [07_ExternalInt](../Examples/01_GPIO/07_ExternalInt), [72_NVIC_Priority](../Examples/08_Clock_System/72_NVIC_Priority_HAL_c) |
-| 11 | ADC: 11.3.7 아날로그 워치독 p.220, 11.10 온도 센서 p.235 | 215 | ✔ | [03_ADC](../Examples/03_ADC) (20~23) |
+| 9 | GPIO와 대체 기능(AFIO): 9.3 AFIO p.175, 9.4.2 AFIO_MAPR p.184 | — | ✔ | [01_GPIO 전체](../Examples/01_GPIO), [04_AFIO_Remap](../Examples/08_Clock_System/04_AFIO_Remap_Reg_c) |
+| 10 | 인터럽트와 이벤트(EXTI) | 197 | ✔ | [06_ExtInt](../Examples/01_GPIO/06_ExtInt), [08_ExternalInt](../Examples/01_GPIO/08_ExternalInt), [03_NVIC_Priority](../Examples/08_Clock_System/03_NVIC_Priority_HAL_c) |
+| 11 | ADC: 11.3.7 아날로그 워치독 p.220, 11.3.9 주입 채널 p.221, 11.9.2 정규 동시 모드 p.230, 11.10 온도 센서 p.235 | 215 | ✔ | [03_ADC](../Examples/03_ADC) (01~07), [06_ADC_DualMode](../Examples/03_ADC/06_ADC_DualMode_HAL_c) |
 | 12 | DAC | 254 | ✘ (대용량 이상) | — |
-| 13 | DMA: 13.3.7 요청 매핑 p.281 | 274 | ✔ (DMA1, 7채널) | [60_DMA_MemToMem](../Examples/07_DMA/60_DMA_MemToMem_HAL_c), [12](../Examples/02_USART/12_USART_DMA_IdleLine_HAL_c), [21](../Examples/03_ADC/21_ADC_DMA_TimTrigger_HAL_c), [41](../Examples/05_SPI_Communication/41_SPI_DMA_Fullduplex_HAL_c) |
-| 14 | 고급 제어 타이머 (TIM1) | 292 | ✔ (TIM1만; TIM8 없음) | [53_TIM1_DeadTime_Break](../Examples/06_Timers_RTC/53_TIM1_DeadTime_Break_HAL_c) |
-| 15 | 범용 타이머 (TIM2~TIM5): 15.3.6 PWM 입력 p.385, 15.3.10 원 펄스 p.390, 15.3.12 엔코더 p.392, 15.3.15 동기화 p.398 | 365 | ✔ (TIM2~4만; TIM5 없음) | [50~52, 55~57](../Examples/06_Timers_RTC) |
+| 13 | DMA: 13.3.2 중재기(Arbiter) p.277, 13.3.7 요청 매핑 p.281 | 274 | ✔ (DMA1, 7채널) | [01_DMA_MemToMem](../Examples/07_DMA/01_DMA_MemToMem_HAL_c), [03_USART_DMA_IdleLine](../Examples/02_USART/03_USART_DMA_IdleLine_HAL_c), [02_ADC_DMA_TimTrigger](../Examples/03_ADC/02_ADC_DMA_TimTrigger_HAL_c), [02_SPI_DMA_Fullduplex](../Examples/05_SPI_Communication/02_SPI_DMA_Fullduplex_HAL_c), [02_DMA_Circular_GPIO](../Examples/07_DMA/02_DMA_Circular_GPIO_HAL_c), [03_DMA_Priority](../Examples/07_DMA/03_DMA_Priority_HAL_c), [04_I2C_MPU6050_DMA](../Examples/04_I2C_Communication/04_I2C_MPU6050_DMA_HAL_c) |
+| 14 | 고급 제어 타이머 (TIM1) | 292 | ✔ (TIM1만; TIM8 없음) | [04_TIM1_DeadTime_Break](../Examples/06_Timers_RTC/04_TIM1_DeadTime_Break_HAL_c) |
+| 15 | 범용 타이머 (TIM2~TIM5): 15.3.6 PWM 입력 p.385, 15.3.10 원 펄스 p.390, 15.3.12 엔코더 p.392, 15.3.15 동기화 p.398 | 365 | ✔ (TIM2~4만; TIM5 없음) | [06_Timers_RTC](../Examples/06_Timers_RTC) (01~03, 06~11) |
 | 16 | 범용 타이머 (TIM9~TIM14) | 425 | ✘ | — |
 | 17 | 기본 타이머 (TIM6, TIM7) | 469 | ✘ (대용량 이상) | — |
-| 18 | RTC | 482 | ✔ | [54_RTC_Calendar](../Examples/06_Timers_RTC/54_RTC_Calendar_HAL_c), [84_Standby](../Examples/09_WatchDog_Sleep/84_Standby_RTC_Wakeup_HAL_c) |
-| 19 | 독립 워치독 (IWDG) | 494 | ✔ | [80_WatchdogTimer](../Examples/09_WatchDog_Sleep/80_WatchdogTimer) |
-| 20 | 윈도우 워치독 (WWDG) | 500 | ✔ | [81_WWDG](../Examples/09_WatchDog_Sleep/81_WWDG_HAL_c) |
+| 18 | RTC | 482 | ✔ | [05_RTC_Calendar](../Examples/06_Timers_RTC/05_RTC_Calendar_HAL_c), [05_Standby_RTC_Wakeup](../Examples/09_WatchDog_Sleep/05_Standby_RTC_Wakeup_HAL_c) |
+| 19 | 독립 워치독 (IWDG) | 494 | ✔ | [01_WatchdogTimer](../Examples/09_WatchDog_Sleep/01_WatchdogTimer), [07_IWDG](../Examples/09_WatchDog_Sleep/07_IWDG_HAL_c) |
+| 20 | 윈도우 워치독 (WWDG) | 500 | ✔ | [02_WWDG](../Examples/09_WatchDog_Sleep/02_WWDG_HAL_c) |
 | 21 | FSMC | 507 | ✘ | — |
 | 22 | SDIO | 566 | ✘ | — |
 | 23 | USB 풀스피드 디바이스 | 622 | ✔ (Nucleo 에 커넥터 없음, PA11/PA12 배선 필요) | — |
-| 24 | bxCAN | 653 | ✔ (Nucleo 에 트랜시버 없음) | [100_CAN_Loopback](../Examples/11_CAN_Communication/100_CAN_Loopback_HAL_c) |
+| 24 | bxCAN (24.7.4 필터 p.664) | 653 | ✔ (Nucleo 에 트랜시버 없음) | [01_CAN_Loopback](../Examples/11_CAN_Communication/01_CAN_Loopback_HAL_c), [02_CAN_Filter](../Examples/11_CAN_Communication/02_CAN_Filter_HAL_c), [03_CAN_Normal_2boards](../Examples/11_CAN_Communication/03_CAN_Normal_2boards_HAL_c) |
 | 25 | SPI | 699 | ✔ (SPI1, SPI2) | [05_SPI_Communication](../Examples/05_SPI_Communication) |
 | 26 | I2C | 752 | ✔ (I2C1, I2C2) | [04_I2C_Communication](../Examples/04_I2C_Communication) |
 | 27 | USART | — | ✔ (USART1~3) | [02_USART](../Examples/02_USART) |
 | 28 | USB OTG FS | 828 | ✘ (연결형) | — |
 | 29 | 이더넷 (ETH) | — | ✘ (연결형) | — |
-| 30 | 디바이스 전자 서명: 30.2 96비트 고유 ID p.1077 | 1076 | ✔ | [79_DeviceInfo_UniqueID](../Examples/08_Clock_System/79_DeviceInfo_UniqueID_Reg_c) |
-| 31 | 디버그 지원(DBG): 31.16.1 저전력 모드 디버그 p.1100 | 1079 | ✔ | [82_Sleep](../Examples/09_WatchDog_Sleep/82_Sleep_Mode_HAL_c), [83_Stop](../Examples/09_WatchDog_Sleep/83_Stop_Mode_EXTI_HAL_c) |
+| 30 | 디바이스 전자 서명: 30.2 96비트 고유 ID p.1077 | 1076 | ✔ | [10_DeviceInfo_UniqueID](../Examples/08_Clock_System/10_DeviceInfo_UniqueID_Reg_c) |
+| 31 | 디버그 지원(DBG): 31.16.1 저전력 모드 디버그 p.1100 | 1079 | ✔ | [03_Sleep_Mode](../Examples/09_WatchDog_Sleep/03_Sleep_Mode_HAL_c), [04_Stop_Mode_EXTI](../Examples/09_WatchDog_Sleep/04_Stop_Mode_EXTI_HAL_c), [12_ITM_SWO_Printf](../Examples/08_Clock_System/12_ITM_SWO_Printf_Reg_c) |
 
 "쪽"은 PDF 상의 쪽 번호이고, `—` 는 목차에서 확인하지 못한 항목이다. 예제의 소스 주석에도 참조한 장/절을 적어 두었다.
 
@@ -85,13 +85,14 @@ RM0008 은 여러 밀도를 한 문서에 담아서 **F103RB 에는 없는 장**
 
 | 절 | 내용 | 쪽 | 관련 예제 |
 |---|---|---|---|
-| 2.2.5 | 비트 밴딩 | 27 | [08_BitBanding](../Examples/01_GPIO/08_BitBanding_Reg_c) |
-| 2.3.6 | 인터럽트 우선순위 그룹핑 | 36 | [72_NVIC_Priority](../Examples/08_Clock_System/72_NVIC_Priority_HAL_c) |
-| 2.4.3 | 폴트 상태/주소 레지스터 | 41 | [74_HardFault_Diagnosis](../Examples/08_Clock_System/74_HardFault_Diagnosis_Reg_c) |
-| 4.3 / 4.3.7 | NVIC / 우선순위 레지스터(NVIC_IPR) | 118 / 125 | [72_NVIC_Priority](../Examples/08_Clock_System/72_NVIC_Priority_HAL_c) |
-| 4.4.6 | SCB_SCR (SLEEPDEEP, SLEEPONEXIT) | 136 | [82_Sleep](../Examples/09_WatchDog_Sleep/82_Sleep_Mode_HAL_c), [83_Stop](../Examples/09_WatchDog_Sleep/83_Stop_Mode_EXTI_HAL_c) |
-| 4.4.10 / 4.4.11 | SCB_CFSR / SCB_HFSR (폴트 원인) | 142 / 145 | [74_HardFault_Diagnosis](../Examples/08_Clock_System/74_HardFault_Diagnosis_Reg_c) |
-| 4.5 | SysTick (STK_CTRL/LOAD/VAL) | 150 | [71_SysTick](../Examples/08_Clock_System/71_SysTick_Reg_c), [75_PendSV_ContextSwitch](../Examples/08_Clock_System/75_PendSV_ContextSwitch_Reg_c) |
+| 2.2.5 | 비트 밴딩 | 27 | [09_BitBanding](../Examples/01_GPIO/09_BitBanding_Reg_c) |
+| 2.3.6 | 인터럽트 우선순위 그룹핑 | 36 | [03_NVIC_Priority](../Examples/08_Clock_System/03_NVIC_Priority_HAL_c) |
+| 2.4.3 | 폴트 상태/주소 레지스터 | 41 | [05_HardFault_Diagnosis](../Examples/08_Clock_System/05_HardFault_Diagnosis_Reg_c) |
+| 4.3 / 4.3.7 | NVIC / 우선순위 레지스터(NVIC_IPR) | 118 / 125 | [03_NVIC_Priority](../Examples/08_Clock_System/03_NVIC_Priority_HAL_c) |
+| 4.4.4 | SCB_VTOR (벡터 테이블 오프셋) | 133 | [03_IAP_Bootloader](../Examples/10_Flash_CRC/03_IAP_Bootloader_Reg_c), [04_IAP_App](../Examples/10_Flash_CRC/04_IAP_App_Reg_c) |
+| 4.4.6 | SCB_SCR (SLEEPDEEP, SLEEPONEXIT) | 136 | [03_Sleep_Mode](../Examples/09_WatchDog_Sleep/03_Sleep_Mode_HAL_c), [04_Stop_Mode_EXTI](../Examples/09_WatchDog_Sleep/04_Stop_Mode_EXTI_HAL_c) |
+| 4.4.10 / 4.4.11 | SCB_CFSR / SCB_HFSR (폴트 원인) | 142 / 145 | [05_HardFault_Diagnosis](../Examples/08_Clock_System/05_HardFault_Diagnosis_Reg_c) |
+| 4.5 | SysTick (STK_CTRL/LOAD/VAL) | 150 | [02_SysTick](../Examples/08_Clock_System/02_SysTick_Reg_c), [06_PendSV_ContextSwitch](../Examples/08_Clock_System/06_PendSV_ContextSwitch_Reg_c) |
 
 ## 5. Nucleo-F103RB 보드 핵심 정보 (UM1724 기준)
 
@@ -112,8 +113,8 @@ RM0008 은 여러 밀도를 한 문서에 담아서 **F103RB 에는 없는 장**
 | LSE (32.768kHz) | 사용 안 함 (PC14/PC15 가 GPIO) | 온보드 X2 크리스털 | 새 LSE 크리스털(ABS25) + 부하 커패시터 값 변경 |
 
 이 차이가 이 저장소 예제에 영향을 주는 곳:
-- **HSE**: 모든 HAL 예제는 **HSI/2 × 16 = 64MHz** 를 쓰므로 개정과 무관하게 동작한다. HSE 는 [76_MCO_ClockOut](../Examples/08_Clock_System/76_MCO_ClockOut_HAL_c) 에서 **바이패스 모드**로만 시도하며, C-01 처럼 HSE 가 없으면 그 소스는 자동으로 건너뛴다.
-- **LSE**: [54_RTC_Calendar](../Examples/06_Timers_RTC/54_RTC_Calendar_HAL_c) 와 [84_Standby_RTC_Wakeup](../Examples/09_WatchDog_Sleep/84_Standby_RTC_Wakeup_HAL_c) 는 LSE 시작에 실패하면 **LSI 로 자동 대체**한다. (LSI 는 정확도가 낮아 시계가 빠르게 어긋난다)
+- **HSE**: 모든 HAL 예제는 **HSI/2 × 16 = 64MHz** 를 쓰므로 개정과 무관하게 동작한다. HSE 는 [07_MCO_ClockOut](../Examples/08_Clock_System/07_MCO_ClockOut_HAL_c) 에서 **바이패스 모드**로만 시도하며, C-01 처럼 HSE 가 없으면 그 소스는 자동으로 건너뛴다.
+- **LSE**: [05_RTC_Calendar](../Examples/06_Timers_RTC/05_RTC_Calendar_HAL_c) 와 [05_Standby_RTC_Wakeup](../Examples/09_WatchDog_Sleep/05_Standby_RTC_Wakeup_HAL_c) 는 LSE 시작에 실패하면 **LSI 로 자동 대체**한다. (LSI 는 정확도가 낮아 시계가 빠르게 어긋난다)
 - 외부 8MHz 크리스털(X3)은 기본 미장착이라 직접 납땜해야 한다 (사양: 8MHz, 16pF, 20ppm, DIP).
 
 ## 6. 이 폴더와 다른 곳의 관계

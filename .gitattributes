@@ -1,0 +1,61 @@
+# 줄바꿈 정규화 — 저장소에는 LF, 작업트리는 OS 기본(Windows=CRLF)
+* text=auto
+
+# ---- 소스·설정 ----
+*.c      text
+*.h      text
+*.cpp    text
+*.hpp    text
+*.ino    text
+*.pde    text
+*.py     text
+*.js     text
+*.md     text
+*.txt    text
+*.json   text
+*.xml    text
+*.ini    text
+*.html   text
+*.svg    text
+*.csv    text
+
+# ---- EDA·제조 파일 (ASCII) ----
+*.kicad_sch  text
+*.kicad_pcb  text
+*.kicad_mod  text
+*.kicad_sym  text
+*.kicad_pro  text
+*.gbr        text
+*.drl        text
+*.rpt        text
+*.step       text
+*.hex        text eol=lf
+
+# ---- 바이너리 (변환 금지) ----
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.pdf    binary
+*.zip    binary
+*.xlsx   binary
+*.docx   binary
+*.pptx   binary
+*.pdsprj binary
+*.pdsbak binary
+# *.DSN 은 지정하지 않는다 — Proteus는 바이너리지만 KiCad Specctra(.dsn)는 ASCII다.
+#          text=auto 의 자동 판별(NUL 바이트 검사)에 맡긴다.
+*.DBK    binary
+*.vi     binary
+*.elf    binary
+*.bin    binary
+*.o      binary
+*.a      binary
+*.lib    binary
+*.dll    binary
+*.exe    binary
+*.mat    binary
+*.whl    binary
+*.avi    binary
+*.mp4    binary

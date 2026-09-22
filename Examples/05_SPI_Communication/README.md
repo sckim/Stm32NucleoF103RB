@@ -6,11 +6,10 @@ SPI1(SCK = PA5, MISO = PA6, MOSI = PA7) 마스터 전이중 통신을 폴링과 
 |---|---|---|---|
 | 01 | [01_SPI_Loopback_HAL_c](01_SPI_Loopback_HAL_c/README.md) | HAL | 루프백 검증, 분주비별 속도 측정 |
 | 02 | [02_SPI_DMA_Fullduplex_HAL_c](02_SPI_DMA_Fullduplex_HAL_c/README.md) | HAL, DMA | DMA 전이중, 폴링과 CPU 여유 비교 |
-| 03 | [03_SPI_Slave_Loopback_HAL_c](03_SPI_Slave_Loopback_HAL_c/README.md) | HAL | 슬레이브 모드, 하드웨어 NSS, 응답 장전 |
-| 04 | [04_SPI_OLED_SSD1306_HAL_c](04_SPI_OLED_SSD1306_HAL_c/README.md) | HAL | D/C 핀 방식 OLED, 8MHz 고속 갱신 |
-| 05 | [05_SPI_SDcard_HAL_c](05_SPI_SDcard_HAL_c/README.md) | HAL | SD 카드 SPI 초기화, 섹터 읽기(MBR) |
-| 06 | [06_SPI_Flash_W25Qxx_HAL_c](06_SPI_Flash_W25Qxx_HAL_c/README.md) | HAL | SPI NOR Flash: ID, 섹터 소거, 페이지 프로그램 |
-| 07 | [07_SPI_MAX7219_HAL_c](07_SPI_MAX7219_HAL_c/README.md) | HAL | 8x8 LED 매트릭스, 16비트 프레임/LOAD 반영 |
+| 03 | [03_SPI_OLED_SSD1306_HAL_c](03_SPI_OLED_SSD1306_HAL_c/README.md) | HAL | D/C 핀 방식 OLED, 8MHz 고속 갱신 |
+| 04 | [04_SPI_SDcard_HAL_c](04_SPI_SDcard_HAL_c/README.md) | HAL | SD 카드 SPI 초기화, 섹터 읽기(MBR) |
+| 05 | [05_SPI_Flash_W25Qxx_HAL_c](05_SPI_Flash_W25Qxx_HAL_c/README.md) | HAL | SPI NOR Flash: ID, 섹터 소거, 페이지 프로그램 |
+| 06 | [06_SPI_MAX7219_HAL_c](06_SPI_MAX7219_HAL_c/README.md) | HAL | 8x8 LED 매트릭스, 16비트 프레임/LOAD 반영 |
 
 ## 이 그룹에서 배우는 것
 

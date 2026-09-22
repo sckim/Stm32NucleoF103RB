@@ -21,4 +21,4 @@ PC0~PC7 에 로직 분석기, 또는 LED 8개(저항 포함), 또는 R-2R 병렬
 
 ## 관련 예제
 
-`01_DMA_MemToMem_HAL_c`, `03_DMA_Priority_HAL_c`, `03_ADC/02_ADC_DMA_TimTrigger_HAL_c`(원형 DMA 수신 쪽).
+`01_DMA_MemToMem_HAL_c`, `12_Advanced_Topics/06_DMA_Priority_HAL_c`, `03_ADC/02_ADC_DMA_TimTrigger_HAL_c`(원형 DMA 수신 쪽).

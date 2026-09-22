@@ -4,19 +4,18 @@
 
 | 번호 | 예제 | 계층 | 핵심 |
 |---|---|---|---|
-| 01 | [01_Clock_Config_Reg_c](01_Clock_Config_Reg_c/README.md) | 레지스터 | HSI ↔ PLL 48MHz 전환 순서 |
-| 02 | [02_SysTick_Reg_c](02_SysTick_Reg_c/README.md) | 레지스터 | 1ms 틱, `millis()`, 논블로킹 |
-| 03 | [03_NVIC_Priority_HAL_c](03_NVIC_Priority_HAL_c/README.md) | HAL, NVIC | 선점/서브 우선순위, 인터럽트 중첩 |
-| 04 | [04_AFIO_Remap_Reg_c](04_AFIO_Remap_Reg_c/README.md) | 레지스터 | JTAG 핀 해방, 타이머 핀 리맵 |
-| 05 | [05_HardFault_Diagnosis_Reg_c](05_HardFault_Diagnosis_Reg_c/README.md) | 레지스터+ASM | 폴트 원인 진단(CFSR, 스택 프레임) |
-| 06 | [06_PendSV_ContextSwitch_Reg_c](06_PendSV_ContextSwitch_Reg_c/README.md) | 레지스터+ASM | 미니 선점형 RTOS |
-| 07 | [07_MCO_ClockOut_HAL_c](07_MCO_ClockOut_HAL_c/README.md) | HAL | 클럭을 핀으로 출력 |
-| 08 | [08_DWT_Profiling_Reg_c](08_DWT_Profiling_Reg_c/README.md) | 레지스터 | 사이클 단위 실행 시간 측정 |
-| 09 | [09_NonBlocking_StateMachine_HAL_c](09_NonBlocking_StateMachine_HAL_c/README.md) | HAL | 상태 머신, 디바운스 |
-| 10 | [10_DeviceInfo_UniqueID_Reg_c](10_DeviceInfo_UniqueID_Reg_c/README.md) | 레지스터 | 고유 ID, 리셋 원인 |
-| 11 | [11_HSE_PLL_72MHz_Reg_c](11_HSE_PLL_72MHz_Reg_c/README.md) | 레지스터 | HSE+PLL 72MHz, 실패 시 HSI 복귀 |
-| 12 | [12_ITM_SWO_Printf_Reg_c](12_ITM_SWO_Printf_Reg_c/README.md) | 레지스터 | SWO 로 printf (UART 없이) |
-| 13 | [13_StackWatermark_Reg_c](13_StackWatermark_Reg_c/README.md) | 레지스터 | 스택 페인팅, 하이 워터마크, 재귀 실험 |
+| 01 | [01_CoreRegisters_Instructions_Reg_c](01_CoreRegisters_Instructions_Reg_c/README.md) | 레지스터+ASM | 레지스터 파일, 조건 플래그, IT 조건부실행, 스택 PUSH/POP, 하드웨어 나눗셈 |
+| 02 | [02_MemoryMap_Reg_c](02_MemoryMap_Reg_c/README.md) | 레지스터 | 4GB 주소 공간, 버스 계층, memory-mapped I/O, 리틀 엔디안 |
+| 03 | [03_ExceptionModel_VectorTable_Reg_c](03_ExceptionModel_VectorTable_Reg_c/README.md) | 레지스터+ASM | 벡터 테이블, 예외 자동 스택 저장, EXC_RETURN, SVC |
+| 04 | [04_Clock_Config_Reg_c](04_Clock_Config_Reg_c/README.md) | 레지스터 | HSI ↔ PLL 48MHz 전환 순서 |
+| 05 | [05_SysTick_Reg_c](05_SysTick_Reg_c/README.md) | 레지스터 | 1ms 틱, `millis()`, 논블로킹 |
+| 06 | [06_NVIC_Priority_HAL_c](06_NVIC_Priority_HAL_c/README.md) | HAL, NVIC | 선점/서브 우선순위, 인터럽트 중첩 |
+| 07 | [07_AFIO_Remap_Reg_c](07_AFIO_Remap_Reg_c/README.md) | 레지스터 | JTAG 핀 해방, 타이머 핀 리맵 |
+| 08 | [08_HardFault_Diagnosis_Reg_c](08_HardFault_Diagnosis_Reg_c/README.md) | 레지스터+ASM | 폴트 원인 진단(CFSR, 스택 프레임) |
+| 09 | [09_MCO_ClockOut_HAL_c](09_MCO_ClockOut_HAL_c/README.md) | HAL | 클럭을 핀으로 출력 |
+| 10 | [10_DWT_Profiling_Reg_c](10_DWT_Profiling_Reg_c/README.md) | 레지스터 | 사이클 단위 실행 시간 측정 |
+| 11 | [11_NonBlocking_StateMachine_HAL_c](11_NonBlocking_StateMachine_HAL_c/README.md) | HAL | 상태 머신, 디바운스 |
+| 12 | [12_DeviceInfo_UniqueID_Reg_c](12_DeviceInfo_UniqueID_Reg_c/README.md) | 레지스터 | 고유 ID, 리셋 원인 |
 
 ## 이 그룹에서 배우는 것
 

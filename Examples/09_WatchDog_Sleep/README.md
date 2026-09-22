@@ -30,4 +30,4 @@
 
 ## 앞으로 추가 예정
 
-클럭 보안 시스템(CSS): HSE 장애 시 NMI 로 HSI 복귀 (`08_Clock_System/11_HSE_PLL_72MHz_Reg_c`의 다음 단계).
+클럭 보안 시스템(CSS): HSE 장애 시 NMI 로 HSI 복귀 (`08_Clock_System/08_HSE_PLL_72MHz_Reg_c`의 다음 단계).

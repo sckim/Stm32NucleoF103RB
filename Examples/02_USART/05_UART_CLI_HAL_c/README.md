@@ -26,7 +26,7 @@ UART 명령줄 인터페이스(CLI): 한 줄 입력 편집 + 명령어 테이블
 
 ## 주의
 
-`peek`는 읽기 전용이지만 존재하지 않는 주소를 읽으면 BusFault → HardFault가 난다. 진단 방법은 `08_Clock_System/05_HardFault_Diagnosis_Reg_c` 참고.
+`peek`는 읽기 전용이지만 존재하지 않는 주소를 읽으면 BusFault → HardFault가 난다. 진단 방법은 `08_Clock_System/08_HardFault_Diagnosis_Reg_c` 참고.
 
 ## ISR vs 콜백
 

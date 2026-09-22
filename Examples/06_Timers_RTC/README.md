@@ -13,8 +13,7 @@ STM32F103의 범용 타이머(TIM2~4)·고급 타이머(TIM1)를 시간 기준, 
 | 07 | [07_TIM_Encoder_HAL_c](07_TIM_Encoder_HAL_c/README.md) | HAL | 엔코더 인터페이스 모드 |
 | 08 | [08_TIM_OnePulse_HCSR04_HAL_c](08_TIM_OnePulse_HCSR04_HAL_c/README.md) | HAL+레지스터 | 원 펄스 + 입력 캡처로 초음파 거리 |
 | 09 | [09_TIM_Servo_HAL_c](09_TIM_Servo_HAL_c/README.md) | HAL | 50Hz PWM, 1~2ms = 0~180° 서보 |
-| 10 | [10_TIM_Cascade32_HAL_c](10_TIM_Cascade32_HAL_c/README.md) | HAL | 마스터/슬레이브로 잇는 32비트 카운터, 스톱워치 |
-| 11 | [11_TIM_MotorDriver_TB6612_HAL_c](11_TIM_MotorDriver_TB6612_HAL_c/README.md) | HAL | H-브리지 모터: 20kHz PWM, 브레이크/코스트, 비상 정지 |
+| 10 | [10_TIM_MotorDriver_TB6612_HAL_c](10_TIM_MotorDriver_TB6612_HAL_c/README.md) | HAL | H-브리지 모터: 20kHz PWM, 브레이크/코스트, 비상 정지 |
 
 ## 이 그룹에서 배우는 것
 

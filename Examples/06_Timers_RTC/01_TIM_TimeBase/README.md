@@ -20,4 +20,4 @@ LD2가 1초 주기로 토글된다 (1ms 인터럽트 × 1000).
 
 ## 관련 예제
 
-PWM `02_TIM_PWM_HAL_c`, 입력 캡처 `03_TIM_InputCapture_HAL_c`. 인터럽트 우선순위 `08_Clock_System/03_NVIC_Priority_HAL_c`.
+PWM `02_TIM_PWM_HAL_c`, 입력 캡처 `03_TIM_InputCapture_HAL_c`. 인터럽트 우선순위 `08_Clock_System/06_NVIC_Priority_HAL_c`.

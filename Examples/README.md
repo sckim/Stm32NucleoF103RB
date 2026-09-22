@@ -9,19 +9,20 @@ Nucleo-F103RB(Cortex-M3, 64MHz, Flash 128KB / SRAM 20KB) 보드로 GPIO부터 �
 |---|---|---|
 | [01_GPIO](01_GPIO/README.md) | 출력·입력·외부 인터럽트 | 4가지 추상화 계층 비교, EXTI, 비트 밴딩 |
 | [02_USART](02_USART/README.md) | 시리얼 통신 | printf 리다이렉션, 수신 인터럽트, DMA+IDLE, 링 버퍼, CLI, 단선 반이중 |
-| [03_ADC](03_ADC/README.md) | 아날로그 입력 | 타이머 트리거, DMA, 아날로그 워치독, Vrefint 보정, 주입 채널, 듀얼 모드, 가변저항 PWM |
-| [04_I2C_Communication](04_I2C_Communication/README.md) | I2C | 주소 스캔, 문자 LCD, MPU6050(폴링/DMA), 슬레이브 모드, OLED, EEPROM, DS3231 RTC |
-| [05_SPI_Communication](05_SPI_Communication/README.md) | SPI | 루프백, 전이중 DMA, 슬레이브 모드, OLED, SD 카드, NOR Flash, MAX7219 |
-| [06_Timers_RTC](06_Timers_RTC/README.md) | 타이머·RTC | 시간 기준, PWM, 입력 캡처, 데드타임, RTC, PWM 입력, 엔코더, 원 펄스, 서보, 32비트 연결, 모터 드라이버 |
-| [07_DMA](07_DMA/README.md) | DMA | 메모리↔메모리, 원형 DMA 핑퐁, 채널 우선순위 |
-| [08_Clock_System](08_Clock_System/README.md) | 클럭·코어 시스템 | RCC, HSE+PLL 72MHz, SysTick, NVIC, AFIO, 폴트, PendSV, MCO, DWT, ITM/SWO, 상태 머신, 스택 워터마크 |
+| [03_ADC](03_ADC/README.md) | 아날로그 입력 | 타이머 트리거, DMA, 아날로그 워치독, Vrefint 보정, 가변저항 PWM |
+| [04_I2C_Communication](04_I2C_Communication/README.md) | I2C | 주소 스캔, 문자 LCD, MPU6050, OLED, EEPROM, DS3231 RTC |
+| [05_SPI_Communication](05_SPI_Communication/README.md) | SPI | 루프백, 전이중 DMA, OLED, SD 카드, NOR Flash, MAX7219 |
+| [06_Timers_RTC](06_Timers_RTC/README.md) | 타이머·RTC | 시간 기준, PWM, 입력 캡처, 데드타임, RTC, PWM 입력, 엔코더, 원 펄스, 서보, 모터 드라이버 |
+| [07_DMA](07_DMA/README.md) | DMA | 메모리↔메모리, 원형 DMA 핑퐁 |
+| [08_Clock_System](08_Clock_System/README.md) | 코어·클럭 시스템 | 레지스터/명령어, 메모리 맵, 예외 모델, RCC, SysTick, NVIC, AFIO, 폴트, MCO, DWT, 상태 머신, 칩 정보 |
 | [09_WatchDog_Sleep](09_WatchDog_Sleep/README.md) | 워치독·저전력 | WWDG, IWDG, Sleep/Stop/Standby, BKP 탬퍼 |
-| [10_Flash_CRC](10_Flash_CRC/README.md) | 내부 Flash·CRC·부트 | 페이지 소거/쓰기, 하드웨어 CRC, IAP 부트로더/앱, XMODEM 업데이트, 옵션 바이트 |
-| [11_CAN_Communication](11_CAN_Communication/README.md) | CAN | bxCAN 루프백, 수신 필터, 실제 버스(2보드) |
+| [10_Flash_CRC](10_Flash_CRC/README.md) | 내부 Flash·CRC | 페이지 소거/쓰기, 하드웨어 CRC |
+| [11_CAN_Communication](11_CAN_Communication/README.md) | CAN | bxCAN 루프백, 수신 필터 |
+| [12_Advanced_Topics](12_Advanced_Topics/README.md) | 심화(선택) | ADC 주입/듀얼, I2C·SPI 슬레이브, PendSV 미니 RTOS, IAP/XMODEM 부트로더, CAN 실제 버스 — 기본 진도가 아님 |
 
 ## 명명 규칙
 
-- 그룹 폴더는 `01_GPIO`, `02_USART`… 처럼 번호를 붙이고, **예제 폴더 번호는 그룹 안에서 항상 `02_BlinkHAL`부터 순서대로** 붙인다 (예: `08_Clock_System/01_Clock_Config_Reg_c`). 예제를 추가하면 그 그룹의 다음 번호를 쓴다.
+- 그룹 폴더는 `01_GPIO`, `02_USART`… 처럼 번호를 붙이고, **예제 폴더 번호는 그룹 안에서 항상 `01`부터 순서대로** 붙인다 (예: `08_Clock_System/04_Clock_Config_Reg_c`). 예제를 추가하거나 다른 그룹으로 옮기면 남은 예제 번호를 다시 채워 넣는다.
 - 폴더명 끝의 **`_c`**는 Claude가 작성한 예제(사용자 검토 전)이다. 이름의 계층 표기(`_HAL`, `_LL`, `_Reg`)가 그 예제의 추상화 수준이다.
 - 모든 예제는 소스 상단 주석에 계층, 사용 레지스터·비트, ISR과 HAL 콜백의 역할 구분을 적어 두었다. README는 그 요약이며 세부 내용은 `main.c` 주석을 참고한다.
 
@@ -56,8 +57,14 @@ Nucleo-F103RB(Cortex-M3, 64MHz, Flash 128KB / SRAM 20KB) 보드로 GPIO부터 �
 
 1. **GPIO** `01_GPIO/01`~`04`: 같은 Blink를 4계층으로 비교 → `05`~`08` 입력/EXTI → `09` 비트 밴딩
 2. **USART** `02_USART/01`~`06`: printf 출력으로 디버깅 수단 확보 → 인터럽트·DMA·링 버퍼·CLI·단선
-3. **Clock/SysTick/NVIC** `08_Clock_System/01`~`03`: 클럭 트리와 인터럽트 우선순위 이해
-4. **Timer** `06_Timers_RTC/01`~`11`, **ADC** `03_ADC/01`~`07`: 주기·PWM·측정
-5. **통신** I2C(`04_I2C_Communication/01`~`08`), SPI(`05_SPI_Communication/01`~`07`), CAN(`11_CAN_Communication/01`~`03`)
-6. **DMA** `07_DMA/01`~`03`, **저전력** `09_WatchDog_Sleep/01`~`07`, **Flash/CRC/부트** `10_Flash_CRC/01`~`06`
-7. **심화** `08_Clock_System/04`~`13`: AFIO, HardFault 진단, PendSV 문맥 교환, MCO, DWT, 상태 머신, 칩 정보, HSE 72MHz, ITM/SWO, 스택 워터마크
+3. **코어 기초** `08_Clock_System/01`~`03`: 레지스터 파일·조건 플래그·IT → 메모리 맵 → 벡터 테이블·예외 진입/복귀.
+   C 코드 뒤에서 실제로 무슨 일이 벌어지는지 먼저 본 뒤, 이어서 클럭·인터럽트 예제로 들어간다.
+4. **Clock/SysTick/NVIC** `08_Clock_System/04`~`06`: 클럭 트리 전환과 인터럽트 우선순위
+5. **Timer** `06_Timers_RTC/01`~`10`, **ADC** `03_ADC/01`~`05`: 주기·PWM·측정
+6. **통신** I2C(`04_I2C_Communication/01`~`07`), SPI(`05_SPI_Communication/01`~`06`), CAN(`11_CAN_Communication/01`~`02`)
+7. **DMA** `07_DMA/01`~`02`, **저전력** `09_WatchDog_Sleep/01`~`07`, **Flash/CRC** `10_Flash_CRC/01`~`02`
+8. **코어 심화** `08_Clock_System/07`~`12`: AFIO 리맵, HardFault 진단, MCO, DWT, 상태 머신, 칩 정보
+
+이 8단계가 3학년 2학기 진도의 전부다. 여기까지 끝냈다면 **[12_Advanced_Topics](12_Advanced_Topics/README.md)**(ADC 주입/듀얼, I2C·SPI
+슬레이브, PendSV 미니 RTOS, HSE 72MHz, ITM/SWO, 스택 워터마크, IAP/XMODEM 부트로더, 옵션 바이트, CAN 실제 버스)를 선택적으로 본다.
+각 항목의 "먼저 볼 기본 예제"는 그 그룹 README 표에 있다.

@@ -21,4 +21,4 @@ SPI1 마스터의 MOSI를 MISO에 연결(루프백)해 송수신 데이터 일�
 
 ## 관련 예제
 
-`02_SPI_DMA_Fullduplex_HAL_c`, DWT 원리 `08_Clock_System/08_DWT_Profiling_Reg_c`.
+`02_SPI_DMA_Fullduplex_HAL_c`, DWT 원리 `08_Clock_System/10_DWT_Profiling_Reg_c`.

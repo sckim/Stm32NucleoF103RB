@@ -20,4 +20,4 @@ WWDG 카운터 틱은 `4096 × 8 / PCLK1(32MHz) ≈ 1.024ms`이다. `Counter = 6
 
 ## 관련 예제
 
-`02_WWDG_HAL_c`(윈도우 타이밍 계산과 조기 경고), `08_Clock_System/10_DeviceInfo_UniqueID_Reg_c`(리셋 원인 확인).
+`02_WWDG_HAL_c`(윈도우 타이밍 계산과 조기 경고), `08_Clock_System/12_DeviceInfo_UniqueID_Reg_c`(리셋 원인 확인).

@@ -6,7 +6,6 @@ DMA(Direct Memory Access)는 CPU 개입 없이 버스 마스터로 데이터를 
 |---|---|---|---|
 | 01 | [01_DMA_MemToMem_HAL_c](01_DMA_MemToMem_HAL_c/README.md) | HAL | 메모리→메모리 복사, CPU 복사와 사이클 비교 |
 | 02 | [02_DMA_Circular_GPIO_HAL_c](02_DMA_Circular_GPIO_HAL_c/README.md) | HAL, TIM, DMA | 원형 DMA + 핑퐁 버퍼로 GPIO 패턴 출력 |
-| 03 | [03_DMA_Priority_HAL_c](03_DMA_Priority_HAL_c/README.md) | HAL | 채널 우선순위와 중재, 완료 시각 측정 |
 
 ## 이 그룹에서 배우는 것
 

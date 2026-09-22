@@ -11,7 +11,7 @@ LL API로 LD2(PA5)를 1초 간격으로 토글한다.
 - **CubeMX가 생성한 초기화 코드 읽기**
   - `LL_APB2_GRP1_EnableClock(AFIO)`, `LL_APB1_GRP1_EnableClock(PWR)`: 주변장치 클럭 허용 (`RCC->APB2ENR`, `APB1ENR`)
   - `NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4)`: 우선순위 4비트 전부 선점 우선순위로 사용
-  - `LL_GPIO_AF_Remap_SWJ_NOJTAG()`: `AFIO->MAPR.SWJ_CFG` 로 JTAG-DP를 끄고 SW-DP만 유지 (PA15/PB3/PB4 해방). 자세한 내용은 `08_Clock_System/04_AFIO_Remap_Reg_c` 참고.
+  - `LL_GPIO_AF_Remap_SWJ_NOJTAG()`: `AFIO->MAPR.SWJ_CFG` 로 JTAG-DP를 끄고 SW-DP만 유지 (PA15/PB3/PB4 해방). 자세한 내용은 `08_Clock_System/07_AFIO_Remap_Reg_c` 참고.
 
 ## 동작
 

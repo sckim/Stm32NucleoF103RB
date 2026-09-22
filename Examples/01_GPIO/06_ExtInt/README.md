@@ -12,7 +12,7 @@
   - `EXTI15_10_IRQHandler`(`stm32f1xx_it.c`, 진짜 ISR) → `HAL_GPIO_EXTI_IRQHandler()`가 펜딩 비트(`EXTI->PR`)를 지우고 →
   - `HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)`(이 예제의 `main.c`, 사용자 콜백)를 호출한다.
 - 콜백은 ISR 문맥에서 실행되므로 `HAL_Delay()` 등 오래 걸리는 처리를 넣지 않고 짧게 끝낸다. 매개변수 `GPIO_Pin`으로 어느 핀에서 발생했는지 구분한다.
-- 이 예제에는 디바운스 처리가 없다. 기계식 버튼의 접점 튐 때문에 한 번 눌러도 여러 번 토글될 수 있는지 관찰해 볼 만하다 (→ `08_Clock_System/09_NonBlocking_StateMachine_HAL_c`에 디바운스 예).
+- 이 예제에는 디바운스 처리가 없다. 기계식 버튼의 접점 튐 때문에 한 번 눌러도 여러 번 토글될 수 있는지 관찰해 볼 만하다 (→ `08_Clock_System/11_NonBlocking_StateMachine_HAL_c`에 디바운스 예).
 
 ## 관련 예제
 

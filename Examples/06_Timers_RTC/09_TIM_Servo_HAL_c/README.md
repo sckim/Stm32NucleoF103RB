@@ -21,4 +21,4 @@
 
 ## 관련 예제
 
-`02_TIM_PWM_HAL_c`(기본 PWM), `11_TIM_MotorDriver_TB6612_HAL_c`.
+`02_TIM_PWM_HAL_c`(기본 PWM), `10_TIM_MotorDriver_TB6612_HAL_c`.

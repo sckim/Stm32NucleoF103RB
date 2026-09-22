@@ -21,4 +21,4 @@ B1 을 누르면 프로그램이 멈춘 것을 흉내(리프레시 중단) → �
 
 ## 관련 예제
 
-`02_WWDG_HAL_c`, `06_BKP_Tamper_HAL_c`, `08_Clock_System/10_DeviceInfo_UniqueID_Reg_c`(리셋 원인 출력).
+`02_WWDG_HAL_c`, `06_BKP_Tamper_HAL_c`, `08_Clock_System/12_DeviceInfo_UniqueID_Reg_c`(리셋 원인 출력).

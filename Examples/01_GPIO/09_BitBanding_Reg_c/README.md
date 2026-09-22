@@ -24,4 +24,4 @@ Cortex-M3의 **비트 밴딩(bit-banding)** 으로 레지스터/SRAM의 비트 �
 
 ## 관련 예제
 
-`04_BlinkReg`(일반 레지스터 조작 방식), `08_Clock_System/02_SysTick_Reg_c`.
+`04_BlinkReg`(일반 레지스터 조작 방식), `08_Clock_System/05_SysTick_Reg_c`.

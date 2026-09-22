@@ -27,4 +27,4 @@
 
 ## 관련 예제
 
-`01_Flash_Write_HAL_c`(저장 데이터 보호에 적용), `08_Clock_System/08_DWT_Profiling_Reg_c`(시간 측정).
+`01_Flash_Write_HAL_c`(저장 데이터 보호에 적용), `08_Clock_System/10_DWT_Profiling_Reg_c`(시간 측정).

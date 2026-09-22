@@ -15,7 +15,7 @@
  *   3) 파싱: 공백으로 토큰 분리(strtok) -> 명령 테이블(이름, 핸들러)에서 검색 -> 핸들러 호출
  *   명령을 추가하려면 핸들러 함수를 만들고 cmd_table 에 한 줄 추가한다.
  *   * peek 은 읽기 전용이다. 잘못된(존재하지 않는) 주소를 읽으면 BusFault -> HardFault 가 나므로 주의
- *     (진단 방법은 08_Clock_System/05_HardFault_Diagnosis 참고)
+ *     (진단 방법은 08_Clock_System/08_HardFault_Diagnosis 참고)
  *
  * ISR vs 콜백
  *   USART2_IRQHandler (stm32f1xx_it.c, 진짜 ISR) -> HAL_UART_IRQHandler() -> HAL_UART_RxCpltCallback() (이 파일)

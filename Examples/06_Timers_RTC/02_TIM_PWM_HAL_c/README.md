@@ -26,4 +26,4 @@ TIM2_CH1(PA0)에 1kHz PWM을 출력하고 듀티를 0~100%로 왕복시켜 LED�
 
 ## 관련 예제
 
-`04_TIM1_DeadTime_Break_HAL_c`(상보 PWM), `08_Clock_System/04_AFIO_Remap_Reg_c`(PWM 핀 리맵).
+`04_TIM1_DeadTime_Break_HAL_c`(상보 PWM), `08_Clock_System/07_AFIO_Remap_Reg_c`(PWM 핀 리맵).

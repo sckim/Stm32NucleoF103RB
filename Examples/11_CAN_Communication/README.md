@@ -6,7 +6,6 @@ STM32F103의 bxCAN(CAN 2.0A/B)을 다룬다.
 |---|---|---|---|
 | 01 | [01_CAN_Loopback_HAL_c](01_CAN_Loopback_HAL_c/README.md) | HAL | 500kbps 루프백, 수신 FIFO0 인터럽트 |
 | 02 | [02_CAN_Filter_HAL_c](02_CAN_Filter_HAL_c/README.md) | HAL | ID 리스트/마스크 필터, FIFO0/1 분배 |
-| 03 | [03_CAN_Normal_2boards_HAL_c](03_CAN_Normal_2boards_HAL_c/README.md) | HAL | 실제 버스 2보드, 오류 카운터, 버스오프 복구 |
 
 ## 이 그룹에서 배우는 것
 

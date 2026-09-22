@@ -8,9 +8,7 @@ STM32F103의 12비트 ADC1(약 1µs 변환, 채널 0~17)을 폴링에서 시작�
 | 02 | [02_ADC_DMA_TimTrigger_HAL_c](02_ADC_DMA_TimTrigger_HAL_c/README.md) | HAL, TIM, DMA | TIM3 TRGO 1kHz 트리거, 2채널 스캔, DMA 원형 |
 | 03 | [03_ADC_AnalogWatchdog_HAL_c](03_ADC_AnalogWatchdog_HAL_c/README.md) | HAL, DMA | 전압 창 이탈을 하드웨어가 감시 |
 | 04 | [04_ADC_Vrefint_VDDA_HAL_c](04_ADC_Vrefint_VDDA_HAL_c/README.md) | HAL | Vrefint로 실제 VDDA 측정 후 보정 |
-| 05 | [05_ADC_Injected_HAL_c](05_ADC_Injected_HAL_c/README.md) | HAL, DMA | 주입 채널이 연속 변환에 끼어들기 |
-| 06 | [06_ADC_DualMode_HAL_c](06_ADC_DualMode_HAL_c/README.md) | HAL, DMA | ADC1+ADC2 동시 샘플링(듀얼 모드), 32비트 DMA |
-| 07 | [07_ADC_Potentiometer_PWM_HAL_c](07_ADC_Potentiometer_PWM_HAL_c/README.md) | HAL, DMA, TIM | 가변저항 → 이동평균/감마 → PWM 밝기 |
+| 05 | [05_ADC_Potentiometer_PWM_HAL_c](05_ADC_Potentiometer_PWM_HAL_c/README.md) | HAL, DMA, TIM | 가변저항 → 이동평균/감마 → PWM 밝기 |
 
 ## 이 그룹에서 배우는 것
 

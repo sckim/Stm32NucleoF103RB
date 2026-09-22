@@ -27,4 +27,4 @@
 
 ## 관련 예제
 
-`01_WatchdogTimer`(기본 사용), `08_Clock_System/10_DeviceInfo_UniqueID_Reg_c`(리셋 원인 플래그).
+`01_WatchdogTimer`(기본 사용), `08_Clock_System/12_DeviceInfo_UniqueID_Reg_c`(리셋 원인 플래그).

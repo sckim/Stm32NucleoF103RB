@@ -19,4 +19,4 @@
 
 ## 관련 예제
 
-`02_BlinkHAL`, `03_BlinkLL`과 비교. SysTick을 더 자세히 다루는 `08_Clock_System/02_SysTick_Reg_c`, 비트 밴딩 `09_BitBanding_Reg_c`.
+`02_BlinkHAL`, `03_BlinkLL`과 비교. SysTick을 더 자세히 다루는 `08_Clock_System/05_SysTick_Reg_c`, 비트 밴딩 `09_BitBanding_Reg_c`.

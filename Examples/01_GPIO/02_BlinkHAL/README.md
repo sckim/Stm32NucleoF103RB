@@ -135,4 +135,4 @@ build_type = debug
 
 ## 관련 예제
 
-같은 동작의 `01_BlinkArduino`(더 추상적), `03_BlinkLL`, `04_BlinkReg`(더 낮은 수준)와 비교한다.
+같은 동작의 [01_BlinkArduino](../01_BlinkArduino/README.md)(더 추상적), [03_BlinkLL](../03_BlinkLL/README.md), [04_BlinkReg](../04_BlinkReg/README.md)(더 낮은 수준)와 비교한다.

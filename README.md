@@ -125,7 +125,7 @@
 | [Schematic_STM32F103RB.pdf](Docs/Schematic_STM32F103RB.pdf) | Nucleo-F103RB 회로도 |
 | [AN2586-...hardware-development...pdf](<Docs/AN2586-getting-started-with-stm32f10xxx-hardware-development-stmicroelectronics.pdf>) | STM32F10xxx 하드웨어 개발 시작 가이드 |
 | [AN2606-...system-memory-boot-mode...pdf](<Docs/AN2606-introduction-to-system-memory-boot-mode-on-stm32-mcus-stmicroelectronics.pdf>) | STM32 시스템 메모리 부트 모드 안내 |
-| [ES0340-...device-errata...pdf](<Docs/ES0340-stm32f101xcde-stm32f103xcde-device-errata-stmicroelectronics.pdf>) | STM32F101/103 디바이스 errata(오류 정정표) |
+| [ES096-...mediumdensity-device-limitations...pdf](<Docs/ES096-stm32f101x8b-stm32f102x8b-and-stm32f103x8b-mediumdensity-device-limitations-stmicroelectronics.pdf>) | STM32F103x8/xB(중밀도, F103RB) 디바이스 errata(오류 정정표) |
 | [NUCLEO-F103RB.url](Docs/NUCLEO-F103RB.url) | [ST 공식 제품 페이지](https://www.st.com/en/evaluation-tools/nucleo-f103rb.html?ecmp=tt9470_gl_link_feb2019&rt=db&id=DB2196) 바로가기 |
 
 ## 회로 시뮬레이션

@@ -3,46 +3,50 @@
 Nucleo-F103RB(MCU **STM32F103RB**, Cortex-M3, 72MHz, Flash 128KB / SRAM 20KB, 중밀도(medium-density))를 다루는 데 필요한 공식 문서 모음이다.
 이 폴더의 PDF 표지·목차를 직접 확인해 정리했으며, 쪽수와 개정은 이 저장소에 들어 있는 파일 기준이다.
 
-> 처음 시작하는 순서: **UM1724**(보드) → **Datasheet**(칩 사양) → **RM0008**(레지스터) → 필요할 때 **PM0056**(코어) / **UM1850**(HAL).
+> 처음 시작하는 순서: **[UM1724](UM1724_User_Manual_STM32Nucleo64.pdf)**(보드) → **[Datasheet](Datasheet_stm32f103.pdf)**(칩 사양) → **[RM0008](RM0008_Reference_manual.pdf)**(레지스터) → 필요할 때 **[PM0056](<PM0056-stm32f10xxx20xxx21xxxl1xxxx-cortexm3-programming-manual-stmicroelectronics.pdf>)**(코어) / **[UM1850](HAL_UM1850_hal_and_lowlayer_drivers.pdf)**(HAL).
 
 ## 1. 문서 목록
 
 | 파일 | 문서 | 개정 / 분량 | 내용 |
 |---|---|---|---|
 | [UM1724_User_Manual_STM32Nucleo64.pdf](UM1724_User_Manual_STM32Nucleo64.pdf) | UM1724 | Rev 17 (2025-09) / 91쪽 | Nucleo-64(MB1136) 보드 사용자 매뉴얼. 점퍼(JP), 솔더 브리지(SB), 클럭/USART 배선, 커넥터 핀 배치 |
-| [Schematic_STM32F103RB.pdf](Schematic_STM32F103RB.pdf) | MB1136 회로도 | 5장(sheet) | 보드 회로도: 개요, 전원, MCU, ST-LINK/V2-1, 확장 커넥터 |
-| [DB2196_Nucleo_64_boards.pdf](DB2196_Nucleo_64_boards.pdf) | DB2196 | Rev 22 (2026-02) / 13쪽 | Nucleo-64 **전 제품군** 데이터브리프(F103RB 포함). 보드 특징 요약 |
 | [Datasheet_stm32f103.pdf](Datasheet_stm32f103.pdf) | DS5319 | Rev 19 (2023-09) / 114쪽 | STM32F103x8/xB(64/128KB Flash) 데이터시트: 핀 배치, 메모리 맵, 전기적 특성, 패키지 |
 | [RM0008_Reference_manual.pdf](RM0008_Reference_manual.pdf) | RM0008 | Rev 21 / 1136쪽 | STM32F10xxx **레퍼런스 매뉴얼**: 모든 주변장치와 레지스터 상세 |
 | [PM0056-stm32f10xxx20xxx21xxxl1xxxx-cortexm3-programming-manual-stmicroelectronics.pdf](<PM0056-stm32f10xxx20xxx21xxxl1xxxx-cortexm3-programming-manual-stmicroelectronics.pdf>) | PM0056 | Rev 7 (2024-12) / 156쪽 | Cortex-M3 **프로그래밍 매뉴얼**: 명령어 집합, NVIC, SCB, SysTick, 폴트 |
 | [HAL_UM1850_hal_and_lowlayer_drivers.pdf](HAL_UM1850_hal_and_lowlayer_drivers.pdf) | UM1850 | Rev 3 (2020-02) / 1208쪽 | STM32F1 **HAL/LL 드라이버** API 설명 |
+| [Schematic_STM32F103RB.pdf](Schematic_STM32F103RB.pdf) | MB1136 회로도 | 5장(sheet) | 보드 회로도: 개요, 전원, MCU, ST-LINK/V2-1, 확장 커넥터 |
+| [DB2196_Nucleo_64_boards.pdf](DB2196_Nucleo_64_boards.pdf) | DB2196 | Rev 22 (2026-02) / 13쪽 | Nucleo-64 **전 제품군** 데이터브리프(F103RB 포함). 보드 특징 요약 |
 | [AN2586-getting-started-with-stm32f10xxx-hardware-development-stmicroelectronics.pdf](<AN2586-getting-started-with-stm32f10xxx-hardware-development-stmicroelectronics.pdf>) | AN2586 | Rev 8 (2022-12) / 29쪽 | STM32F10xxx **하드웨어 설계** 입문: 전원, 클럭, 리셋, 부트 모드, 디버그 |
 | [AN2606-introduction-to-system-memory-boot-mode-on-stm32-mcus-stmicroelectronics.pdf](<AN2606-introduction-to-system-memory-boot-mode-on-stm32-mcus-stmicroelectronics.pdf>) | AN2606 | Rev 70 (2026-02) / 553쪽 | **시스템 메모리 부트로더** (USART/CAN/USB 등으로 Flash 다운로드). 전 STM32 시리즈 공통 문서 |
+| [ES096-stm32f101x8b-stm32f102x8b-and-stm32f103x8b-mediumdensity-device-limitations-stmicroelectronics.pdf](<ES096-stm32f101x8b-stm32f102x8b-and-stm32f103x8b-mediumdensity-device-limitations-stmicroelectronics.pdf>) | ES096 | Rev 15 (2022-03) / 31쪽 | STM32F101/102/103 **x8/xB**(중밀도, F103RB 포함) **디바이스 errata**: 실리콘 결함과 우회 방법, 문서 오류 |
 | [UM1727_Getting_started.pdf](UM1727_Getting_started.pdf) | UM1727 | Rev 5 (2016-01) / 22쪽 | Nucleo 소프트웨어 개발 도구(IAR, Keil, TrueSTUDIO, SW4STM32) 시작 가이드 |
-| [ES0340-stm32f101xcde-stm32f103xcde-device-errata-stmicroelectronics.pdf](<ES0340-stm32f101xcde-stm32f103xcde-device-errata-stmicroelectronics.pdf>) | ES0340 | Rev 17 (2022-06) / 38쪽 | STM32F101/103 **xC/D/E** 디바이스 errata (아래 주의 참고) |
 | [NUCLEO-F103RB.url](NUCLEO-F103RB.url) | — | — | ST 공식 [Nucleo-F103RB 제품 페이지](https://www.st.com/en/evaluation-tools/nucleo-f103rb.html?ecmp=tt9470_gl_link_feb2019&rt=db&id=DB2196) 바로가기 |
 
 ### 사용할 때 알아 둘 점
-- **ES0340 은 F103RB 에 적용되지 않는다.** 표지의 적용 대상이 STM32F101/103 **xC/D/E**(대용량) 부품번호(RC, RD, RE, VC…ZE)이고, F103RB 는 **xB**(중밀도)이다. F103RB 의 errata 는 ST 사이트의 STM32F103x8/xB 전용 errata 시트를 따로 받아서 확인해야 한다.
+- **ES096 은 F103RB 전용 errata** 다. 적용 대상은 STM32F103x8/xB 이며, 모든 실리콘 리비전(A, B, Z, Y/X/1/2/3)에 걸쳐 결함 여부를 표로 보여 준다. 예제와 직접 관련된 항목:
+  - **2.2.2 디버그 레지스터를 사용자 소프트웨어가 읽을 수 없음 (우회 방법 없음)**: `DBGMCU_IDCODE` 와 `DBGMCU_CR` 는 디버그 모드에서만 읽히고, 디버거 없이 실행하면 **0x00** 이 읽힌다. [12_DeviceInfo_UniqueID](../Examples/08_Clock_System/12_DeviceInfo_UniqueID_Reg_c) 의 `DEV_ID`/`REV_ID` 는 디버거를 연결한 상태에서만 정상값(0x410)이 나온다.
+  - **2.2.3 Stop 모드 디버그와 SysTick**: `DBG_STOP` 을 켜고 Stop 모드를 디버그하면 SysTick 인터럽트가 MCU 를 깨운다. Stop 모드를 디버그할 때는 SysTick 인터럽트를 끈다 ([04_Stop_Mode_EXTI](../Examples/09_WatchDog_Sleep/04_Stop_Mode_EXTI_HAL_c)).
+  - **2.8.x I2C**: 이벤트(EV7, EV6_1 등)를 제때 처리하지 못하면 바이트가 더 받아지거나 빠질 수 있다. DMA 를 쓰거나 I2C 인터럽트 우선순위를 가장 높게 두는 것이 권장 우회 방법이다.
 - **UM1727 은 오래된 문서(2016)** 라서 소개하는 IDE(TrueSTUDIO, SW4STM32)는 현재 지원이 종료되었다. 빌드/디버그 흐름은 이 저장소의 PlatformIO 또는 STM32CubeIDE 기준으로 보고, UM1727 은 ST-LINK 드라이버 설치와 Nucleo 개념 이해용으로만 참고한다.
 - **AN2606 은 전 시리즈 공통 문서(553쪽)** 다. F103 부분(STM32F10xxx 부트로더 절)만 찾아 읽으면 된다.
 - **DB2196 은 모든 Nucleo-64 보드용** 이라 F103RB 만의 상세 정보는 UM1724 와 회로도가 정확하다.
-- **시판 교재(Joseph Yiu, *The Definitive Guide to ARM Cortex-M3 and Cortex-M4 Processors*)는 저작권 자료라 저장소에 포함하지 않는다.** 필요하면 각자 구해서 이 폴더에 두면 되고, `.gitignore` 로 커밋되지 않게 막아 두었다.
-- 문서 개정은 ST 사이트에서 계속 올라가므로, 레지스터 값 등 중요한 내용은 최신 개정과 대조한다.
+- **시판 교재(Joseph Yiu, *The Definitive Guide to ARM Cortex-M3 and Cortex-M4 Processors*)는 저작권 자료라 저장소에 포함하지 않는다.**
+- 문서 개정은 ST 사이트에서 계속 올라가므로, 레지스터 값 등 중요한 내용은 최신 개정을 참고할 필요가 있다.
 
 ## 2. 이럴 때는 이 문서
 
 | 알고 싶은 것 | 볼 문서 |
 |---|---|
-| 보드의 LED/버튼/USART 핀, 점퍼, 솔더 브리지 | UM1724 (7장 하드웨어 배치와 설정), 회로도 |
-| 특정 핀의 대체 기능(AF)과 핀 배치, 전기적 한계값 | Datasheet (핀 배치, 핀 정의 표) |
-| 레지스터 이름·비트 의미, 주변장치 동작 원리 | RM0008 (해당 주변장치 장) |
-| 인터럽트 우선순위, SysTick, SCB, 폴트 레지스터 | PM0056 (2장 코어, 4장 코어 주변장치) |
-| `HAL_xxx_Init()`, 콜백, LL API 의 사용법 | UM1850 |
-| 전원/클럭/리셋/부트 핀 하드웨어 설계 | AN2586 |
-| 시스템 메모리 부트로더로 UART/USB 다운로드 | AN2606 |
+| 보드의 LED/버튼/USART 핀, 점퍼, 솔더 브리지 | [UM1724](UM1724_User_Manual_STM32Nucleo64.pdf) (7장 하드웨어 배치와 설정), [회로도](Schematic_STM32F103RB.pdf) |
+| 특정 핀의 대체 기능(AF)과 핀 배치, 전기적 한계값 | [Datasheet](Datasheet_stm32f103.pdf) (핀 배치, 핀 정의 표) |
+| 레지스터 이름·비트 의미, 주변장치 동작 원리 | [RM0008](RM0008_Reference_manual.pdf) (해당 주변장치 장) |
+| 인터럽트 우선순위, SysTick, SCB, 폴트 레지스터 | [PM0056](<PM0056-stm32f10xxx20xxx21xxxl1xxxx-cortexm3-programming-manual-stmicroelectronics.pdf>) (2장 코어, 4장 코어 주변장치) |
+| `HAL_xxx_Init()`, 콜백, LL API 의 사용법 | [UM1850](HAL_UM1850_hal_and_lowlayer_drivers.pdf) |
+| 전원/클럭/리셋/부트 핀 하드웨어 설계 | [AN2586](<AN2586-getting-started-with-stm32f10xxx-hardware-development-stmicroelectronics.pdf>) |
+| 시스템 메모리 부트로더로 UART/USB 다운로드 | [AN2606](<AN2606-introduction-to-system-memory-boot-mode-on-stm32-mcus-stmicroelectronics.pdf>) |
+| 레퍼런스 매뉴얼대로 했는데 동작이 다를 때 (실리콘 결함) | [ES096](<ES096-stm32f101x8b-stm32f102x8b-and-stm32f103x8b-mediumdensity-device-limitations-stmicroelectronics.pdf>) |
 
-## 3. RM0008 장(chapter) 지도 — F103RB 기준
+## 3. [RM0008](RM0008_Reference_manual.pdf) 장(chapter) 지도 — F103RB 기준
 
 F103RB 는 중밀도 소자이다. 데이터시트(DS5319) 표지 요약: **타이머 7개**(16비트 범용 3개 + 모터 제어용 1개 + 워치독 2개 + SysTick), **ADC 2개**, **통신 인터페이스 9개**(USART 최대 3, I2C 최대 2, SPI 최대 2, CAN, USB), **7채널 DMA**. DAC/SDIO/FSMC 는 이 소자의 기능 목록에 없다.
 RM0008 은 여러 밀도를 한 문서에 담아서 **F103RB 에는 없는 장**이 섞여 있다.
@@ -81,7 +85,7 @@ RM0008 은 여러 밀도를 한 문서에 담아서 **F103RB 에는 없는 장**
 
 "쪽"은 PDF 상의 쪽 번호이고, `—` 는 목차에서 확인하지 못한 항목이다. 예제의 소스 주석에도 참조한 장/절을 적어 두었다.
 
-## 4. PM0056 (Cortex-M3) 절 지도
+## 4. [PM0056](<PM0056-stm32f10xxx20xxx21xxxl1xxxx-cortexm3-programming-manual-stmicroelectronics.pdf>) (Cortex-M3) 절 지도
 
 | 절 | 내용 | 쪽 | 관련 예제 |
 |---|---|---|---|
@@ -102,7 +106,7 @@ RM0008 은 여러 밀도를 한 문서에 담아서 **F103RB 에는 없는 장**
 | 4.4.10 / 4.4.11 | SCB_CFSR / SCB_HFSR (폴트 원인) | 142 / 145 | [08_HardFault_Diagnosis](../Examples/08_Clock_System/08_HardFault_Diagnosis_Reg_c) |
 | 4.5 | SysTick (STK_CTRL/LOAD/VAL) | 150 | [05_SysTick](../Examples/08_Clock_System/05_SysTick_Reg_c), [07_PendSV_ContextSwitch](../Examples/12_Advanced_Topics/07_PendSV_ContextSwitch_Reg_c) |
 
-## 5. Nucleo-F103RB 보드 핵심 정보 (UM1724 기준)
+## 5. Nucleo-F103RB 보드 핵심 정보 ([UM1724](UM1724_User_Manual_STM32Nucleo64.pdf) 기준)
 
 | 항목 | 내용 |
 |---|---|
@@ -129,4 +133,3 @@ RM0008 은 여러 밀도를 한 문서에 담아서 **F103RB 에는 없는 장**
 
 - 저장소 루트의 [README.md](../README.md) 는 전체 구조와 예제 표를, 이 문서는 **참고 문서의 상세**를 다룬다.
 - 예제 폴더는 기능별 그룹으로 정리되어 있다: [Examples/](../Examples).
-- 새 PDF 를 추가할 때는 위 "문서 목록" 표에 **문서 번호, 개정, 쪽수, 한 줄 설명**을 함께 추가한다.

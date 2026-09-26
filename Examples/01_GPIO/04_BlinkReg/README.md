@@ -16,9 +16,9 @@
 ## 핵심 학습 내용
 
 - **GPIO 설정 3단계를 레지스터로 확인**
-  1. `RCC->APB2ENR |= RCC_APB2ENR_IOPAEN` : GPIOA 클럭 허용
-  2. `GPIOA->CRL` 의 PA5 필드(비트 23:20)를 `CNF=00`(범용 푸시풀) + `MODE=01`(출력)으로 설정. 핀당 4비트이므로 `5 * 4` 비트 시프트.
-  3. `GPIOA->BSRR = GPIO_BSRR_BS5 / BR5` : 원자적 set/reset (`ODR`을 읽고-수정-쓰기 하지 않음)
+  1. `RCC->APB2ENR |= RCC_APB2ENR_IOPAEN` : GPIOA 클럭 허용 (RM0008 7.3.7, p.112)
+  2. `GPIOA->CRL` 의 PA5 필드(비트 23:20)를 `CNF=00`(범용 푸시풀) + `MODE=01`(출력)으로 설정. 핀당 4비트이므로 `5 * 4` 비트 시프트. (RM0008 9.2.1, p.171 / 값의 의미는 Table 20·21, p.161)
+  3. `GPIOA->BSRR = GPIO_BSRR_BS5 / BR5` : 원자적 set/reset (`ODR`을 읽고-수정-쓰기 하지 않음) (RM0008 9.2.5, p.173)
 - **SysTick 기반 `delay_ms`**: `SysTick_Config(SystemCoreClock / 1000)`으로 1ms 예외를 만들고, `SysTick_Handler`가 `msTicks`(`volatile`)를 증가시킨다. `(msTicks - start) < ms` 뺄셈 비교는 32비트 오버플로에도 안전하다.
 - HAL이 내부에서 하는 일을 직접 해 보며 `02_BlinkHAL`, `03_BlinkLL`의 API가 무엇을 감싸는지 이해한다.
 
@@ -52,12 +52,14 @@ PlatformIO가 제공하는 `system_stm32f1xx.c`의 `SystemInit()`은 PLL을 켜�
 
 ### 3. SysTick 사용 방식 — HAL을 흉내 낸 인터럽트 틱
 
-| 레지스터·비트 | `SysTick_Config()`가 쓰는 값 |
-|---|---|
-| `SysTick->LOAD` | `SystemCoreClock/1000 - 1` (= 7999) |
-| `SCB->SHP[11]` (SysTick 우선순위) | 가장 낮은 우선순위 |
-| `SysTick->VAL` | 0 (카운터 초기화) |
-| `SysTick->CTRL` | `CLKSOURCE`(HCLK) \| **`TICKINT`**(예외 허용) \| `ENABLE` |
+| 레지스터·비트 | `SysTick_Config()`가 쓰는 값 | PM0056 위치 |
+|---|---|---|
+| `SysTick->LOAD` | `SystemCoreClock/1000 - 1` (= 7999) | 4.5.2 STK_LOAD, p.152 |
+| `SCB->SHP[11]` (SysTick 우선순위) | 가장 낮은 우선순위 | 4.4.8 SHPR3, p.138 |
+| `SysTick->VAL` | 0 (카운터 초기화) | 4.5.3 STK_VAL, p.153 |
+| `SysTick->CTRL` | `CLKSOURCE`(HCLK) \| **`TICKINT`**(예외 허용) \| `ENABLE` | 4.5.1 STK_CTRL, p.151 |
+
+SysTick 은 STM32 주변장치가 아니라 Cortex-M3 코어에 들어 있으므로 RM0008 이 아니라 **PM0056** 에 설명되어 있다.
 
 LL 예제와 달리 **`TICKINT`를 켜므로** 1ms마다 `SysTick_Handler`(ISR)가 실제로 호출된다.
 ISR에서 공유하는 `msTicks`는 반드시 `volatile`로 선언해야 컴파일러가 `delay_ms()`의 while 루프에서 값을 레지스터에 캐싱하지 않는다.
@@ -82,7 +84,21 @@ CubeMX가 해 주던 ②~⑤단계(핀·클럭 설정, 초기화 코드 생성)�
 
 - VS Code + PlatformIO 확장 (CubeMX는 필요 없음)
 - NUCLEO-F103RB 보드, USB 케이블(ST-LINK 드라이버 설치)
-- 참고 문서: RM0008 (STM32F10x Reference Manual) — 7장 RCC(`RCC_APB2ENR`), 9장 GPIO(`GPIOx_CRL`, `GPIOx_BSRR`), PM0056 (Cortex-M3 Programming Manual) — SysTick
+- 참고 문서: 아래 표의 레지스터를 해당 쪽에서 확인하며 코드를 작성한다. (쪽수는 저장소 [Docs](../../../Docs) 폴더의 PDF 기준: RM0008 Rev 21, PM0056 Rev 7)
+
+| 레지스터 | 이 예제에서 쓰는 비트 | 문서 · 절 | 쪽 |
+|---|---|---|---|
+| 메모리 맵 (GPIOA = `0x4001 0800`, RCC = `0x4002 1000`) | — | [RM0008](../../../Docs/RM0008_Reference_manual.pdf) 3.3 Memory map | p.51 |
+| `RCC_APB2ENR` | `IOPAEN`(비트 2) | RM0008 7.3.7 APB2 peripheral clock enable register | p.112 |
+| GPIO 핀 설정표 (CNF/MODE 값의 의미) | `CNF=00` 푸시풀, `MODE=01` 10MHz | RM0008 9.1 Table 20 Port bit configuration, Table 21 Output MODE bits | p.161 |
+| `GPIOx_CRL` | `CNF5[1:0]`(비트 23:22), `MODE5[1:0]`(비트 21:20) | RM0008 9.2.1 Port configuration register low | p.171 |
+| `GPIOx_ODR` | `ODR5` (디버거로 확인) | RM0008 9.2.4 Port output data register | p.173 |
+| `GPIOx_BSRR` | `BS5`(비트 5), `BR5`(비트 21) | RM0008 9.2.5 Port bit set/reset register | p.173 |
+| `STK_CTRL` / `STK_LOAD` / `STK_VAL` | `ENABLE`, `TICKINT`, `CLKSOURCE` / 7999 / 0 | [PM0056](<../../../Docs/PM0056-stm32f10xxx20xxx21xxxl1xxxx-cortexm3-programming-manual-stmicroelectronics.pdf>) 4.5.1 ~ 4.5.3 SysTick | p.151 ~ 153 |
+| `SCB_SHPR3` | SysTick 우선순위 | PM0056 4.4.8 System handler priority registers | p.138 |
+| 벡터 테이블 (`SysTick_Handler` 위치) | 예외 번호 15 | PM0056 2.3.4 Vector table | — |
+
+LD2 가 PA5 에 연결된 것은 보드 배선이므로 RM0008 이 아니라 [UM1724](../../../Docs/UM1724_User_Manual_STM32Nucleo64.pdf)(7.6 LEDs, p.24)와 회로도에서 확인한다.
 
 ### 1. PlatformIO 새 프로젝트 만들기
 

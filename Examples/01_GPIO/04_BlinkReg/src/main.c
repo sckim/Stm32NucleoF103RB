@@ -46,10 +46,10 @@ int main(void)
     {
         // 3. PA5 HIGH (LED 켜기) - BSRR 사용
         GPIOA->BSRR = GPIO_BSRR_BS5;
-        delay_ms(500);
+        delay_ms(1000);
 
         // 4. PA5 LOW (LED 끄기)
         GPIOA->BSRR = GPIO_BSRR_BR5;
-        delay_ms(500);
+        delay_ms(1000);
     }
 }

@@ -198,8 +198,8 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : LD2_Pin */
@@ -219,16 +219,20 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+/**
+  * @brief  외부 인터럽트가 발생했을 때 HAL 라이브러리가 자동으로 호출하는 콜백 함수
+  * @param  GPIO_Pin: 인터럽트를 유발한 핀 번호
+  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
   // 1. 여러 인터럽트 핀 중 현재 발생한 인터럽트가 버튼 핀(B1_Pin)인지 확인
   if (GPIO_Pin == B1_Pin)
   {
-    /* * [생체신호처리/임베디드 핵심 팁]
+    /* * [생체신호처리/임베디드 핵심 팁] 
      * 인터럽트 서비스 루틴(ISR) 내부에서는 HAL_Delay()나 무거운 연산을 절대 사용하면 안 됨.
      * 여기서는 플래그 변수만 토글하거나, 아래와 같이 아주 가벼운 하드웨어 제어만 수행하는 것이 정석임.
      */
-
+    
     // 버튼이 눌릴 때마다 LD2 LED 상태를 반전
     HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
   }

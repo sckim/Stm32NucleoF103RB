@@ -21,4 +21,4 @@ PA1(A1)에 가변저항(0~3.3V)을 연결하면 정규 채널 값이 변한다. 
 
 ## 관련 예제
 
-`03_ADC/01_ADC_Temperature`(폴링), `03_ADC/03_ADC_AnalogWatchdog_HAL_c`(연속 변환 + DMA 패턴).
+`03_ADC/01_ADC_Temperature`(폴링), `03_ADC/04_ADC_AnalogWatchdog_HAL_c`(연속 변환 + DMA 패턴).

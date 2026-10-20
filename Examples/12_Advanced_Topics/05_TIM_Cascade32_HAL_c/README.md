@@ -21,4 +21,4 @@
 
 ## 관련 예제
 
-`06_Timers_RTC/08_TIM_OnePulse_HCSR04_HAL_c`, `03_ADC/02_ADC_DMA_TimTrigger_HAL_c`(타이머 TRGO 를 다른 장치에 연결).
+`06_Timers_RTC/08_TIM_OnePulse_HCSR04_HAL_c`, `03_ADC/03_ADC_DMA_TimTrigger_HAL_c`(타이머 TRGO 를 다른 장치에 연결).

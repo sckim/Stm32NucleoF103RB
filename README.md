@@ -37,10 +37,11 @@
 | 05 | `02_USART/05_UART_CLI_HAL_c` | HAL, UART | (검토 전) 명령줄 인터페이스: 줄 편집, 명령 테이블(help/led/uptime/echo/peek/reset) |
 | 06 | `02_USART/06_USART_HalfDuplex_HAL_c` | HAL, UART | (검토 전) USART 단선 반이중(PA9 한 선), 방향 전환, 오픈드레인 버스 |
 | 01 | `03_ADC/01_ADC_Temperature` | HAL, ADC | 내부 온도 센서 ADC 값을 UART로 출력 |
-| 02 | `03_ADC/02_ADC_DMA_TimTrigger_HAL_c` | HAL, ADC, DMA, TIM | (검토 전) TIM3 TRGO 트리거 1kHz 2채널 스캔, DMA 원형 저장, HT/TC 콜백 |
-| 03 | `03_ADC/03_ADC_AnalogWatchdog_HAL_c` | HAL, ADC, DMA | (검토 전) ADC 아날로그 워치독으로 전압 창(window) 이탈 감지 인터럽트 |
-| 04 | `03_ADC/04_ADC_Vrefint_VDDA_HAL_c` | HAL, ADC | (검토 전) Vrefint 로 실제 VDDA 를 측정해 ADC 값을 보정 |
-| 05 | `03_ADC/05_ADC_Potentiometer_PWM_HAL_c` | HAL, ADC, TIM | (검토 전) 가변저항 → 이동평균/히스테리시스/감마 → PWM 밝기 |
+| 02 | `03_ADC/02_ADC_Multi_HAL_c` | HAL, ADC | (검토 전) 스캔 + 불연속 모드로 DMA 없이 4채널(A0/A1/A2/Vrefint) 폴링 |
+| 03 | `03_ADC/03_ADC_DMA_TimTrigger_HAL_c` | HAL, ADC, DMA, TIM | (검토 전) TIM3 TRGO 트리거 1kHz 2채널 스캔, DMA 원형 저장, HT/TC 콜백 |
+| 04 | `03_ADC/04_ADC_AnalogWatchdog_HAL_c` | HAL, ADC, DMA | (검토 전) ADC 아날로그 워치독으로 전압 창(window) 이탈 감지 인터럽트 |
+| 05 | `03_ADC/05_ADC_Vrefint_VDDA_HAL_c` | HAL, ADC | (검토 전) Vrefint 로 실제 VDDA 를 측정해 ADC 값을 보정 |
+| 06 | `03_ADC/06_ADC_Potentiometer_PWM_HAL_c` | HAL, ADC, TIM | (검토 전) 가변저항 → 이동평균/히스테리시스/감마 → PWM 밝기 |
 | 01 | `04_I2C_Communication/01_PCF8574` | HAL, I2C | PCF8574 I2C 확장 IC를 통한 문자 LCD 제어, I2C 주소 스캐너 포함 |
 | 02 | `04_I2C_Communication/02_I2C_Scan_HAL_c` | HAL, I2C | (검토 전) I2C1 버스 스캐너(0x08~0x77), 흔한 장치 이름 표시 |
 | 03 | `04_I2C_Communication/03_I2C_MPU6050_HAL_c` | HAL, I2C | (검토 전) MPU6050 WHO_AM_I 확인과 가속도/자이로/온도 14바이트 연속 읽기 |

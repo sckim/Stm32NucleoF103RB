@@ -21,4 +21,4 @@ PA0(ADC1_IN0), PA1(ADC2_IN1)에 각각 신호(가변저항 등)를 연결. 같�
 
 ## 관련 예제
 
-`03_ADC/02_ADC_DMA_TimTrigger_HAL_c`(단일 ADC 스캔), `01_ADC_Injected_HAL_c`.
+`03_ADC/03_ADC_DMA_TimTrigger_HAL_c`(단일 ADC 스캔), `01_ADC_Injected_HAL_c`.

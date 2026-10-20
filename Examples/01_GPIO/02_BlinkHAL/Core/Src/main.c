@@ -63,7 +63,7 @@ static void MX_GPIO_Init(void);
   */
 int main(void)
 {
-
+   SystemInit();
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -114,13 +114,12 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
-  RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL8;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL16;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -150,6 +149,17 @@ static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   /* USER CODE BEGIN MX_GPIO_Init_1 */
+  /* [HAL] 사용하지 않는 헤더 핀 D6(PB10), D10(PB6)을 풀다운 입력으로 고정한다.
+   * - 리셋 상태는 플로팅 입력(GPIOx_CRL/CRH 리셋값 0x4444_4444, CNF=01 MODE=00)이라
+   *   로직 분석기로 보면 누설/잡음 때문에 신호가 임의로 바뀌어 보인다.
+   * - HAL_GPIO_Init(GPIO_MODE_INPUT, GPIO_PULLDOWN)은 다음을 설정한다.
+   *     PB6 : GPIOB_CRL 비트 27:24 = CNF6=10, MODE6=00 (풀업/풀다운 입력)
+   *     PB10: GPIOB_CRH 비트 11:8  = CNF10=10, MODE10=00
+   *     그리고 GPIOB_BRR에 1을 써서 ODR 해당 비트=0 → 풀다운 선택 (RM0008 9.2.1~9.2.6)
+   * - D1(PA2)은 설정하지 않는다(Reset_State). NUCLEO 기본 설정(SB62 OFF, SB13 ON)에서
+   *   D1 헤더와 CN10-35는 PA2와 끊겨 있어 펌웨어 풀다운이 닿지 않는다(UM1724).
+   *   PA2는 ST-LINK 가상 COM 포트 수신선에 연결되어 있으므로 풀다운을 걸면 안 된다.
+   *   D1 헤더를 고정하려면 외부 풀다운 저항이나 GND 연결을 사용한다. */
 
   /* USER CODE END MX_GPIO_Init_1 */
 
@@ -174,6 +184,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : D6_Pin D10_Pin */
+  GPIO_InitStruct.Pin = D6_Pin|D10_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 

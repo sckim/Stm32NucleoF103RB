@@ -1,4 +1,4 @@
-# 02_ADC_DMA_TimTrigger_HAL_c
+# 03_ADC_DMA_TimTrigger_HAL_c
 
 > 계층: **HAL** + TIM + DMA — Claude 작성, 검토 전 (컴파일만 확인)
 

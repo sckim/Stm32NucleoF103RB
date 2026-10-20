@@ -1,5 +1,5 @@
 /**
- * 04_ADC_Vrefint_VDDA_HAL_c  —  [계층: HAL]  내부 기준전압(Vrefint)으로 실제 VDDA 를 측정하고 ADC 값을 보정
+ * 05_ADC_Vrefint_VDDA_HAL_c  —  [계층: HAL]  내부 기준전압(Vrefint)으로 실제 VDDA 를 측정하고 ADC 값을 보정
  *
  * 문제: ADC 는 "VDDA(기준전압) 대비 비율"을 변환한다. mV = raw x 3300 / 4095 는 VDDA 가 정확히 3.3V 일 때만 맞다.
  *       USB/배터리 전원에서 VDDA 가 3.0~3.4V 로 변하면 오차가 생긴다.

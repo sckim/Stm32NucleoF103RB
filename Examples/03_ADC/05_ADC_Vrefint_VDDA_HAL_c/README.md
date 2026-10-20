@@ -1,4 +1,4 @@
-# 04_ADC_Vrefint_VDDA_HAL_c
+# 05_ADC_Vrefint_VDDA_HAL_c
 
 > 계층: **HAL** — Claude 작성, 검토 전 (컴파일만 확인)
 
@@ -21,4 +21,4 @@
 
 ## 관련 예제
 
-`01_ADC_Temperature`(내부 채널 사용), `03_ADC_AnalogWatchdog_HAL_c`(PA0 입력).
+`01_ADC_Temperature`(내부 채널 사용), `04_ADC_AnalogWatchdog_HAL_c`(PA0 입력).

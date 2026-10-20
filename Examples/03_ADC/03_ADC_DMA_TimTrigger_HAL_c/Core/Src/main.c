@@ -1,5 +1,5 @@
 /**
- * 02_ADC_DMA_TimTrigger_HAL_c  —  [계층: HAL]  타이머 트리거 + ADC 스캔 + DMA 원형 저장
+ * 03_ADC_DMA_TimTrigger_HAL_c  —  [계층: HAL]  타이머 트리거 + ADC 스캔 + DMA 원형 저장
  *
  * 동작 (CPU 개입 없이 정확한 주기로 샘플링)
  *   TIM3 업데이트 이벤트(1kHz) --TRGO--> ADC1 외부 트리거 --> CH0(PA0), CH1(PA1) 2채널 스캔 변환

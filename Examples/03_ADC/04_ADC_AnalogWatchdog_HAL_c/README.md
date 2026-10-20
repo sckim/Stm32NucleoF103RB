@@ -1,4 +1,4 @@
-# 03_ADC_AnalogWatchdog_HAL_c
+# 04_ADC_AnalogWatchdog_HAL_c
 
 > 계층: **HAL** + DMA — Claude 작성, 검토 전 (컴파일만 확인)
 
@@ -22,4 +22,4 @@ PA0(A0)에 가변저항을 연결하고 0~3.3V로 돌린다. 창을 벗어나면
 
 ## 관련 예제
 
-`02_ADC_DMA_TimTrigger_HAL_c`(DMA 스캔), `01_ADC_Temperature`(폴링).
+`03_ADC_DMA_TimTrigger_HAL_c`(DMA 스캔), `01_ADC_Temperature`(폴링).

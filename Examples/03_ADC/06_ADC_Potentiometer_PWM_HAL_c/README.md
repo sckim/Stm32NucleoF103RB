@@ -1,4 +1,4 @@
-# 05_ADC_Potentiometer_PWM_HAL_c
+# 06_ADC_Potentiometer_PWM_HAL_c
 
 > 계층: **HAL + DMA** — Claude 작성, 검토 전 (PlatformIO 빌드만 확인)
 
@@ -21,4 +21,4 @@ PA1 에 가변저항 가운데 단자(양끝 3.3V/GND), PA0 → 330Ω → LED �
 
 ## 관련 예제
 
-`03_ADC_AnalogWatchdog_HAL_c`(연속 변환 + DMA 패턴), `06_Timers_RTC/02_TIM_PWM_HAL_c`.
+`04_ADC_AnalogWatchdog_HAL_c`(연속 변환 + DMA 패턴), `06_Timers_RTC/02_TIM_PWM_HAL_c`.

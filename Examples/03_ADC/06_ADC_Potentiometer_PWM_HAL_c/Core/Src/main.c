@@ -1,5 +1,5 @@
 /**
- * 05_ADC_Potentiometer_PWM_HAL_c  —  [계층: HAL]  가변저항으로 LED 밝기 조절: ADC(입력) + TIM PWM(출력) + 감마 보정
+ * 06_ADC_Potentiometer_PWM_HAL_c  —  [계층: HAL]  가변저항으로 LED 밝기 조절: ADC(입력) + TIM PWM(출력) + 감마 보정
  *
  * "센서 값 -> 처리 -> 액추에이터" 를 가장 단순하게 보여 주는 예제.
  *   입력 : PA1 (ADC1_IN1) 에 가변저항 가운데 단자, 양 끝은 3.3V / GND.  연속 변환 + DMA 로 최신값을 항상 변수에 유지.

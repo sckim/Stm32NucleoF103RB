@@ -124,9 +124,10 @@ int main(void)
 
   while (1)
   {
+    // ADC1_SR.EOC 플래그 대기 후 ADC1_DR에서 PA0(ADC1_IN0) 변환값(12bit, 0~4095) 읽기
     HAL_ADC_PollForConversion(&hadc1, 100);
     adc1 = HAL_ADC_GetValue(&hadc1);
-    printf("ADC Temperature = %d\r\n", adc1);
+    printf("ADC PA0 = %d (%d mV)\r\n", adc1, (int)(adc1 * 3300UL / 4095));
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -214,7 +215,7 @@ static void MX_ADC1_Init(void)
 
   /** Configure Regular Channel
   */
-  sConfig.Channel = ADC_CHANNEL_TEMPSENSOR;
+  sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = ADC_REGULAR_RANK_1;
   sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)

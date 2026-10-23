@@ -63,7 +63,7 @@ static void MX_GPIO_Init(void);
   */
 int main(void)
 {
-   SystemInit();
+
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */

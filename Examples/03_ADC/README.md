@@ -4,12 +4,12 @@ STM32F103의 12비트 ADC1(약 1µs 변환, 채널 0~17)을 폴링에서 시작�
 
 | 번호 | 예제 | 계층 | 핵심 |
 |---|---|---|---|
-| 01 | [01_ADC_Temperature](01_ADC_Temperature/README.md) | HAL | 내부 온도 센서, 연속 변환, 교정 |
-| 02 | [02_ADC_Multi_HAL_c](02_ADC_Multi_HAL_c/README.md) | HAL | 스캔 + 불연속 모드로 4채널(A0/A1/A2/Vrefint) 폴링 |
-| 03 | [03_ADC_DMA_TimTrigger_HAL_c](03_ADC_DMA_TimTrigger_HAL_c/README.md) | HAL, TIM, DMA | TIM3 TRGO 1kHz 트리거, 2채널 스캔, DMA 원형 |
-| 04 | [04_ADC_AnalogWatchdog_HAL_c](04_ADC_AnalogWatchdog_HAL_c/README.md) | HAL, DMA | 전압 창 이탈을 하드웨어가 감시 |
-| 05 | [05_ADC_Vrefint_VDDA_HAL_c](05_ADC_Vrefint_VDDA_HAL_c/README.md) | HAL | Vrefint로 실제 VDDA 측정 후 보정 |
-| 06 | [06_ADC_Potentiometer_PWM_HAL_c](06_ADC_Potentiometer_PWM_HAL_c/README.md) | HAL, DMA, TIM | 가변저항 → 이동평균/감마 → PWM 밝기 |
+| 01 | [01_ADC_Temperature](01_ADC_Temperature) | HAL | 내부 온도 센서, 연속 변환, 교정 |
+| 02 | [02_ADC_Multi_HAL_c](02_ADC_Multi_HAL_c) | HAL | 스캔 + 불연속 모드로 4채널(A0/A1/A2/Vrefint) 폴링 |
+| 03 | [03_ADC_DMA_TimTrigger_HAL_c](03_ADC_DMA_TimTrigger_HAL_c) | HAL, TIM, DMA | TIM3 TRGO 1kHz 트리거, 2채널 스캔, DMA 원형 |
+| 04 | [04_ADC_AnalogWatchdog_HAL_c](04_ADC_AnalogWatchdog_HAL_c) | HAL, DMA | 전압 창 이탈을 하드웨어가 감시 |
+| 05 | [05_ADC_Vrefint_VDDA_HAL_c](05_ADC_Vrefint_VDDA_HAL_c) | HAL | Vrefint로 실제 VDDA 측정 후 보정 |
+| 06 | [06_ADC_Potentiometer_PWM_HAL_c](06_ADC_Potentiometer_PWM_HAL_c) | HAL, DMA, TIM | 가변저항 → 이동평균/감마 → PWM 밝기 |
 
 ## 이 그룹에서 배우는 것
 

@@ -1,180 +1,134 @@
-# 04_BlinkReg
+# 10_AD2Test
 
-> 계층: **레지스터 직접 제어(CMSIS)** (PlatformIO `framework = cmsis`, HAL/LL 없음, CubeMX 사용 안 함)
+> 계층: **HAL** (STM32CubeMX 생성 프로젝트, PlatformIO `framework = stm32cube`)
 
-`RCC`, `GPIOA->CRL`, `GPIOA->BSRR` 레지스터를 직접 다뤄 LD2(PA5)를 0.5초 간격으로 점멸한다. 딜레이도 SysTick 인터럽트로 직접 만든다.
+Nucleo-F103RB의 Arduino 헤더 핀 14개(D2~D13, A4, A5)를 **하나씩 차례로 1초씩 켜고**, 한 바퀴가 끝날 때마다 USART2(PA2/D1)로 `Hello, AD2`를 보낸다.
+핀마다 펄스가 순서대로 나오므로, 외부 계측기(예: Digilent Analog Discovery 2 같은 로직 분석기/패턴 생성 확인용)로 **헤더 핀 배선과 핀 매핑을 한눈에 검증**하는 용도의 예제다. (폴더 이름의 "AD2"는 이 용도를 가리키는 것으로 보이며, 코드에는 별도 설명이 없다.)
 
-> [02_BlinkHAL](../02_BlinkHAL/README.md) → [03_BlinkLL](../03_BlinkLL/README.md)에 이어지는 예제다.
-> HAL/LL 예제는 **CubeMX가 만든 뼈대 위에 두 줄만 추가**했지만, 이 예제는 **CubeMX 없이 `main.c` 하나를 처음부터 작성**한다.
-> 이 문서는 앞의 두 예제와 **달라지는 부분**을 중심으로 설명한다.
+> 원래 레지스터(CMSIS) 직접 제어로 작성했던 예제를 **HAL + CubeMX 구조로 옮긴 것**이다.
+> [04_BlinkReg](../04_BlinkReg/README.md)(레지스터로 PA5 한 핀 점멸)의 확장판이었던 코드를 **핀 표(배열) + 반복문**으로 HAL API에 맞춰 일반화했다.
 
 ## 동작
 
-`GPIOA->BSRR = GPIO_BSRR_BS5` → `delay_ms(500)` → `GPIOA->BSRR = GPIO_BSRR_BR5` → `delay_ms(500)` 반복.
-(HAL/LL은 1초마다 토글, 이 예제는 0.5초 켜짐 + 0.5초 꺼짐 → 점멸 주기는 같은 1초.)
+```
+main():  HAL_Init() → SystemClock_Config() → MX_GPIO_Init() → MX_USART2_UART_Init()
+loop  :  for 각 핀(D2 … D13, A4, A5)
+             HAL_GPIO_WritePin(SET) → HAL_Delay(1000) → HAL_GPIO_WritePin(RESET)   (다음 핀으로 바로 이동)
+         HAL_UART_Transmit("Hello, AD2\r\n")
+```
+
+- 한 바퀴 시간 ≈ 핀 14개 × 1000ms + 메시지 송신 약 12.5ms(12글자 × 10비트 / 9600bps) ≈ **14초**.
+- D13(PA5)은 온보드 LD2와 같은 핀이다. 1초 동안 켜지므로 LED로도 순서를 눈으로 확인할 수 있다.
+- 로직 분석기로 빠른 펄스를 보고 싶다면 `HAL_Delay()` 값을 줄인다 (실습 과제 1).
+
+## 핀 매핑 (`arduino_pins[]` 순서)
+
+CubeMX에서 각 핀에 라벨을 붙여 `main.h`에 `D2_Pin` / `D2_GPIO_Port` 형태의 정의가 생성되고, `main.c`의 `arduino_pins[]`가 이를 사용한다.
+
+| 순서 | Arduino | MCU 핀 | CubeMX 라벨 | 비고 |
+|---|---|---|---|---|
+| 1 | D2 | PA10 | `D2` | |
+| 2 | D3 | PB3 | `D3` | JTAG(JTDO) 핀 → SWJ 설정 필요 |
+| 3 | D4 | PB5 | `D4` | |
+| 4 | D5 | PB4 | `D5` | JTAG(NJTRST) 핀 → SWJ 설정 필요 |
+| 5 | D6 | PB10 | `D6` | |
+| 6 | D7 | PA8 | `D7` | |
+| 7 | D8 | PA9 | `D8` | |
+| 8 | D9 | PC7 | `D9` | |
+| 9 | D10 | PB6 | `D10` | |
+| 10 | D11 | PA7 | `D11` | |
+| 11 | D12 | PA6 | `D12` | |
+| 12 | D13 | PA5 | `LD2` | 온보드 LD2 |
+| 13 | A4 | PC1 | `A4` | 아날로그 헤더 |
+| 14 | A5 | PC0 | `A5` | 아날로그 헤더 |
+
+**제외한 핀**
+
+- **D0(PA3) / D1(PA2)**: USART2 RX/TX와 겹친다. 이 예제는 D1(PA2)을 GPIO가 아니라 **USART2_TX**로 쓴다. CubeMX가 USART2를 Asynchronous로 설정하면 PA3(RX)도 함께 대체 기능으로 설정되지만 코드에서는 수신하지 않는다.
+- **D14(PB9) / D15(PB8)**: I2C 핀(SDA/SCL)이라 사용하지 않는다. 이 보드에서 D14/D15(PB9/PB8)와 A4/A5(PC1/PC0)는 서로 다른 핀이다.
 
 ## 핵심 학습 내용
 
-- **GPIO 설정 3단계를 레지스터로 확인**
-  1. `RCC->APB2ENR |= RCC_APB2ENR_IOPAEN` : GPIOA 클럭 허용 (RM0008 7.3.7, p.112)
-  2. `GPIOA->CRL` 의 PA5 필드(비트 23:20)를 `CNF=00`(범용 푸시풀) + `MODE=01`(출력)으로 설정. 핀당 4비트이므로 `5 * 4` 비트 시프트. (RM0008 9.2.1, p.171 / 값의 의미는 Table 20·21, p.161)
-  3. `GPIOA->BSRR = GPIO_BSRR_BS5 / BR5` : 원자적 set/reset (`ODR`을 읽고-수정-쓰기 하지 않음) (RM0008 9.2.5, p.173)
-- **SysTick 기반 `delay_ms`**: `SysTick_Config(SystemCoreClock / 1000)`으로 1ms 예외를 만들고, `SysTick_Handler`가 `msTicks`(`volatile`)를 증가시킨다. `(msTicks - start) < ms` 뺄셈 비교는 32비트 오버플로에도 안전하다.
-- HAL이 내부에서 하는 일을 직접 해 보며 `02_BlinkHAL`, `03_BlinkLL`의 API가 무엇을 감싸는지 이해한다.
+- **CubeMX 생성 코드와 `USER CODE` 영역**: 핀/클럭/UART 초기화(`MX_GPIO_Init`, `MX_USART2_UART_Init`, `SystemClock_Config`)는 CubeMX가 생성한다. 순차 출력 루프와 `arduino_pins[]` 표는 `USER CODE BEGIN PV` / `USER CODE BEGIN 3` 안에 있어 **CubeMX로 코드를 다시 생성해도 보존**된다.
+- **핀 표 + 반복문으로 HAL 접근 일반화**: `GpioPin {port, pin}` 배열을 돌며 `HAL_GPIO_WritePin()`으로 모든 핀을 같은 코드로 제어한다. HAL 핀 값은 번호가 아니라 **비트 마스크**(`GPIO_PIN_x = 1 << n`)다.
+- **초기 상태 LOW**: `MX_GPIO_Init()`이 `HAL_GPIO_Init()`(→ `GPIOx_CRL/CRH`) 전에 `HAL_GPIO_WritePin(RESET)`(→ `GPIOx_BSRR`)을 먼저 호출해, 출력으로 바뀌는 순간 핀이 HIGH로 튀지 않게 한다.
+- **JTAG 핀 해방 (`AFIO_MAPR.SWJ_CFG[2:0]`)**: PB3/PB4는 리셋 직후 JTAG 용도로 점유되어 있다. CubeMX에서 SYS의 Debug를 **Serial Wire**로 두면 `HAL_MspInit()`(`stm32f1xx_hal_msp.c`)에 `__HAL_AFIO_REMAP_SWJ_NOJTAG()`가 생성되어 **JTAG-DP만 끄고 SW-DP(ST-LINK 디버깅)는 유지**한다. 이 매크로 호출 전에 `__HAL_RCC_AFIO_CLK_ENABLE()`(`RCC_APB2ENR.AFIOEN`)도 함께 생성된다.
+- **USART2 HAL 초기화**
+  1. `MX_USART2_UART_Init()`에서 `huart2.Init`(9600, 8N1, TX/RX)를 채우고 `HAL_UART_Init()` 호출. `USART2->BRR`은 HAL이 PCLK1 기준으로 계산한다.
+  2. `HAL_UART_Init()`이 내부에서 **`HAL_UART_MspInit()` 콜백**(`stm32f1xx_hal_msp.c`)을 호출한다. 여기서 `__HAL_RCC_USART2_CLK_ENABLE()`(`RCC_APB1ENR.USART2EN`)과 PA2/PA3의 `GPIO_MODE_AF_PP` 설정이 이루어진다.
+- **송신 폴링**: `HAL_UART_Transmit()`이 `SR.TXE`/`SR.TC` 플래그 대기를 내부에서 처리한다. 인터럽트는 쓰지 않는다.
+- **`HAL_Delay()`와 SysTick**: `HAL_Init()`이 SysTick을 1ms로 설정하고, `SysTick_Handler`(`stm32f1xx_it.c`)가 `HAL_IncTick()`으로 `uwTick`을 증가시킨다. `HAL_Delay()`는 이 값을 기준으로 대기한다.
 
-### 1. HAL · LL · 레지스터 비교
+### 클럭
 
-| 구분 | HAL (`02_BlinkHAL`) | LL (`03_BlinkLL`) | 레지스터 (이 예제) |
+CubeMX가 생성한 `SystemClock_Config()`는 **HSI → PLL ×16 = SYSCLK 64MHz**, `APB1 = /2 (32MHz)`, `APB2 = 64MHz`로 설정한다 (다른 CubeMX 예제와 동일). 레지스터 버전은 리셋 기본값 HSI 8MHz를 그대로 썼지만, HAL 버전은 클럭이 올라가 있다.
+
+- UART 보레이트 분주값은 HAL이 PCLK1(32MHz) 기준으로 자동 계산하므로 보레이트는 여전히 **9600**이다.
+- 클럭을 바꾸고 싶으면 `.ioc`의 Clock Configuration에서 수정한 뒤 코드를 재생성한다.
+
+## ISR / 콜백
+
+| 구분 | 이름 | 위치 | 역할 |
 |---|---|---|---|
-| PlatformIO `framework` | `stm32cube` | `stm32cube` + `-DUSE_FULL_LL_DRIVER` | **`cmsis`** |
-| 프로젝트 생성 | CubeMX `.ioc` → GENERATE CODE | CubeMX (Driver Selector = LL) | **PlatformIO New Project** (`.ioc` 없음) |
-| 소스 위치 | `Core/Src`, `Core/Inc` | `Core/Src`, `Core/Inc` | **`src/main.c`** 하나 |
-| 사용하는 헤더 | `stm32f1xx_hal.h` | `stm32f1xx_ll_*.h` | **`stm32f1xx.h`** (레지스터 구조체·비트 매크로만 정의) |
-| `USER CODE` 영역 | 있음 (재생성 시 보존) | 있음 | **없음** — 재생성할 도구가 없으므로 파일 전체가 사용자 코드 |
-| 시스템 클럭 | `SystemClock_Config()`: HSE Bypass × PLL8 = **64MHz** | 동일 (LL 함수 나열) | **설정 안 함 → 리셋 기본값 HSI 8MHz** |
-| GPIO 클럭 허용 | `__HAL_RCC_GPIOA_CLK_ENABLE()` | `LL_APB2_GRP1_EnableClock(...GPIOA)` | `RCC->APB2ENR \|= RCC_APB2ENR_IOPAEN` |
-| PA5 출력 설정 | `HAL_GPIO_Init()` (구조체) | `LL_GPIO_Init()` (구조체) | `GPIOA->CRL` 비트 23:20 직접 쓰기 |
-| 출력 속도 (`MODE5`) | `GPIO_SPEED_FREQ_LOW` = `10`(2MHz) | `LL_GPIO_SPEED_FREQ_LOW` = `10`(2MHz) | **`01`(10MHz)** — LED에는 차이 없음 |
-| LED 제어 | `HAL_GPIO_TogglePin()` | `LL_GPIO_TogglePin()` (ODR 읽고 BSRR 1회 쓰기) | `BSRR`에 `BS5`/`BR5` 직접 쓰기 (ODR 읽지 않음) |
-| 딜레이 | `HAL_Delay()` — SysTick **인터럽트** + `uwTick` | `LL_mDelay()` — SysTick **COUNTFLAG 폴링** | `delay_ms()` — SysTick **인터럽트** + `msTicks` (HAL 방식을 직접 구현) |
-| `SysTick_Handler` 위치 | `stm32f1xx_it.c` (CubeMX 생성) → `HAL_IncTick()` | `stm32f1xx_it.c` (비어 있음, 호출 안 됨) | **`main.c`에 직접 작성** (startup의 weak 심볼 재정의) |
+| ISR | `SysTick_Handler` | `stm32f1xx_it.c` | 1ms마다 `HAL_IncTick()` 호출 → `uwTick` 증가 |
+| HAL 콜백 | `HAL_UART_MspInit` | `stm32f1xx_hal_msp.c` | `HAL_UART_Init()` 안에서 호출되어 USART2 클럭·핀 설정 |
+| HAL 콜백 | `HAL_MspInit` | `stm32f1xx_hal_msp.c` | `HAL_Init()` 안에서 호출되어 AFIO/PWR 클럭, SWJ 설정 |
 
-### 2. 클럭을 설정하지 않았는데 어떻게 동작하나?
+USART2는 인터럽트 없이 폴링으로 보내므로 `USART2_IRQHandler`는 없다.
 
-`framework = cmsis`의 startup 코드(`startup_stm32f103xb.s`)는 `main()` 전에 `SystemInit()`을 호출하지만,
-PlatformIO가 제공하는 `system_stm32f1xx.c`의 `SystemInit()`은 PLL을 켜지 않는다. 따라서 칩은 **리셋 기본값인 HSI 8MHz**로 동작하고,
-`SystemCoreClock` 변수도 초기값 `8000000`이다.
+## 하드웨어 / 확인 방법
 
-- `SysTick_Config(SystemCoreClock / 1000)` → `SysTick->LOAD = 8000 - 1` → 8MHz에서 정확히 1ms. 그래서 딜레이는 맞다.
-- HAL/LL 예제와 **CPU 속도는 8배 차이**(8MHz vs 64MHz)가 나지만, LED 점멸 주기는 SysTick이 1ms를 보장하므로 같다.
-- 64MHz로 올리려면 LL 예제의 `SystemClock_Config()` 순서(Flash Latency → HSE → PLL → 프리스케일러 → SW)를 레지스터로 직접 작성해야 한다. `08_Clock_System/04_Clock_Config_Reg_c`에서 다룬다.
-  클럭을 바꾼 뒤에는 `SystemCoreClockUpdate()`를 호출해야 `SysTick_Config()`에 넘기는 값이 맞는다.
+- NUCLEO-F103RB 보드, USB 케이블 (ST-LINK).
+- **시리얼 출력**: D1(PA2)은 ST-LINK 가상 COM 포트로도 연결되어 있다. 이 예제의 보드레이트는 **9600**이며 `platformio.ini`의 `monitor_speed = 9600`과 일치한다. `monitor_port = COM5`는 작성자 PC 기준이다.
+- **로직 분석기/오실로스코프**: D2~D13, A4, A5에 채널을 연결하면 핀이 위 표의 순서대로 하나씩 1초 펄스를 내는 것을 볼 수 있다. D1(PA2)에서는 UART 프레임 (`Hello, AD2\r\n`, 9600 8N1)을 디코드할 수 있다.
+- 한 번에 한 핀만 HIGH이므로, 배선이 서로 단락되었거나 핀 번호가 어긋난 경우 다른 채널에 같은 펄스가 함께 나타나서 구별된다.
 
-### 3. SysTick 사용 방식 — HAL을 흉내 낸 인터럽트 틱
+## 폴더 구성
 
-| 레지스터·비트 | `SysTick_Config()`가 쓰는 값 | PM0056 위치 |
+```
+10_AD2Test/
+├─ AD2Test.ioc                  ← CubeMX 설정 (핀, USART2, 클럭, SYS)
+├─ Core/
+│  ├─ Inc/                      ← main.h(핀 라벨 정의), stm32f1xx_hal_conf.h, stm32f1xx_it.h
+│  ├─ Src/main.c                ← 이 예제의 소스 (USER CODE 영역에 순차 출력 루프)
+│  ├─ Src/stm32f1xx_it.c        ← SysTick_Handler 등 예외/인터럽트 핸들러
+│  ├─ Src/stm32f1xx_hal_msp.c   ← HAL_MspInit, HAL_UART_MspInit (클럭·핀·SWJ)
+│  └─ Startup/                  ← 시작 코드 (벡터 테이블)
+├─ Drivers/                     ← HAL/CMSIS 드라이버 (CubeMX가 복사, git 제외)
+├─ STM32F103RBTX_FLASH.ld       ← 링커 스크립트
+├─ platformio.ini               ← framework = stm32cube, src_dir = Core/Src
+└─ STM32F103R_ArduinoPinmap.pdsprj   ← Proteus 시뮬레이션 프로젝트
+```
+
+CubeMX가 재생성할 때 `/* USER CODE BEGIN ... */` ~ `/* USER CODE END ... */` 바깥은 덮어써지므로, 사용자 코드는 반드시 그 영역 안에 둔다.
+
+## 참고 레지스터
+
+HAL이 내부에서 다루는 레지스터다 (직접 접근하지 않는다).
+
+| 레지스터 | 관련 HAL 호출 | 문서 · 절 |
 |---|---|---|
-| `SysTick->LOAD` | `SystemCoreClock/1000 - 1` (= 7999) | 4.5.2 STK_LOAD, p.152 |
-| `SCB->SHP[11]` (SysTick 우선순위) | 가장 낮은 우선순위 | 4.4.8 SHPR3, p.138 |
-| `SysTick->VAL` | 0 (카운터 초기화) | 4.5.3 STK_VAL, p.153 |
-| `SysTick->CTRL` | `CLKSOURCE`(HCLK) \| **`TICKINT`**(예외 허용) \| `ENABLE` | 4.5.1 STK_CTRL, p.151 |
+| `RCC_APB2ENR` (`IOPAEN`, `IOPBEN`, `IOPCEN`, `AFIOEN`) | `__HAL_RCC_GPIOx_CLK_ENABLE()`, `__HAL_RCC_AFIO_CLK_ENABLE()` | [RM0008](../../../Docs/RM0008_Reference_manual.pdf) 7.3.7 (p.112) |
+| `RCC_APB1ENR` (`USART2EN`) | `__HAL_RCC_USART2_CLK_ENABLE()` | RM0008 7.3.8 |
+| `AFIO_MAPR` (`SWJ_CFG[2:0]` = `010`) | `__HAL_AFIO_REMAP_SWJ_NOJTAG()` | RM0008 9.4.2 |
+| `GPIOx_CRL` / `GPIOx_CRH` | `HAL_GPIO_Init()` | RM0008 9.2.1 (p.171) / 9.2.2, Table 20·21 (p.161) |
+| `GPIOx_BSRR` | `HAL_GPIO_WritePin()` | RM0008 9.2.5 (p.173) |
+| `USART_SR` / `DR` / `BRR` / `CR1` | `HAL_UART_Init()`, `HAL_UART_Transmit()` | RM0008 27.6 USART registers |
+| `STK_CTRL` / `STK_LOAD` / `STK_VAL` | `HAL_Init()` → `HAL_SYSTICK_Config()` | [PM0056](<../../../Docs/PM0056-stm32f10xxx20xxx21xxxl1xxxx-cortexm3-programming-manual-stmicroelectronics.pdf>) 4.5 (p.151~153) |
 
-SysTick 은 STM32 주변장치가 아니라 Cortex-M3 코어에 들어 있으므로 RM0008 이 아니라 **PM0056** 에 설명되어 있다.
-
-LL 예제와 달리 **`TICKINT`를 켜므로** 1ms마다 `SysTick_Handler`(ISR)가 실제로 호출된다.
-ISR에서 공유하는 `msTicks`는 반드시 `volatile`로 선언해야 컴파일러가 `delay_ms()`의 while 루프에서 값을 레지스터에 캐싱하지 않는다.
-
-## ISR
-
-`SysTick_Handler` (벡터 테이블의 weak 심볼 재정의). 콜백 개념은 없다.
-
-- HAL: ISR(`SysTick_Handler`) → `HAL_IncTick()` → (필요하면) 사용자가 `HAL_SYSTICK_Callback` 등 콜백 구현
-- 레지스터: ISR 안에 할 일(`msTicks++`)을 직접 쓴다. 함수 이름이 startup 파일의 벡터 이름과 **정확히 같아야** 한다 (오타가 나면 weak 기본 핸들러 `Default_Handler`의 무한 루프로 빠진다).
-
-## 진행 순서 (HAL/LL 예제와 비교)
-
-```
-HAL/LL : ① CubeMX 새 프로젝트 → ② 핀 → ③ 클럭 → ④ Project Manager → ⑤ GENERATE → ⑥ platformio.ini 추가 → ⑦ USER CODE 작성 → ⑧ 빌드·업로드
-Reg    : ① PlatformIO 새 프로젝트(framework = CMSIS)            → ② main.c 전체 작성(클럭·GPIO·SysTick·ISR 직접) → ③ 빌드·업로드 → ④ 디버거로 레지스터 확인
-```
-
-CubeMX가 해 주던 ②~⑤단계(핀·클럭 설정, 초기화 코드 생성)를 **사람이 레퍼런스 매뉴얼(RM0008)을 보고 직접 코드로 작성**하는 것이 핵심 차이다.
-
-### 0. 준비물
-
-- VS Code + PlatformIO 확장 (CubeMX는 필요 없음)
-- NUCLEO-F103RB 보드, USB 케이블(ST-LINK 드라이버 설치)
-- 참고 문서: 아래 표의 레지스터를 해당 쪽에서 확인하며 코드를 작성한다. (쪽수는 저장소 [Docs](../../../Docs) 폴더의 PDF 기준: RM0008 Rev 21, PM0056 Rev 7)
-
-| 레지스터 | 이 예제에서 쓰는 비트 | 문서 · 절 | 쪽 |
-|---|---|---|---|
-| 메모리 맵 (GPIOA = `0x4001 0800`, RCC = `0x4002 1000`) | — | [RM0008](../../../Docs/RM0008_Reference_manual.pdf) 3.3 Memory map | p.51 |
-| `RCC_APB2ENR` | `IOPAEN`(비트 2) | RM0008 7.3.7 APB2 peripheral clock enable register | p.112 |
-| GPIO 핀 설정표 (CNF/MODE 값의 의미) | `CNF=00` 푸시풀, `MODE=01` 10MHz | RM0008 9.1 Table 20 Port bit configuration, Table 21 Output MODE bits | p.161 |
-| `GPIOx_CRL` | `CNF5[1:0]`(비트 23:22), `MODE5[1:0]`(비트 21:20) | RM0008 9.2.1 Port configuration register low | p.171 |
-| `GPIOx_ODR` | `ODR5` (디버거로 확인) | RM0008 9.2.4 Port output data register | p.173 |
-| `GPIOx_BSRR` | `BS5`(비트 5), `BR5`(비트 21) | RM0008 9.2.5 Port bit set/reset register | p.173 |
-| `STK_CTRL` / `STK_LOAD` / `STK_VAL` | `ENABLE`, `TICKINT`, `CLKSOURCE` / 7999 / 0 | [PM0056](<../../../Docs/PM0056-stm32f10xxx20xxx21xxxl1xxxx-cortexm3-programming-manual-stmicroelectronics.pdf>) 4.5.1 ~ 4.5.3 SysTick | p.151 ~ 153 |
-| `SCB_SHPR3` | SysTick 우선순위 | PM0056 4.4.8 System handler priority registers | p.138 |
-| 벡터 테이블 (`SysTick_Handler` 위치) | 예외 번호 15 | PM0056 2.3.4 Vector table | — |
-
-LD2 가 PA5 에 연결된 것은 보드 배선이므로 RM0008 이 아니라 [UM1724](../../../Docs/UM1724_User_Manual_STM32Nucleo64.pdf)(7.6 LEDs, p.24)와 회로도에서 확인한다.
-
-### 1. PlatformIO 새 프로젝트 만들기
-
-1. PlatformIO Home → **New Project**
-2. Name: `04_BlinkReg`, Board: **ST Nucleo F103RB**, Framework: **CMSIS** 선택 → Finish.
-3. `src/`, `include/`, `lib/`, `test/`, `platformio.ini`가 생성된다. (`include/`, `lib/`, `test/`는 PlatformIO 기본 템플릿으로 이 예제에서는 비어 있다.)
-
-생성된 `platformio.ini`는 HAL/LL 예제와 달리 `[platformio] src_dir/include_dir` 지정이 **필요 없다** (기본 `src/`, `include/` 사용).
-
-```ini
-[env:nucleo_f103rb]
-platform = ststm32
-board = nucleo_f103rb
-framework = cmsis        ; HAL/LL 드라이버 없이 CMSIS 헤더 + startup + system 파일만 링크
-build_type = debug       ; 디버거에서 변수·레지스터를 보기 위해
-```
-
-- `framework = cmsis`이면 `stm32f1xx.h`(→ `stm32f103xb.h`), `core_cm3.h`, startup 어셈블리, `system_stm32f1xx.c`, 링커 스크립트만 제공된다.
-- `stm32f1xx_hal.h`나 `stm32f1xx_ll_gpio.h`를 include하면 **파일을 찾지 못해 컴파일 에러**가 난다. 이 차이로 "지금 어느 계층을 쓰는지"를 확인할 수 있다.
-- `monitor_port`(COM5)는 작성자 PC 기준이며, 이 예제는 시리얼 출력을 사용하지 않는다.
-
-### 2. `src/main.c` 작성
-
-CubeMX가 없으므로 HAL/LL 예제에서 **생성 코드가 하던 일을 순서대로 직접** 쓴다. 대응 관계는 다음과 같다.
-
-| HAL/LL 예제에서 누가 했나 | 이 예제의 코드 | 다루는 레지스터·비트 |
-|---|---|---|
-| startup → `SystemInit()` | (자동, 작성 안 함) | `RCC_CR`, `RCC_CFGR` 리셋값 복원 → HSI 8MHz |
-| `HAL_Init()` / `LL_Init1msTick()` | `SysTick_Init()` → `SysTick_Config(SystemCoreClock / 1000)` | `SysTick->LOAD/VAL/CTRL` |
-| `stm32f1xx_it.c`의 `SysTick_Handler` | `main.c`의 `SysTick_Handler()` | (ISR, 벡터 테이블 SysTick 항목) |
-| `SystemClock_Config()` | **없음** (HSI 8MHz 그대로 사용) | — |
-| `MX_GPIO_Init()`의 클럭 허용 | `RCC->APB2ENR \|= RCC_APB2ENR_IOPAEN` | `RCC_APB2ENR.IOPAEN`(비트 2) |
-| `MX_GPIO_Init()`의 핀 설정 | `GPIOA->CRL &= ~(0xF << 20); GPIOA->CRL \|= (0x1 << 20);` | `GPIOA_CRL.CNF5[1:0]=00`, `MODE5[1:0]=01` |
-| `HAL_GPIO_TogglePin` / `LL_GPIO_TogglePin` | `GPIOA->BSRR = GPIO_BSRR_BS5;` / `GPIO_BSRR_BR5` | `GPIOA_BSRR.BS5`(비트 5), `BR5`(비트 21) |
-| `HAL_Delay` / `LL_mDelay` | `delay_ms()` | `msTicks` (SysTick ISR가 증가) |
-
-작성 시 주의할 점:
-
-- **클럭 허용이 GPIO 설정보다 먼저**여야 한다. `IOPAEN`을 켜기 전에 `GPIOA->CRL`에 쓰면 무시된다 (HAL에서는 `MX_GPIO_Init()`이 순서를 대신 지켜 줬다).
-- `CRL`에 바로 `=`로 쓰면 PA0~PA7 전체 설정이 바뀐다. 반드시 **해당 4비트만 지우고(`&= ~`) 원하는 값만 넣는(`|=`)** read-modify-write를 한다.
-- PA8~PA15는 `CRL`이 아니라 `CRH`를 쓴다 (예: PA10 → `CRH`의 `(10-8)*4` 위치). LL의 `LL_GPIO_PIN_x`에 CRL/CRH 정보가 인코딩되어 있던 이유가 이것이다.
-- `BSRR`은 쓰기 전용이며 0을 쓴 비트는 영향이 없으므로 `|=`가 아니라 `=`로 쓴다.
-
-### 3. 빌드 · 업로드 · 확인
-
-1. VS Code에서 이 폴더를 연다.
-2. PlatformIO 툴바 **Build**(✓) → **Upload**(→), 또는 터미널에서 `pio run -t upload`.
-3. LD2(초록 LED)가 0.5초 켜짐 / 0.5초 꺼짐으로 점멸하면 성공.
-4. 빌드 로그 끝의 Flash/RAM 사용량을 HAL/LL 예제와 비교해 본다. (레지스터 < LL < HAL 순으로 작다.)
-
-### 4. 디버거로 레지스터 확인 (권장)
-
-HAL/LL 예제에서는 함수 안에 숨어 있던 레지스터 변화를 여기서는 한 줄씩 직접 볼 수 있다.
-
-1. PlatformIO **Debug**(F5)로 시작 → `main()`에서 정지.
-2. 왼쪽 **PERIPHERALS** 패널에서 `RCC > APB2ENR`, `GPIOA > CRL`, `GPIOA > ODR`을 펼쳐 둔다.
-3. F10(Step Over)으로 한 줄씩 진행하며 확인한다.
-   - `RCC->APB2ENR |= ...` 후 → `IOPAEN` = 1
-   - `GPIOA->CRL` 두 줄 후 → 비트 23:20 = `0001` (리셋값 `0100` = 플로팅 입력에서 변경)
-   - `GPIOA->BSRR = GPIO_BSRR_BS5` 후 → `ODR5` = 1, LED 켜짐 (BSRR 자체는 읽으면 0)
-4. **VARIABLES / WATCH**에 `msTicks`, `SystemCoreClock`을 추가해 `SystemCoreClock = 8000000`, `msTicks`가 1ms마다 증가하는 것을 확인한다.
+Arduino 핀과 MCU 핀의 대응은 보드 배선이므로 [UM1724](../../../Docs/UM1724_User_Manual_STM32Nucleo64.pdf)의 Arduino 커넥터 표와 회로도에서 확인한다.
 
 ## 실습 과제
 
-앞의 HAL/LL 예제와 비교하며 코드를 바꿔 본다.
-
-1. **HAL과 같은 코드 모양으로 바꾸기**: `BSRR` 두 번 쓰기 대신 LL의 `LL_GPIO_TogglePin()` 방식(ODR을 읽어 BSRR에 한 번 쓰기)으로 토글하고, `delay_ms(1000)`으로 HAL/LL 예제와 같은 동작을 만든다.
-2. **`ODR ^= (1 << 5)`와 비교**: 동작은 같지만 read-modify-write이므로, 같은 포트 핀을 인터럽트에서 바꾸면 왜 위험한지 설명해 본다.
-3. **LL 방식 딜레이로 바꾸기**: `SysTick->CTRL`에서 `TICKINT`를 끄고 `COUNTFLAG`(비트 16)를 폴링하는 `delay_ms()`를 작성해 `LL_mDelay()`와 비교한다. 이때 `SysTick_Handler`가 더 이상 호출되지 않는지 브레이크포인트로 확인한다.
-4. **`volatile` 제거 실험**: `msTicks`의 `volatile`을 지우고 `build_type = release`(최적화)로 빌드하면 `delay_ms()`가 끝나지 않을 수 있음을 확인한다.
-5. **출력 속도 맞추기**: `MODE5`를 `10`(2MHz)으로 바꿔 HAL/LL 예제와 같은 설정으로 만든다. (LED 점멸에는 차이가 없고, 스위칭 엣지 속도·EMI에만 영향이 있다.)
+1. **펄스 폭 바꾸기**: `HAL_Delay(1000)`을 `HAL_Delay(1)`로 바꿔 로직 분석기에서 약 1ms 펄스가 순서대로 나오는지 확인한다. 한 바퀴 시간이 어떻게 바뀌는지 계산해 본다.
+2. **D14/D15 추가**: CubeMX에서 PB9, PB8을 `GPIO_Output`으로 추가하고 `arduino_pins[]`에 넣는다. 핀 14개가 16개가 되고 한 바퀴 시간이 어떻게 달라지는지 계산해 본다.
+3. **SWJ 설정 실험**: CubeMX에서 SYS Debug를 JTAG+SWD(Full SWJ)로 바꿔 재생성하면 `__HAL_AFIO_REMAP_SWJ_NOJTAG()`가 사라진다. D3(PB3)/D5(PB4)에서 펄스가 나오는지 확인하고, 디버거의 `AFIO > MAPR`로 값이 어떻게 달라지는지 본다.
+4. **보드레이트 바꾸기**: `huart2.Init.BaudRate`를 115200으로 바꾸고 `platformio.ini`의 `monitor_speed`도 맞춘다. 실제 보드레이트 오차를 `USART2->BRR` 값으로 계산해 본다.
+5. **송신 인터럽트 방식으로 바꾸기**: `HAL_UART_Transmit()`을 `HAL_UART_Transmit_IT()`로 바꾸고 CubeMX에서 USART2 global interrupt를 켠 뒤, `HAL_UART_TxCpltCallback()`으로 완료를 확인한다. 폴링 방식과 CPU 대기 시간을 비교한다.
 
 ## 관련 예제
 
-- [02_BlinkHAL](../02_BlinkHAL/README.md)(HAL), [03_BlinkLL](../03_BlinkLL/README.md)(LL): 같은 동작. 위 대응표로 한 줄씩 비교한다.
-- [05_ReadPin](../05_ReadPin/README.md) → [07_ReadPinReg](../07_ReadPinReg/README.md): 입력도 같은 방식으로 HAL → 레지스터를 비교한다.
-- [08_Clock_System/04_Clock_Config_Reg_c](../../08_Clock_System/04_Clock_Config_Reg_c/README.md): 이 예제에서 생략한 64MHz 클럭 설정을 레지스터로 작성.
-- [08_Clock_System/05_SysTick_Reg_c](../../08_Clock_System/05_SysTick_Reg_c/README.md): SysTick을 더 자세히.
-- [09_BitBanding_Reg_c](../09_BitBanding_Reg_c/README.md): `BSRR` 대신 비트 밴딩으로 한 비트를 원자적으로 쓰는 방법.
+- [04_BlinkReg](../04_BlinkReg/README.md): 레지스터 방식의 단일 핀 점멸. 이 예제의 원래 출발점.
+- [08_ExternalInt](../08_ExternalInt/README.md): 같은 CubeMX + HAL 구조에서 EXTI를 다루는 예제.
+- [08_Clock_System/07_AFIO_Remap_Reg_c](../../08_Clock_System/07_AFIO_Remap_Reg_c/README.md): `AFIO_MAPR`로 JTAG 핀 해방과 핀 리맵.
+- [02_USART/01_USART_printf](../../02_USART/01_USART_printf/README.md): HAL로 하는 USART2 송신.

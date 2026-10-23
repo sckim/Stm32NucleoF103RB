@@ -29,7 +29,7 @@
 | 06 | [`01_GPIO/06_ExtInt`](Examples/01_GPIO/06_ExtInt) | HAL, EXTI | 버튼 입력을 EXTI 인터럽트로 처리(`HAL_GPIO_EXTI_Callback`) |
 | 07 | [`01_GPIO/07_ReadPinReg`](Examples/01_GPIO/07_ReadPinReg) | 레지스터 | `GPIOC->IDR` 직접 읽기로 버튼 폴링 (05_ReadPin의 레지스터 버전) |
 | 08 | [`01_GPIO/08_ExternalInt`](Examples/01_GPIO/08_ExternalInt) | HAL, EXTI | 두 개 EXTI 라인(`EXTI9_5`, `EXTI15_10`)의 버튼 B1(PC13)·B2(PA6)를 하나의 `HAL_GPIO_EXTI_Callback`에서 구분 처리 |
-| 09 | [`01_GPIO/09_BitBanding_Reg_c`](Examples/01_GPIO/09_BitBanding_Reg_c) | 레지스터 | (검토 전) Cortex-M3 비트 밴딩 별칭으로 RCC/GPIO/SRAM 비트를 원자적으로 접근 |
+| 09 | [`01_GPIO/09_BitBandingReg`](Examples/01_GPIO/09_BitBandingReg) | 레지스터 | Cortex-M3 비트 밴딩 별칭으로 RCC/GPIO/SRAM 비트를 원자적으로 접근 |
 | 01 | [`02_USART/01_USART_printf`](Examples/02_USART/01_USART_printf) | HAL, UART | `printf` 출력을 USART로 리다이렉션 |
 | 02 | [`02_USART/02_USART_Interrupt_RX_HAL`](Examples/02_USART/02_USART_Interrupt_RX_HAL) | HAL, UART, NVIC | (검토 전) USART2 수신 인터럽트(`HAL_UART_RxCpltCallback`)로 에코 및 LED 제어 |
 | 03 | [`02_USART/03_USART_DMA_IdleLine_HAL_c`](Examples/02_USART/03_USART_DMA_IdleLine_HAL_c) | HAL, UART, DMA | (검토 전) DMA 원형 수신 + IDLE 라인 감지로 가변 길이 패킷 처리 |

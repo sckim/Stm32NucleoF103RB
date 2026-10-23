@@ -177,4 +177,4 @@ HAL/LL 예제에서는 함수 안에 숨어 있던 레지스터 변화를 여기
 - [05_ReadPin](../05_ReadPin/README.md) → [07_ReadPinReg](../07_ReadPinReg/README.md): 입력도 같은 방식으로 HAL → 레지스터를 비교한다.
 - [08_Clock_System/04_Clock_Config_Reg_c](../../08_Clock_System/04_Clock_Config_Reg_c/README.md): 이 예제에서 생략한 64MHz 클럭 설정을 레지스터로 작성.
 - [08_Clock_System/05_SysTick_Reg_c](../../08_Clock_System/05_SysTick_Reg_c/README.md): SysTick을 더 자세히.
-- [09_BitBanding_Reg_c](../09_BitBanding_Reg_c/README.md): `BSRR` 대신 비트 밴딩으로 한 비트를 원자적으로 쓰는 방법.
+- [09_BitBandingReg](../09_BitBandingReg/README.md): `BSRR` 대신 비트 밴딩으로 한 비트를 원자적으로 쓰는 방법.

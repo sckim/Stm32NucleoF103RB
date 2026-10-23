@@ -2,6 +2,8 @@
 
 > 계층: **HAL** — Claude 작성, 검토 전 (컴파일만 확인)
 
+> CubeMX(`USART_HalfDuplex.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 USART **단선(half-duplex) 모드**: TX 핀 한 가닥으로 송신과 수신을 번갈아 한다. RS-485, 스마트 서보 버스가 쓰는 방식이다. 보드 한 장에서 시험할 수 있도록 USART1(단선 마스터)과 USART3(가짜 슬레이브)를 한 선에 연결한다.
 
 ## 핵심 학습 내용

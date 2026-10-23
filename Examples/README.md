@@ -7,18 +7,18 @@ Nucleo-F103RB(Cortex-M3, 64MHz, Flash 128KB / SRAM 20KB) 보드로 GPIO부터 �
 
 | 그룹 | 주제 | 핵심 키워드 |
 |---|---|---|
-| [01_GPIO](01_GPIO/README.md) | 출력·입력·외부 인터럽트 | 4가지 추상화 계층 비교, EXTI, 비트 밴딩 |
-| [02_USART](02_USART/README.md) | 시리얼 통신 | printf 리다이렉션, 수신 인터럽트, DMA+IDLE, 링 버퍼, CLI, 단선 반이중 |
-| [03_ADC](03_ADC/README.md) | 아날로그 입력 | 타이머 트리거, DMA, 아날로그 워치독, Vrefint 보정, 가변저항 PWM |
-| [04_I2C_Communication](04_I2C_Communication/README.md) | I2C | 주소 스캔, 문자 LCD, MPU6050, OLED, EEPROM, DS3231 RTC |
-| [05_SPI_Communication](05_SPI_Communication/README.md) | SPI | 루프백, 전이중 DMA, OLED, SD 카드, NOR Flash, MAX7219 |
-| [06_Timers_RTC](06_Timers_RTC/README.md) | 타이머·RTC | 시간 기준, PWM, 입력 캡처, 데드타임, RTC, PWM 입력, 엔코더, 원 펄스, 서보, 모터 드라이버 |
-| [07_DMA](07_DMA/README.md) | DMA | 메모리↔메모리, 원형 DMA 핑퐁 |
-| [08_Clock_System](08_Clock_System/README.md) | 코어·클럭 시스템 | 레지스터/명령어, 메모리 맵, 예외 모델, RCC, SysTick, NVIC, AFIO, 폴트, MCO, DWT, 상태 머신, 칩 정보 |
-| [09_WatchDog_Sleep](09_WatchDog_Sleep/README.md) | 워치독·저전력 | WWDG, IWDG, Sleep/Stop/Standby, BKP 탬퍼 |
-| [10_Flash_CRC](10_Flash_CRC/README.md) | 내부 Flash·CRC | 페이지 소거/쓰기, 하드웨어 CRC |
-| [11_CAN_Communication](11_CAN_Communication/README.md) | CAN | bxCAN 루프백, 수신 필터 |
-| [12_Advanced_Topics](12_Advanced_Topics/README.md) | 심화(선택) | ADC 주입/듀얼, I2C·SPI 슬레이브, PendSV 미니 RTOS, IAP/XMODEM 부트로더, CAN 실제 버스 — 기본 진도가 아님 |
+| [01_GPIO](01_GPIO) | 출력·입력·외부 인터럽트 | 4가지 추상화 계층 비교, EXTI, 비트 밴딩 |
+| [02_USART](02_USART) | 시리얼 통신 | printf 리다이렉션, 수신 인터럽트, DMA+IDLE, 링 버퍼, CLI, 단선 반이중 |
+| [03_ADC](03_ADC) | 아날로그 입력 | 타이머 트리거, DMA, 아날로그 워치독, Vrefint 보정, 가변저항 PWM |
+| [04_I2C_Communication](04_I2C_Communication) | I2C | 주소 스캔, 문자 LCD, MPU6050, OLED, EEPROM, DS3231 RTC |
+| [05_SPI_Communication](05_SPI_Communication) | SPI | 루프백, 전이중 DMA, OLED, SD 카드, NOR Flash, MAX7219 |
+| [06_Timers_RTC](06_Timers_RTC) | 타이머·RTC | 시간 기준, PWM, 입력 캡처, 데드타임, RTC, PWM 입력, 엔코더, 원 펄스, 서보, 모터 드라이버 |
+| [07_DMA](07_DMA) | DMA | 메모리↔메모리, 원형 DMA 핑퐁 |
+| [08_Clock_System](08_Clock_System) | 코어·클럭 시스템 | 레지스터/명령어, 메모리 맵, 예외 모델, RCC, SysTick, NVIC, AFIO, 폴트, MCO, DWT, 상태 머신, 칩 정보 |
+| [09_WatchDog_Sleep](09_WatchDog_Sleep) | 워치독·저전력 | WWDG, IWDG, Sleep/Stop/Standby, BKP 탬퍼 |
+| [10_Flash_CRC](10_Flash_CRC) | 내부 Flash·CRC | 페이지 소거/쓰기, 하드웨어 CRC |
+| [11_CAN_Communication](11_CAN_Communication) | CAN | bxCAN 루프백, 수신 필터 |
+| [12_Advanced_Topics](12_Advanced_Topics) | 심화(선택) | ADC 주입/듀얼, I2C·SPI 슬레이브, PendSV 미니 RTOS, IAP/XMODEM 부트로더, CAN 실제 버스 — 기본 진도가 아님 |
 
 ## 명명 규칙
 
@@ -65,6 +65,6 @@ Nucleo-F103RB(Cortex-M3, 64MHz, Flash 128KB / SRAM 20KB) 보드로 GPIO부터 �
 7. **DMA** `07_DMA/01`~`02`, **저전력** `09_WatchDog_Sleep/01`~`07`, **Flash/CRC** `10_Flash_CRC/01`~`02`
 8. **코어 심화** `08_Clock_System/07`~`12`: AFIO 리맵, HardFault 진단, MCO, DWT, 상태 머신, 칩 정보
 
-이 8단계가 3학년 2학기 진도의 전부다. 여기까지 끝냈다면 **[12_Advanced_Topics](12_Advanced_Topics/README.md)**(ADC 주입/듀얼, I2C·SPI
+이 8단계가 3학년 2학기 진도의 전부다. 여기까지 끝냈다면 **[12_Advanced_Topics](12_Advanced_Topics)**(ADC 주입/듀얼, I2C·SPI
 슬레이브, PendSV 미니 RTOS, HSE 72MHz, ITM/SWO, 스택 워터마크, IAP/XMODEM 부트로더, 옵션 바이트, CAN 실제 버스)를 선택적으로 본다.
 각 항목의 "먼저 볼 기본 예제"는 그 그룹 README 표에 있다.

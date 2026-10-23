@@ -53,7 +53,7 @@ RM0008 은 여러 밀도를 한 문서에 담아서 **F103RB 에는 없는 장**
 
 | 장 | 제목 | 쪽 | F103RB | 관련 예제 (`../Examples/…`) |
 |---|---|---|---|---|
-| 3 | 메모리와 버스 구조 (3.3.2 비트 밴딩 p.53, 3.3.3 Flash, 3.4 부트 설정) | 47 | ✔ | [09_BitBanding](../Examples/01_GPIO/09_BitBanding_Reg_c), [01_Flash_Write](../Examples/10_Flash_CRC/01_Flash_Write_HAL_c), [11_IAP_Bootloader](../Examples/12_Advanced_Topics/11_IAP_Bootloader_Reg_c), [12_IAP_App](../Examples/12_Advanced_Topics/12_IAP_App_Reg_c), [14_OptionBytes_Read](../Examples/12_Advanced_Topics/14_OptionBytes_Read_HAL_c), [13_IAP_Xmodem_Bootloader](../Examples/12_Advanced_Topics/13_IAP_Xmodem_Bootloader_Reg_c) |
+| 3 | 메모리와 버스 구조 (3.3.2 비트 밴딩 p.53, 3.3.3 Flash, 3.4 부트 설정) | 47 | ✔ | [09_BitBanding](../Examples/01_GPIO/09_BitBandingReg), [01_Flash_Write](../Examples/10_Flash_CRC/01_Flash_Write_HAL_c), [11_IAP_Bootloader](../Examples/12_Advanced_Topics/11_IAP_Bootloader_Reg_c), [12_IAP_App](../Examples/12_Advanced_Topics/12_IAP_App_Reg_c), [14_OptionBytes_Read](../Examples/12_Advanced_Topics/14_OptionBytes_Read_HAL_c), [13_IAP_Xmodem_Bootloader](../Examples/12_Advanced_Topics/13_IAP_Xmodem_Bootloader_Reg_c) |
 | 4 | CRC 계산 유닛 | 63 | ✔ | [02_CRC_Unit](../Examples/10_Flash_CRC/02_CRC_Unit_HAL_c) |
 | 5 | 전원 제어(PWR): Sleep p.73 / Stop p.74 / Standby p.76 | 67 | ✔ | [03_Sleep_Mode](../Examples/09_WatchDog_Sleep/03_Sleep_Mode_HAL_c), [04_Stop_Mode_EXTI](../Examples/09_WatchDog_Sleep/04_Stop_Mode_EXTI_HAL_c), [05_Standby_RTC_Wakeup](../Examples/09_WatchDog_Sleep/05_Standby_RTC_Wakeup_HAL_c) |
 | 6 | 백업 레지스터(BKP), 6.3.1 탬퍼 p.82 | 81 | ✔ | [05_Standby_RTC_Wakeup](../Examples/09_WatchDog_Sleep/05_Standby_RTC_Wakeup_HAL_c), [05_RTC_Calendar](../Examples/06_Timers_RTC/05_RTC_Calendar_HAL_c), [06_BKP_Tamper](../Examples/09_WatchDog_Sleep/06_BKP_Tamper_HAL_c) |
@@ -91,7 +91,7 @@ RM0008 은 여러 밀도를 한 문서에 담아서 **F103RB 에는 없는 장**
 |---|---|---|---|
 | 2.1.1 / 2.1.3 | 프로세서 모드·권한 / 코어 레지스터(R0~R15, xPSR, CONTROL) | 13 | [01_CoreRegisters_Instructions](../Examples/08_Clock_System/01_CoreRegisters_Instructions_Reg_c) |
 | 2.2.1 / 2.2.6 | 메모리 영역(Code/SRAM/Peripheral/PPB) / 리틀 엔디안 | 24 / — | [02_MemoryMap](../Examples/08_Clock_System/02_MemoryMap_Reg_c) |
-| 2.2.5 | 비트 밴딩 | 27 | [09_BitBanding](../Examples/01_GPIO/09_BitBanding_Reg_c), [02_MemoryMap](../Examples/08_Clock_System/02_MemoryMap_Reg_c) |
+| 2.2.5 | 비트 밴딩 | 27 | [09_BitBanding](../Examples/01_GPIO/09_BitBandingReg), [02_MemoryMap](../Examples/08_Clock_System/02_MemoryMap_Reg_c) |
 | 2.3.4 | 벡터 테이블 | — | [03_ExceptionModel_VectorTable](../Examples/08_Clock_System/03_ExceptionModel_VectorTable_Reg_c) |
 | 2.3.6 | 인터럽트 우선순위 그룹핑 | 36 | [06_NVIC_Priority](../Examples/08_Clock_System/06_NVIC_Priority_HAL_c) |
 | 2.3.7 | 예외 진입/복귀, EXC_RETURN(Table 17) | — | [03_ExceptionModel_VectorTable](../Examples/08_Clock_System/03_ExceptionModel_VectorTable_Reg_c) |

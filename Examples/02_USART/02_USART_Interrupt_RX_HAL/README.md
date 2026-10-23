@@ -4,6 +4,9 @@
 
 USART2 수신 인터럽트로 1바이트씩 받아 에코하고 LED를 제어한다.
 
+> CubeMX(`USART_Interrupt_RX_HAL.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다.
+> (USART2 Asynchronous 115200, NVIC USART2 global interrupt 활성, PA5=LD2). `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 ## 핵심 학습 내용
 
 - **인터럽트 기반 수신**: `HAL_UART_Receive_IT(&huart2, &rx_byte, 1)`이 `USART2->CR1.RXNEIE`(수신 인터럽트)와 `CR3.EIE`를 켠다. 폴링과 달리 데이터가 올 때까지 CPU가 기다리지 않는다.

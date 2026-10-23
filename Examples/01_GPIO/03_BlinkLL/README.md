@@ -12,7 +12,7 @@ LED 점멸부터 시작해 버튼 입력(폴링/인터럽트)까지 GPIO의 기�
 | 06 | [06_ExtInt](06_ExtInt/README.md) | HAL, EXTI | 버튼 인터럽트와 콜백 |
 | 07 | [07_ReadPinReg](07_ReadPinReg/README.md) | 레지스터 | `GPIOC->IDR` 직접 읽기 |
 | 08 | [08_ExternalInt](08_ExternalInt/README.md) | HAL, EXTI | 두 EXTI 라인(`EXTI9_5`, `EXTI15_10`)과 공용 콜백 |
-| 09 | [09_BitBanding_Reg_c](09_BitBanding_Reg_c/README.md) | 레지스터 | Cortex-M3 비트 밴딩 (검토 전) |
+| 09 | [09_BitBandingReg](09_BitBandingReg/README.md) | 레지스터 | Cortex-M3 비트 밴딩 |
 
 ## 이 그룹에서 배우는 것
 

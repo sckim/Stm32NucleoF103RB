@@ -4,15 +4,15 @@ LED 점멸부터 시작해 버튼 입력(폴링/인터럽트)까지 GPIO의 기�
 
 | 번호 | 예제 | 계층 | 핵심 |
 |---|---|---|---|
-| 01 | [01_BlinkArduino](01_BlinkArduino/README.md) | Arduino | `pinMode`/`digitalWrite`/`delay` |
-| 02 | [02_BlinkHAL](02_BlinkHAL/README.md) | HAL | `HAL_GPIO_TogglePin`, CubeMX 프로젝트 구조 |
-| 03 | [03_BlinkLL](03_BlinkLL/README.md) | LL | `LL_GPIO_TogglePin`, JTAG 해제 코드 |
-| 04 | [04_BlinkReg](04_BlinkReg/README.md) | 레지스터 | `RCC`/`GPIOx->CRL`/`BSRR`, SysTick 딜레이 |
-| 05 | [05_ReadPin](05_ReadPin/README.md) | HAL | 버튼 폴링 입력 |
-| 06 | [06_ExtInt](06_ExtInt/README.md) | HAL, EXTI | 버튼 인터럽트와 콜백 |
-| 07 | [07_ReadPinReg](07_ReadPinReg/README.md) | 레지스터 | `GPIOC->IDR` 직접 읽기 |
-| 08 | [08_ExternalInt](08_ExternalInt/README.md) | HAL, EXTI | 두 EXTI 라인(`EXTI9_5`, `EXTI15_10`)과 공용 콜백 |
-| 09 | [09_BitBanding_Reg_c](09_BitBanding_Reg_c/README.md) | 레지스터 | Cortex-M3 비트 밴딩 (검토 전) |
+| 01 | [01_BlinkArduino](01_BlinkArduino) | Arduino | `pinMode`/`digitalWrite`/`delay` |
+| 02 | [02_BlinkHAL](02_BlinkHAL) | HAL | `HAL_GPIO_TogglePin`, CubeMX 프로젝트 구조 |
+| 03 | [03_BlinkLL](03_BlinkLL) | LL | `LL_GPIO_TogglePin`, JTAG 해제 코드 |
+| 04 | [04_BlinkReg](04_BlinkReg) | 레지스터 | `RCC`/`GPIOx->CRL`/`BSRR`, SysTick 딜레이 |
+| 05 | [05_ReadPin](05_ReadPin) | HAL | 버튼 폴링 입력 |
+| 06 | [06_ExtInt](06_ExtInt) | HAL, EXTI | 버튼 인터럽트와 콜백 |
+| 07 | [07_ReadPinReg](07_ReadPinReg) | 레지스터 | `GPIOC->IDR` 직접 읽기 |
+| 08 | [08_ExternalInt](08_ExternalInt) | HAL, EXTI | 두 EXTI 라인(`EXTI9_5`, `EXTI15_10`)과 공용 콜백 |
+| 09 | [09_BitBandingReg](09_BitBandingReg) | 레지스터 | Cortex-M3 비트 밴딩 |
 
 ## 이 그룹에서 배우는 것
 

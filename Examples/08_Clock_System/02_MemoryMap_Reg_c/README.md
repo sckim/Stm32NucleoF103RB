@@ -22,4 +22,4 @@
 
 ## 관련 예제
 
-`01_CoreRegisters_Instructions_Reg_c`, `01_GPIO/09_BitBanding_Reg_c`(메모리 매핑을 이용한 원자적 비트 접근, 세 번째 접근 방식).
+`01_CoreRegisters_Instructions_Reg_c`, `01_GPIO/09_BitBandingReg`(메모리 매핑을 이용한 원자적 비트 접근, 세 번째 접근 방식).

@@ -4,16 +4,16 @@ STM32F103의 범용 타이머(TIM2~4)·고급 타이머(TIM1)를 시간 기준, 
 
 | 번호 | 예제 | 계층 | 핵심 |
 |---|---|---|---|
-| 01 | [01_TIM_TimeBase](01_TIM_TimeBase/README.md) | HAL | 타이머 1ms 주기 인터럽트 |
-| 02 | [02_TIM_PWM_HAL_c](02_TIM_PWM_HAL_c/README.md) | HAL | PWM 출력, LED 밝기 |
-| 03 | [03_TIM_InputCapture_HAL_c](03_TIM_InputCapture_HAL_c/README.md) | HAL | 입력 캡처로 주파수 측정 |
-| 04 | [04_TIM1_DeadTime_Break_HAL_c](04_TIM1_DeadTime_Break_HAL_c/README.md) | HAL | 상보 PWM, 데드타임, 브레이크 |
-| 05 | [05_RTC_Calendar_HAL_c](05_RTC_Calendar_HAL_c/README.md) | HAL+레지스터 | 32비트 카운터 기반 달력 |
-| 06 | [06_TIM_PWMInput_HAL_c](06_TIM_PWMInput_HAL_c/README.md) | HAL | PWM 입력 모드(주기+듀티) |
-| 07 | [07_TIM_Encoder_HAL_c](07_TIM_Encoder_HAL_c/README.md) | HAL | 엔코더 인터페이스 모드 |
-| 08 | [08_TIM_OnePulse_HCSR04_HAL_c](08_TIM_OnePulse_HCSR04_HAL_c/README.md) | HAL+레지스터 | 원 펄스 + 입력 캡처로 초음파 거리 |
-| 09 | [09_TIM_Servo_HAL_c](09_TIM_Servo_HAL_c/README.md) | HAL | 50Hz PWM, 1~2ms = 0~180° 서보 |
-| 10 | [10_TIM_MotorDriver_TB6612_HAL_c](10_TIM_MotorDriver_TB6612_HAL_c/README.md) | HAL | H-브리지 모터: 20kHz PWM, 브레이크/코스트, 비상 정지 |
+| 01 | [01_TIM_TimeBase](01_TIM_TimeBase) | HAL | 타이머 1ms 주기 인터럽트 |
+| 02 | [02_TIM_PWM_HAL_c](02_TIM_PWM_HAL_c) | HAL | PWM 출력, LED 밝기 |
+| 03 | [03_TIM_InputCapture_HAL_c](03_TIM_InputCapture_HAL_c) | HAL | 입력 캡처로 주파수 측정 |
+| 04 | [04_TIM1_DeadTime_Break_HAL_c](04_TIM1_DeadTime_Break_HAL_c) | HAL | 상보 PWM, 데드타임, 브레이크 |
+| 05 | [05_RTC_Calendar_HAL_c](05_RTC_Calendar_HAL_c) | HAL+레지스터 | 32비트 카운터 기반 달력 |
+| 06 | [06_TIM_PWMInput_HAL_c](06_TIM_PWMInput_HAL_c) | HAL | PWM 입력 모드(주기+듀티) |
+| 07 | [07_TIM_Encoder_HAL_c](07_TIM_Encoder_HAL_c) | HAL | 엔코더 인터페이스 모드 |
+| 08 | [08_TIM_OnePulse_HCSR04_HAL_c](08_TIM_OnePulse_HCSR04_HAL_c) | HAL+레지스터 | 원 펄스 + 입력 캡처로 초음파 거리 |
+| 09 | [09_TIM_Servo_HAL_c](09_TIM_Servo_HAL_c) | HAL | 50Hz PWM, 1~2ms = 0~180° 서보 |
+| 10 | [10_TIM_MotorDriver_TB6612_HAL_c](10_TIM_MotorDriver_TB6612_HAL_c) | HAL | H-브리지 모터: 20kHz PWM, 브레이크/코스트, 비상 정지 |
 
 ## 이 그룹에서 배우는 것
 

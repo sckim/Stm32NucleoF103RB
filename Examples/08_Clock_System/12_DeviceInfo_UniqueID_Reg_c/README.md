@@ -1,6 +1,6 @@
 # 12_DeviceInfo_UniqueID_Reg_c
 
-> 계층: **레지스터(CMSIS)** — Claude 작성, 검토 전 (컴파일만 확인)
+> 계층: **레지스터(CMSIS)** — 검토 전 (컴파일만 확인)
 
 칩 식별 정보(96비트 고유 ID, Flash 크기, 디바이스 ID)와 **리셋 원인**을 읽어 UART로 출력한다.
 

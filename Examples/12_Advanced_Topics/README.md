@@ -8,8 +8,8 @@
 
 | 번호 | 예제 | 계층 | 핵심 | 먼저 볼 기본 예제 |
 |---|---|---|---|---|
-| 01 | [01_ADC_Injected_c](01_ADC_Injected_c) | HAL, DMA | 주입 채널이 연속 변환에 끼어들기 | 03_ADC/04_ADC_AnalogWatchdog_c (연속 변환 + DMA 패턴) |
-| 02 | [02_ADC_DualMode_c](02_ADC_DualMode_c) | HAL, DMA | ADC1+ADC2 동시 샘플링(듀얼 모드), 32비트 DMA | 03_ADC/03_ADC_DMA_TimTrigger_c (단일 ADC 스캔) |
+| 01 | [01_ADC_Injected_c](01_ADC_Injected_c) | HAL, DMA | 주입 채널이 연속 변환에 끼어들기 | 03_ADC/05_ADC_AnalogWatchdog_c (연속 변환 + DMA 패턴) |
+| 02 | [02_ADC_DualMode_c](02_ADC_DualMode_c) | HAL, DMA | ADC1+ADC2 동시 샘플링(듀얼 모드), 32비트 DMA | 03_ADC/04_ADC_DMA_TimTrigger_c (단일 ADC 스캔) |
 | 03 | [03_I2C_Slave_Loopback_c](03_I2C_Slave_Loopback_c) | HAL | 슬레이브 모드, 리슨/주소 일치 콜백 | 04_I2C_Communication/02_I2C_Scan_c |
 | 04 | [04_SPI_Slave_Loopback_c](04_SPI_Slave_Loopback_c) | HAL | 슬레이브 모드, 하드웨어 NSS, 응답 장전 | 05_SPI_Communication/01_SPI_Loopback_c |
 | 05 | [05_TIM_Cascade32_c](05_TIM_Cascade32_c) | HAL | 마스터/슬레이브로 잇는 32비트 카운터, 스톱워치 | 06_Timers_RTC/01_TIM_TimeBase |

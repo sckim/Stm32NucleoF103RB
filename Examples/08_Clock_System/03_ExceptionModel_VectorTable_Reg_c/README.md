@@ -1,6 +1,6 @@
 # 03_ExceptionModel_VectorTable_Reg_c
 
-> 계층: **레지스터(CMSIS) + 어셈블리** — Claude 작성, 검토 전 (PlatformIO 빌드만 확인)
+> 계층: **레지스터(CMSIS) + 어셈블리** — 검토 전 (PlatformIO 빌드만 확인)
 
 인터럽트를 "HAL이 알아서 처리해 주는 것"이 아니라 하드웨어 수준에서 본다. `06_NVIC_Priority_c`(우선순위·선점)와 `08_HardFault_Diagnosis_Reg_c`(폴트 스택 해석)의 개념적 준비 단계.
 

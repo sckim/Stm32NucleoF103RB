@@ -1,6 +1,6 @@
 # 13_IAP_Xmodem_Bootloader_Reg_c
 
-> 계층: **레지스터(CMSIS)** — Claude 작성, 검토 전 (PlatformIO 빌드만 확인)
+> 계층: **레지스터(CMSIS)** — 검토 전 (PlatformIO 빌드만 확인)
 
 **UART 로 새 펌웨어를 받아 Flash 에 기록하는 부트로더**(XMODEM-CRC). ST-LINK 없이 현장에서 업데이트하는 IAP 구조이며, 앱은 `12_IAP_App_Reg_c` 를 사용한다.
 

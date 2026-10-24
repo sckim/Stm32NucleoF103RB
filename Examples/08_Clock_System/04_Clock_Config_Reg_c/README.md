@@ -1,6 +1,6 @@
 # 04_Clock_Config_Reg_c
 
-> 계층: **레지스터(CMSIS)**, HAL 미사용 — Claude 작성, 검토 전 (컴파일만 확인)
+> 계층: **레지스터(CMSIS)**, HAL 미사용 — 검토 전 (컴파일만 확인)
 
 B1(PC13)을 누를 때마다 RCC/FLASH 레지스터로 SYSCLK를 **HSI 8MHz ↔ PLL 48MHz**로 전환한다.
 

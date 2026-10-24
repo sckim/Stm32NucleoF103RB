@@ -31,17 +31,18 @@
 | 08 | [`01_GPIO/08_ExternalInt`](Examples/01_GPIO/08_ExternalInt) | HAL, EXTI | 두 개 EXTI 라인(`EXTI9_5`, `EXTI15_10`)의 버튼 B1(PC13)·B2(PA6)를 하나의 `HAL_GPIO_EXTI_Callback`에서 구분 처리 |
 | 09 | [`01_GPIO/09_BitBandingReg`](Examples/01_GPIO/09_BitBandingReg) | 레지스터 | Cortex-M3 비트 밴딩 별칭으로 RCC/GPIO/SRAM 비트를 원자적으로 접근 |
 | 01 | [`02_USART/01_USART_printf`](Examples/02_USART/01_USART_printf) | HAL, UART | `printf` 출력을 USART로 리다이렉션 |
-| 02 | [`02_USART/02_USART_Interrupt_RX`](Examples/02_USART/02_USART_Interrupt_RX) | HAL, UART, NVIC | (검토 전) USART2 수신 인터럽트(`HAL_UART_RxCpltCallback`)로 에코 및 LED 제어 |
-| 03 | [`02_USART/03_USART_DMA_IdleLine_c`](Examples/02_USART/03_USART_DMA_IdleLine_c) | HAL, UART, DMA | (검토 전) DMA 원형 수신 + IDLE 라인 감지로 가변 길이 패킷 처리 |
-| 04 | [`02_USART/04_USART_RingBuffer_c`](Examples/02_USART/04_USART_RingBuffer_c) | HAL, UART | (검토 전) ISR->main 링 버퍼(lock-free), 오버플로 시험(B1로 main 정지) |
+| 02 | [`02_USART/02_USART_Interrupt`](Examples/02_USART/02_USART_Interrupt) | HAL, UART, NVIC | USART2 수신 인터럽트(`HAL_UART_RxCpltCallback`)로 에코 및 LED 제어 |
+| 03 | [`02_USART/03_USART_RingBuffer_c`](Examples/02_USART/03_USART_RingBuffer_c) | HAL, UART | (검토 전) ISR->main 링 버퍼(lock-free), 오버플로 시험(B1로 main 정지) |
+| 04 | [`02_USART/04_USART_DMA_IdleLine_c`](Examples/02_USART/04_USART_DMA_IdleLine_c) | HAL, UART, DMA | (검토 전) DMA 원형 수신 + IDLE 라인 감지로 가변 길이 패킷 처리 |
 | 05 | [`02_USART/05_UART_CLI_c`](Examples/02_USART/05_UART_CLI_c) | HAL, UART | (검토 전) 명령줄 인터페이스: 줄 편집, 명령 테이블(help/led/uptime/echo/peek/reset) |
 | 06 | [`02_USART/06_USART_HalfDuplex_c`](Examples/02_USART/06_USART_HalfDuplex_c) | HAL, UART | (검토 전) USART 단선 반이중(PA9 한 선), 방향 전환, 오픈드레인 버스 |
-| 01 | [`03_ADC/01_ADC_Temperature`](Examples/03_ADC/01_ADC_Temperature) | HAL, ADC | 내부 온도 센서 ADC 값을 UART로 출력 |
-| 02 | [`03_ADC/02_ADC_Multi_c`](Examples/03_ADC/02_ADC_Multi_c) | HAL, ADC | (검토 전) 스캔 + 불연속 모드로 DMA 없이 4채널(A0/A1/A2/Vrefint) 폴링 |
-| 03 | [`03_ADC/03_ADC_DMA_TimTrigger_c`](Examples/03_ADC/03_ADC_DMA_TimTrigger_c) | HAL, ADC, DMA, TIM | (검토 전) TIM3 TRGO 트리거 1kHz 2채널 스캔, DMA 원형 저장, HT/TC 콜백 |
-| 04 | [`03_ADC/04_ADC_AnalogWatchdog_c`](Examples/03_ADC/04_ADC_AnalogWatchdog_c) | HAL, ADC, DMA | (검토 전) ADC 아날로그 워치독으로 전압 창(window) 이탈 감지 인터럽트 |
-| 05 | [`03_ADC/05_ADC_Vrefint_VDDA_c`](Examples/03_ADC/05_ADC_Vrefint_VDDA_c) | HAL, ADC | (검토 전) Vrefint 로 실제 VDDA 를 측정해 ADC 값을 보정 |
-| 06 | [`03_ADC/06_ADC_Potentiometer_PWM_c`](Examples/03_ADC/06_ADC_Potentiometer_PWM_c) | HAL, ADC, TIM | (검토 전) 가변저항 → 이동평균/히스테리시스/감마 → PWM 밝기 |
+| 01 | [`03_ADC/01_ADC_Single`](Examples/03_ADC/01_ADC_Single) | HAL, ADC | 외부 핀 PA0(CH0) 한 채널 ADC 값을 UART로 출력 |
+| 02 | [`03_ADC/02_ADC_Temperature_c`](Examples/03_ADC/02_ADC_Temperature_c) | HAL, ADC | (검토 전) 내부 온도 센서(CH16) 값을 섭씨로 환산해 UART로 출력 |
+| 03 | [`03_ADC/03_ADC_Multi_c`](Examples/03_ADC/03_ADC_Multi_c) | HAL, ADC | (검토 전) 스캔 + 불연속 모드로 DMA 없이 4채널(A0/A1/A2/Vrefint) 폴링 |
+| 04 | [`03_ADC/04_ADC_DMA_TimTrigger_c`](Examples/03_ADC/04_ADC_DMA_TimTrigger_c) | HAL, ADC, DMA, TIM | (검토 전) TIM3 TRGO 트리거 1kHz 2채널 스캔, DMA 원형 저장, HT/TC 콜백 |
+| 05 | [`03_ADC/05_ADC_AnalogWatchdog_c`](Examples/03_ADC/05_ADC_AnalogWatchdog_c) | HAL, ADC, DMA | (검토 전) ADC 아날로그 워치독으로 전압 창(window) 이탈 감지 인터럽트 |
+| 06 | [`03_ADC/06_ADC_Vrefint_VDDA_c`](Examples/03_ADC/06_ADC_Vrefint_VDDA_c) | HAL, ADC | (검토 전) Vrefint 로 실제 VDDA 를 측정해 ADC 값을 보정 |
+| 07 | [`03_ADC/07_ADC_Potentiometer_PWM_c`](Examples/03_ADC/07_ADC_Potentiometer_PWM_c) | HAL, ADC, TIM | (검토 전) 가변저항 → 이동평균/히스테리시스/감마 → PWM 밝기 |
 | 01 | [`04_I2C_Communication/01_PCF8574`](Examples/04_I2C_Communication/01_PCF8574) | HAL, I2C | PCF8574 I2C 확장 IC를 통한 문자 LCD 제어, I2C 주소 스캐너 포함 |
 | 02 | [`04_I2C_Communication/02_I2C_Scan_c`](Examples/04_I2C_Communication/02_I2C_Scan_c) | HAL, I2C | (검토 전) I2C1 버스 스캐너(0x08~0x77), 흔한 장치 이름 표시 |
 | 03 | [`04_I2C_Communication/03_I2C_MPU6050_c`](Examples/04_I2C_Communication/03_I2C_MPU6050_c) | HAL, I2C | (검토 전) MPU6050 WHO_AM_I 확인과 가속도/자이로/온도 14바이트 연속 읽기 |

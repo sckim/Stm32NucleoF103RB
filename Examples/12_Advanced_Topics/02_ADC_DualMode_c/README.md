@@ -1,6 +1,6 @@
 # 02_ADC_DualMode_c
 
-> 계층: **HAL + DMA** — Claude 작성, 검토 전 (PlatformIO 빌드만 확인)
+> 계층: **HAL + DMA** — 검토 전 (PlatformIO 빌드만 확인)
 
 > CubeMX(`ADC_DualMode.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
 
@@ -23,4 +23,4 @@ PA0(ADC1_IN0), PA1(ADC2_IN1)에 각각 신호(가변저항 등)를 연결. 같�
 
 ## 관련 예제
 
-`03_ADC/03_ADC_DMA_TimTrigger_c`(단일 ADC 스캔), `01_ADC_Injected_c`.
+`03_ADC/04_ADC_DMA_TimTrigger_c`(단일 ADC 스캔), `01_ADC_Injected_c`.

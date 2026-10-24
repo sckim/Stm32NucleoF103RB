@@ -1,6 +1,6 @@
 # 06_USART_HalfDuplex_c
 
-> 계층: **HAL** — Claude 작성, 검토 전 (컴파일만 확인)
+> 계층: **HAL** — 검토 전 (컴파일만 확인)
 
 > CubeMX(`USART_HalfDuplex.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
 
@@ -23,4 +23,4 @@ PA9(USART1_TX) ── PB10(USART3_TX) ── PB11(USART3_RX) 세 핀을 점퍼�
 
 ## 관련 예제
 
-`02_USART_Interrupt_RX`(전이중 수신), `03_USART_DMA_IdleLine_c`.
+`02_USART_Interrupt`(전이중 수신), `04_USART_DMA_IdleLine_c`.

@@ -1,6 +1,6 @@
 # 02_DMA_Circular_GPIO_c
 
-> 계층: **HAL** — Claude 작성, 검토 전 (컴파일만 확인)
+> 계층: **HAL** — 검토 전 (컴파일만 확인)
 
 > CubeMX(`DMA_Circular_GPIO.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
 
@@ -23,4 +23,4 @@ PC0~PC7 에 로직 분석기, 또는 LED 8개(저항 포함), 또는 R-2R 병렬
 
 ## 관련 예제
 
-`01_DMA_MemToMem_c`, `12_Advanced_Topics/06_DMA_Priority_c`, `03_ADC/03_ADC_DMA_TimTrigger_c`(원형 DMA 수신 쪽).
+`01_DMA_MemToMem_c`, `12_Advanced_Topics/06_DMA_Priority_c`, `03_ADC/04_ADC_DMA_TimTrigger_c`(원형 DMA 수신 쪽).

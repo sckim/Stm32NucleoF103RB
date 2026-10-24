@@ -5,9 +5,9 @@ ST-Link 가상 COM 포트(USART2: PA2=TX, PA3=RX)로 PC와 통신한다. 단순 
 | 번호 | 예제 | 계층 | 핵심 |
 |---|---|---|---|
 | 01 | [01_USART_printf](01_USART_printf) | HAL | `printf`를 UART로 리다이렉션 (9600bps) |
-| 02 | [02_USART_Interrupt_RX](02_USART_Interrupt_RX) | HAL, NVIC | 1바이트 수신 인터럽트, 콜백→플래그→main |
-| 03 | [03_USART_DMA_IdleLine_c](03_USART_DMA_IdleLine_c) | HAL, DMA | DMA 원형 수신 + IDLE 라인으로 가변 길이 패킷 |
-| 04 | [04_USART_RingBuffer_c](04_USART_RingBuffer_c) | HAL | ISR→main lock-free 링 버퍼, 오버플로 실험 |
+| 02 | [02_USART_Interrupt](02_USART_Interrupt) | HAL, NVIC | 1바이트 수신 인터럽트, 콜백→플래그→main |
+| 03 | [03_USART_RingBuffer_c](03_USART_RingBuffer_c) | HAL | ISR→main lock-free 링 버퍼, 오버플로 실험 |
+| 04 | [04_USART_DMA_IdleLine_c](04_USART_DMA_IdleLine_c) | HAL, DMA | DMA 원형 수신 + IDLE 라인으로 가변 길이 패킷 |
 | 05 | [05_UART_CLI_c](05_UART_CLI_c) | HAL | 줄 편집, 명령 테이블 파서 |
 | 06 | [06_USART_HalfDuplex_c](06_USART_HalfDuplex_c) | HAL | 단선 반이중, 방향 전환, 오픈드레인 버스 |
 

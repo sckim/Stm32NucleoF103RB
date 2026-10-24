@@ -1,6 +1,6 @@
 # 05_UART_CLI_c
 
-> 계층: **HAL** — Claude 작성, 검토 전 (컴파일만 확인)
+> 계층: **HAL** — 검토 전 (컴파일만 확인)
 
 > CubeMX(`UART_CLI.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
 
@@ -9,7 +9,7 @@ UART 명령줄 인터페이스(CLI): 한 줄 입력 편집 + 명령어 테이블
 ## 핵심 학습 내용
 
 - **3단계 설계**
-  1. 수신: 인터럽트가 링 버퍼(`04_USART_RingBuffer_c`과 같은 방식)에 1바이트씩 넣는다.
+  1. 수신: 인터럽트가 링 버퍼(`03_USART_RingBuffer_c`과 같은 방식)에 1바이트씩 넣는다.
   2. 줄 조립: main이 한 글자씩 꺼내 라인 버퍼에 쌓고 에코/Backspace(0x08/0x7F) 처리, Enter(CR/LF)에서 한 줄 완성.
   3. 파싱: 공백으로 토큰 분리(`strtok`) → 명령 테이블(이름, 핸들러)에서 검색 → 핸들러 호출.
 - **테이블 기반 디스패치**: 명령을 추가하려면 핸들러 함수를 만들고 `cmd_table`에 한 줄 추가하면 된다 (`typedef void (*cmd_fn)(int argc, char **argv)`).

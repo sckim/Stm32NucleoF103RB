@@ -10,7 +10,7 @@
 - `\n` 앞에 `\r`을 붙여 전송해 터미널에서 줄 바꿈이 맞게 표시되도록 한다 (CR+LF).
 - USART2 설정: 9600bps, 8N1, TX/RX 모드 (`huart2.Init`).
 - `sprintf`로 문자열을 만들고 `printf("%s", …)`로 출력하는 방법. 
-- `HAL_UART_Transmit`은 **블로킹(폴링)** 전송이다. 긴 문자열을 자주 보내면 그 시간 동안 CPU가 묶인다 → `03_USART_DMA_IdleLine_c`, `04_USART_RingBuffer_c`에서 개선.
+- `HAL_UART_Transmit`은 **블로킹(폴링)** 전송이다. 긴 문자열을 자주 보내면 그 시간 동안 CPU가 묶인다 → `04_USART_DMA_IdleLine_c`, `03_USART_RingBuffer_c`에서 개선.
 
 ## 동작
 
@@ -22,4 +22,4 @@
 
 ## 관련 예제
 
-수신 쪽은 `02_USART_Interrupt_RX`, 이 출력 기법을 사용하는 `03_ADC/01_ADC_Temperature`.
+수신 쪽은 `02_USART_Interrupt`, 이 출력 기법을 사용하는 `03_ADC/01_ADC_Single`.

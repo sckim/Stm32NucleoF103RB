@@ -1,6 +1,6 @@
 # 02_MemoryMap_Reg_c
 
-> 계층: **레지스터(CMSIS)** — Claude 작성, 검토 전 (PlatformIO 빌드만 확인)
+> 계층: **레지스터(CMSIS)** — 검토 전 (PlatformIO 빌드만 확인)
 
 `GPIOA->ODR = ...`처럼 화살표로 쓰던 레지스터가 사실은 **그냥 메모리 주소**임을 보여준다. Cortex-M3 는 4GB 주소 공간을 Code/SRAM/Peripheral/PPB 로 미리 나눠 두고(memory-mapped I/O), SRAM 을 읽는 것과 똑같은 명령(LDR/STR)으로 주변장치를 읽고 쓴다.
 

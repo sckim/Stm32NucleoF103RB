@@ -28,4 +28,4 @@ AFIO로 **JTAG 핀을 GPIO로 해방**하고 **타이머 채널 핀을 리맵**�
 
 ## 관련 예제
 
-`01_GPIO/03_BlinkLL`(CubeMX가 생성한 `LL_GPIO_AF_Remap_SWJ_NOJTAG`), `06_Timers_RTC/02_TIM_PWM_HAL_c`.
+`01_GPIO/03_BlinkLL`(CubeMX가 생성한 `LL_GPIO_AF_Remap_SWJ_NOJTAG`), `06_Timers_RTC/02_TIM_PWM_c`.

@@ -30,4 +30,4 @@
 
 ## 관련 예제
 
-`02_USART/05_UART_CLI_HAL_c`(`peek`로 잘못된 주소를 읽으면 발생), `12_Advanced_Topics/07_PendSV_ContextSwitch_Reg_c`(같은 스택 프레임 구조).
+`02_USART/05_UART_CLI_c`(`peek`로 잘못된 주소를 읽으면 발생), `12_Advanced_Topics/07_PendSV_ContextSwitch_Reg_c`(같은 스택 프레임 구조).

@@ -15,6 +15,22 @@
  *
  ******************************************************************************
  */
+/**
+ * 02_BlinkHAL  —  [계층: HAL]  CubeMX 생성 코드 + HAL API 로 LD2(PA5) 점멸
+ *
+ * 01_BlinkArduino -> 02_BlinkHAL -> 03_BlinkLL -> 04_BlinkReg 시리즈의 두 번째.
+ * 사용자 코드는 main 루프의 두 줄(HAL_GPIO_TogglePin, HAL_Delay)뿐이고, 클록/GPIO 초기화는
+ * CubeMX 가 만든 SystemClock_Config(), MX_GPIO_Init() 이 담당한다.
+ *
+ * 하드웨어 대응 (RM0008)
+ *   HAL_GPIO_TogglePin : GPIOA 의 출력 데이터(ODR 비트 5) 반전 — 내부적으로 GPIOA_BSRR/ODR 사용
+ *   HAL_Delay(1000)    : SysTick 1ms ISR 이 증가시키는 uwTick 을 비교하는 방식
+ *   MX_GPIO_Init       : RCC_APB2ENR(GPIOx 클록), GPIOA_CRL(PA5 출력) 설정
+ *
+ * ISR 과 콜백의 구분
+ *   SysTick_Handler() (stm32f1xx_it.c, 진짜 ISR) -> HAL_IncTick() 으로 uwTick 증가.
+ *   이 예제에는 HAL 콜백을 직접 구현한 곳이 없다.
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"

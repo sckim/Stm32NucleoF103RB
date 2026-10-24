@@ -15,6 +15,19 @@
  *
  ******************************************************************************
  */
+/**
+ * 01_USART_printf  —  [계층: HAL]  printf 출력을 USART2(ST-Link 가상 COM 포트)로 보내기
+ *
+ * 동작: printf -> newlib _write (syscalls.c) -> __io_putchar(ch) (이 파일) -> HAL_UART_Transmit
+ *   '\n' 앞에 '\r' 을 추가 전송해 터미널에서 줄 바꿈이 맞게 보이게 한다.
+ *
+ * 하드웨어 대응 (RM0008)
+ *   USART2 : PA2(TX) / PA3(RX), 115200bps 8N1  -> USART2_BRR, USART2_CR1(TE/RE/UE)
+ *   HAL_UART_Transmit : USART2_SR.TXE 를 폴링하며 USART2_DR 에 1바이트씩 기록 (블로킹)
+ *
+ * 인터럽트/콜백 없음 (폴링 송신). ISR 은 SysTick_Handler(HAL_Delay 용)뿐이다.
+ * 이후 모든 예제의 디버그 출력 방식의 기본이 되는 코드이다.
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"

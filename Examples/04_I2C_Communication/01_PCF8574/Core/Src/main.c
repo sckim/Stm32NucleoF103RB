@@ -15,6 +15,21 @@
   *
   ******************************************************************************
   */
+/**
+ * 01_PCF8574  —  [계층: HAL + 사용자 드라이버(i2c_lcd)]  I2C 백팩(PCF8574)을 단 문자 LCD 제어
+ *
+ * 구성
+ *   I2C1 (100kHz, PB8/PB9 로 리맵) -> PCF8574 (I/O 확장기) -> HD44780 문자 LCD (4비트 모드)
+ *   i2c_lcd.h : 외부 라이브러리 I2C-LCD-STM32 (PlatformIO lib_deps) — HAL I2C 호출을 감싼 LCD 드라이버
+ *
+ * 하드웨어 대응 (RM0008)
+ *   AFIO_MAPR.I2C1_REMAP = 1 : I2C1 을 PB6/PB7 에서 PB8/PB9 로 이동 (HAL_msp 에서 설정)
+ *   I2C1_CR1, CCR, TRISE      : 100kHz 표준 모드 타이밍
+ *   HAL_I2C_IsDeviceReady     : 주소 바이트를 보내 ACK 여부를 확인 (I2C 스캐너)
+ *   LCD 주소 0x4E = 7비트 0x27 << 1  (HAL 은 8비트 형태 주소를 요구)
+ *
+ * 인터럽트/콜백 없음 (폴링 방식의 블로킹 전송). ISR 은 SysTick_Handler(HAL_Delay 용)뿐이다.
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"

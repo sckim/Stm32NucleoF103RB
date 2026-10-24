@@ -15,6 +15,21 @@
   *
   ******************************************************************************
   */
+/**
+ * 03_BlinkLL  —  [계층: LL]  CubeMX 생성 코드 + LL(Low-Layer) API 로 LD2(PA5) 점멸
+ *
+ * 01_BlinkArduino -> 02_BlinkHAL -> 03_BlinkLL -> 04_BlinkReg 시리즈의 세 번째.
+ * LL 은 HAL 보다 얇다: 핸들 구조체/상태 머신/타임아웃 없이 레지스터 접근을 인라인 함수로 감싼 정도이다.
+ *
+ * 하드웨어 대응 (RM0008)
+ *   LL_GPIO_TogglePin : GPIOA 의 출력 데이터(ODR 비트 5) 반전
+ *   LL_mDelay(1000)   : SysTick_CTRL.COUNTFLAG 를 폴링하며 ms 단위로 대기 (LL_Init1msTick 이 먼저 필요)
+ *   LL_APB2_GRP1_EnableClock : RCC_APB2ENR 의 클록 허가 비트
+ *   LL_FLASH_SetLatency / LL_RCC_* : FLASH_ACR.LATENCY, RCC_CR/CFGR 로 시스템 클록 설정
+ *
+ * ISR: SysTick 을 인터럽트로 쓰지 않고 COUNTFLAG 를 폴링하므로 HAL 의 HAL_IncTick 계층이 없다.
+ *   콜백(HAL_..._Callback)은 LL 에 존재하지 않는다.
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"

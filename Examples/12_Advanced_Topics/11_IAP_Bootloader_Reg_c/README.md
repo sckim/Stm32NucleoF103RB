@@ -21,4 +21,4 @@
 
 ## 관련 예제
 
-`12_IAP_App_Reg_c`(짝), `10_Flash_CRC/01_Flash_Write_HAL_c`, Docs `AN2606`(ST 시스템 메모리 부트로더).
+`12_IAP_App_Reg_c`(짝), `10_Flash_CRC/01_Flash_Write_c`, Docs `AN2606`(ST 시스템 메모리 부트로더).

@@ -15,6 +15,17 @@
  *
  ******************************************************************************
  */
+/**
+ * 05_ReadPin  —  [계층: HAL]  버튼(B1, PC13)을 폴링해 LED(LD2, PA5) 제어
+ *
+ * 하드웨어 대응 (RM0008)
+ *   HAL_GPIO_ReadPin  : GPIOC_IDR 비트 13 읽기 (B1 은 Active-Low: 눌리면 0)
+ *   HAL_GPIO_WritePin : GPIOA_BSRR 로 PA5 설정/해제
+ *   MX_GPIO_Init      : PC13 입력, PA5 출력 (GPIOC_CRH, GPIOA_CRL)
+ *
+ * 폴링 방식이므로 인터럽트/콜백을 쓰지 않는다 (ISR 은 SysTick 뿐).
+ * 인터럽트 방식으로 같은 일을 하려면 06_ExtInt, 레지스터로 구현한 같은 동작은 07_ReadPinReg 참고.
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"

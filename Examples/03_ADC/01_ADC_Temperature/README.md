@@ -18,8 +18,8 @@ ADC1의 **내부 온도 센서 채널**을 연속 변환해 원시 값을 UART�
 
 ## 참고 (다음 단계)
 
-이 예제는 원시 값만 출력한다. 온도[°C]로 환산하려면 `T = (V25 - Vsense)/Avg_Slope + 25` 공식(데이터시트: V25 ≈ 1.43V, 기울기 ≈ 4.3mV/°C)이 필요하며, 온도 센서의 개체 편차가 크고 VDDA 변동의 영향도 받는다 → `05_ADC_Vrefint_VDDA_HAL_c`.
+이 예제는 원시 값만 출력한다. 온도[°C]로 환산하려면 `T = (V25 - Vsense)/Avg_Slope + 25` 공식(데이터시트: V25 ≈ 1.43V, 기울기 ≈ 4.3mV/°C)이 필요하며, 온도 센서의 개체 편차가 크고 VDDA 변동의 영향도 받는다 → `05_ADC_Vrefint_VDDA_c`.
 
 ## 관련 예제
 
-`03_ADC_DMA_TimTrigger_HAL_c`(타이머 트리거 + DMA), `04_ADC_AnalogWatchdog_HAL_c`(아날로그 워치독).
+`03_ADC_DMA_TimTrigger_c`(타이머 트리거 + DMA), `04_ADC_AnalogWatchdog_c`(아날로그 워치독).

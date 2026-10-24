@@ -1,3 +1,20 @@
+/**
+ * 07_ReadPinReg  —  [계층: 레지스터(CMSIS)]  버튼(PC13) 입력을 폴링해 LED(PA5) 제어
+ *
+ * 05_ReadPin(HAL) 과 같은 동작을 레지스터로 구현한 버전이다. HAL_GPIO_ReadPin 이
+ * 결국 어떤 레지스터를 읽는지 비교해 보자.
+ *
+ * 사용하는 레지스터 / 비트 (RM0008)
+ *   RCC_APB2ENR.IOPAEN, IOPCEN  : GPIOA, GPIOC 클록 공급
+ *   GPIOA_CRL  [23:20]          : PA5  출력 (MODE=01, CNF=00 푸시풀)
+ *   GPIOC_CRH  [23:20]          : PC13 입력 (MODE=00, CNF=10 풀업/풀다운 입력)
+ *   GPIOC_ODR  bit13            : 입력 모드에서 1 = 풀업, 0 = 풀다운 선택
+ *   GPIOC_IDR  bit13            : 버튼 상태 읽기 (B1 은 Active-Low: 눌리면 0)
+ *   GPIOA_BSRR BS5 / BR5        : LED 켜기 / 끄기
+ *
+ * 인터럽트: SysTick_Handler()(ISR)가 msTicks 를 증가시키지만 이 예제의 입력 처리에는 쓰이지 않는다.
+ *   버튼은 인터럽트가 아니라 main 루프에서 폴링한다 (인터럽트 방식은 06_ExtInt 참고).
+ */
 #include "stm32f1xx.h"
 
 // SysTick 기반 밀리초 카운터

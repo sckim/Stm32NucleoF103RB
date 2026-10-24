@@ -21,4 +21,4 @@ MCO(PA8)에 PLL/2 = 36MHz(성공) 또는 HSI 8MHz(실패)를 출력하니 스코
 
 ## 관련 예제
 
-`08_Clock_System/04_Clock_Config_Reg_c`(HSI↔PLL 48MHz), `08_Clock_System/09_MCO_ClockOut_HAL_c`.
+`08_Clock_System/04_Clock_Config_Reg_c`(HSI↔PLL 48MHz), `08_Clock_System/09_MCO_ClockOut_c`.

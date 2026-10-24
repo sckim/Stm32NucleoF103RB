@@ -15,6 +15,21 @@
   *
   ******************************************************************************
   */
+/**
+ * 01_ADC_Temperature  —  [계층: HAL]  ADC1 단일 채널(PA0 = ADC1_IN0) 폴링 변환 + UART 출력
+ *
+ * 이 예제는 PA0 의 원시 12비트 값(0~4095)과 mV 환산값을 출력한다 (VDDA = 3.3V 가정).
+ *
+ * 하드웨어 대응 (RM0008)
+ *   HAL_ADCEx_Calibration_Start : ADC1_CR2.CAL = 1 (변환 전 보정, 오프셋 오차 감소)
+ *   HAL_ADC_Start               : ADC1_CR2.ADON (연속/단일 모드 설정은 CONT 비트)
+ *   HAL_ADC_PollForConversion   : ADC1_SR.EOC 폴링
+ *   HAL_ADC_GetValue            : ADC1_DR 읽기 (읽으면 EOC 가 자동으로 지워짐)
+ *   샘플링 시간 13.5 사이클 (ADC1_SMPR2), 변환 12.5 사이클
+ *
+ * 인터럽트/콜백 없음 (폴링 변환). ISR 은 SysTick_Handler(HAL_Delay 용)뿐이다.
+ * printf 의 UART 출력은 01_USART_printf 와 같은 방식이다.
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"

@@ -4,8 +4,8 @@
 
 | 번호 | 예제 | 계층 | 핵심 |
 |---|---|---|---|
-| 01 | [01_Flash_Write_HAL_c](01_Flash_Write_HAL_c) | HAL | 페이지 소거/반워드 쓰기, 웨어 레벨링 |
-| 02 | [02_CRC_Unit_HAL_c](02_CRC_Unit_HAL_c) | HAL | 하드웨어 CRC-32/MPEG-2, 소프트웨어와 비교 |
+| 01 | [01_Flash_Write_c](01_Flash_Write_c) | HAL | 페이지 소거/반워드 쓰기, 웨어 레벨링 |
+| 02 | [02_CRC_Unit_c](02_CRC_Unit_c) | HAL | 하드웨어 CRC-32/MPEG-2, 소프트웨어와 비교 |
 
 ## 이 그룹에서 배우는 것
 

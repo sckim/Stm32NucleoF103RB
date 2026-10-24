@@ -22,7 +22,7 @@
  *    SVC(소프트웨어 인터럽트, `svc 0` 명령)를 직접 발생시켜 이 값을 확인한다.
  *
  * 4) 우선순위는 그냥 레지스터의 숫자다 — `NVIC_GetPriority()` 로 SysTick 의 현재 우선순위를 읽어 확인.
- *    "우선순위가 왜/어떻게 실행 순서를 바꾸는가"는 06_NVIC_Priority_HAL_c 에서 실험한다.
+ *    "우선순위가 왜/어떻게 실행 순서를 바꾸는가"는 06_NVIC_Priority_c 에서 실험한다.
  *
  * ISR: SysTick_Handler, SVC_Handler (아래).
  */
@@ -133,7 +133,7 @@ int main(void)
 
     uart_puts("\r\n[4] 우선순위는 레지스터의 숫자일 뿐 (SCB->SHPR 계열)\r\n");
     uart_puts("  SysTick 현재 우선순위 = "); uart_dec((uint32_t)NVIC_GetPriority(SysTick_IRQn));
-    uart_puts("  (숫자가 작을수록 우선순위가 높다. 자세한 선점 실험은 06_NVIC_Priority_HAL_c 참고)\r\n");
+    uart_puts("  (숫자가 작을수록 우선순위가 높다. 자세한 선점 실험은 06_NVIC_Priority_c 참고)\r\n");
 
     uart_puts("\r\ndone.\r\n");
     while (1) {}

@@ -23,4 +23,4 @@ UART(115200)로 "사이클 수 / 8MHz 기준 시간" 표를 출력.
 
 ## 관련 예제
 
-`05_SPI_Communication/01_SPI_Loopback_HAL_c`, `07_DMA/01_DMA_MemToMem_HAL_c`, `10_Flash_CRC/02_CRC_Unit_HAL_c`(DWT로 시간 측정 활용), `06_NVIC_Priority_HAL_c`.
+`05_SPI_Communication/01_SPI_Loopback_c`, `07_DMA/01_DMA_MemToMem_c`, `10_Flash_CRC/02_CRC_Unit_c`(DWT로 시간 측정 활용), `06_NVIC_Priority_c`.

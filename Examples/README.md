@@ -33,7 +33,7 @@ Nucleo-F103RB(Cortex-M3, 64MHz, Flash 128KB / SRAM 20KB) 보드로 GPIO부터 �
 | 계층 | 특징 | 대표 예제 |
 |---|---|---|
 | Arduino | 가장 단순, 하드웨어가 숨겨짐 | `01_BlinkArduino` |
-| HAL | 이식성·생산성, CubeMX 코드 생성 | `02_BlinkHAL`, 대부분의 `_HAL_c` |
+| HAL | 이식성·생산성, CubeMX 코드 생성 | `02_BlinkHAL`, 대부분의 예제 (`_c` 접미사는 미확인 표시) |
 | LL | 레지스터에 가까운 얇은 래퍼 | `03_BlinkLL` |
 | 레지스터(CMSIS) | 비트 단위 직접 제어, 동작 원리 학습 | `04_BlinkReg`, `_Reg_c` |
 

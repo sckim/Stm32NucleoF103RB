@@ -28,4 +28,4 @@
 
 ## 관련 예제
 
-`09_WatchDog_Sleep/02_WWDG_HAL_c`, `09_WatchDog_Sleep/05_Standby_RTC_Wakeup_HAL_c`(리셋 원인 판별).
+`09_WatchDog_Sleep/02_WWDG_c`, `09_WatchDog_Sleep/05_Standby_RTC_Wakeup_c`(리셋 원인 판별).

@@ -17,4 +17,4 @@ SysTick으로 1ms 틱을 만들고 `millis()` 방식의 **논블로킹 타이밍
 
 ## 관련 예제
 
-`01_GPIO/04_BlinkReg`(블로킹 딜레이), `11_NonBlocking_StateMachine_HAL_c`(같은 사상의 상태 머신 확장).
+`01_GPIO/04_BlinkReg`(블로킹 딜레이), `11_NonBlocking_StateMachine_c`(같은 사상의 상태 머신 확장).

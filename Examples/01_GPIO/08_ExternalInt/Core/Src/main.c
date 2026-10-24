@@ -15,6 +15,22 @@
   *
   ******************************************************************************
   */
+/**
+ * 08_ExternalInt  —  [계층: HAL + EXTI/NVIC]  버튼 2개를 하나의 콜백에서 구분해 처리
+ *
+ *   B1 (PC13) : EXTI13, 하강 에지, 벡터 EXTI15_10_IRQn
+ *   B2 (PA6)  : EXTI6,  상승 에지, 벡터 EXTI9_5_IRQn   (두 버튼의 극성이 다름)
+ *
+ * 하드웨어 대응 (RM0008)
+ *   AFIO_EXTICR2 (EXTI6 -> PA) / AFIO_EXTICR4 (EXTI13 -> PC) : 라인별 입력 포트 선택
+ *   EXTI_IMR, EXTI_FTSR(B1) / EXTI_RTSR(B2) : 인터럽트 허용, 트리거 에지
+ *   EXTI_PR       : 펜딩 비트 (HAL_GPIO_EXTI_IRQHandler 가 지움)
+ *   NVIC_ISER     : EXTI9_5_IRQn, EXTI15_10_IRQn 각각 허용
+ *
+ * ISR 과 콜백의 구분
+ *   EXTI9_5_IRQHandler(), EXTI15_10_IRQHandler() (stm32f1xx_it.c) : 진짜 ISR 2개
+ *   HAL_GPIO_EXTI_Callback(GPIO_Pin) (이 파일) : 두 ISR 이 공통으로 호출. GPIO_Pin 으로 어느 버튼인지 구분
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"

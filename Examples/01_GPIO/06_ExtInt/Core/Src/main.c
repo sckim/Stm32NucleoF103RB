@@ -15,6 +15,21 @@
   *
   ******************************************************************************
   */
+/**
+ * 06_ExtInt  —  [계층: HAL + EXTI/NVIC]  버튼(B1, PC13) 외부 인터럽트로 LED(LD2) 토글
+ *
+ * 신호 경로: PC13 -> EXTI13 (하강 에지) -> NVIC EXTI15_10_IRQn -> ISR -> HAL 콜백
+ *
+ * 하드웨어 대응 (RM0008)
+ *   AFIO_EXTICR4  : EXTI13 의 입력 포트를 PC 로 선택
+ *   EXTI_IMR / EXTI_FTSR : EXTI13 인터럽트 마스크 해제 / 하강 에지 트리거
+ *   EXTI_PR       : 펜딩 비트 (HAL_GPIO_EXTI_IRQHandler 가 1을 써서 지움)
+ *   NVIC_ISER     : EXTI15_10_IRQn 허용 (HAL_NVIC_EnableIRQ)
+ *
+ * ISR 과 콜백의 구분
+ *   EXTI15_10_IRQHandler()     (stm32f1xx_it.c) : 진짜 ISR. HAL_GPIO_EXTI_IRQHandler() 를 호출
+ *   HAL_GPIO_EXTI_Callback()   (이 파일)        : 사용자 콜백. ISR 문맥에서 실행되므로 짧게 끝낼 것
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"

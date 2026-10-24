@@ -5,12 +5,12 @@
 | 번호 | 예제 | 계층 | 핵심 |
 |---|---|---|---|
 | 01 | [01_WatchdogTimer](01_WatchdogTimer) | HAL, WWDG | 윈도우 워치독 기본 사용 (사용자 작성) |
-| 02 | [02_WWDG_HAL_c](02_WWDG_HAL_c) | HAL, WWDG | 윈도우 타이밍 설계, 조기 경고 콜백 |
-| 03 | [03_Sleep_Mode_HAL_c](03_Sleep_Mode_HAL_c) | HAL, PWR | WFI Sleep, main 루프 횟수 비교 |
-| 04 | [04_Stop_Mode_EXTI_HAL_c](04_Stop_Mode_EXTI_HAL_c) | HAL, PWR, EXTI | Stop 진입, 버튼 웨이크업, 클럭 복구 |
-| 05 | [05_Standby_RTC_Wakeup_HAL_c](05_Standby_RTC_Wakeup_HAL_c) | HAL, PWR, RTC | Standby, RTC 알람 웨이크업, BKP 유지 |
-| 06 | [06_BKP_Tamper_HAL_c](06_BKP_Tamper_HAL_c) | HAL+레지스터 | 백업 레지스터 유지, 탬퍼 시 삭제 |
-| 07 | [07_IWDG_HAL_c](07_IWDG_HAL_c) | HAL | 독립 워치독(LSI), 타임아웃 계산, 리셋 원인 |
+| 02 | [02_WWDG_c](02_WWDG_c) | HAL, WWDG | 윈도우 타이밍 설계, 조기 경고 콜백 |
+| 03 | [03_Sleep_Mode_c](03_Sleep_Mode_c) | HAL, PWR | WFI Sleep, main 루프 횟수 비교 |
+| 04 | [04_Stop_Mode_EXTI_c](04_Stop_Mode_EXTI_c) | HAL, PWR, EXTI | Stop 진입, 버튼 웨이크업, 클럭 복구 |
+| 05 | [05_Standby_RTC_Wakeup_c](05_Standby_RTC_Wakeup_c) | HAL, PWR, RTC | Standby, RTC 알람 웨이크업, BKP 유지 |
+| 06 | [06_BKP_Tamper_c](06_BKP_Tamper_c) | HAL+레지스터 | 백업 레지스터 유지, 탬퍼 시 삭제 |
+| 07 | [07_IWDG_c](07_IWDG_c) | HAL | 독립 워치독(LSI), 타임아웃 계산, 리셋 원인 |
 
 ## 저전력 모드 비교 (RM0008 5장)
 

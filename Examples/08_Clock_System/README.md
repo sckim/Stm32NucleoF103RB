@@ -9,12 +9,12 @@
 | 03 | [03_ExceptionModel_VectorTable_Reg_c](03_ExceptionModel_VectorTable_Reg_c) | 레지스터+ASM | 벡터 테이블, 예외 자동 스택 저장, EXC_RETURN, SVC |
 | 04 | [04_Clock_Config_Reg_c](04_Clock_Config_Reg_c) | 레지스터 | HSI ↔ PLL 48MHz 전환 순서 |
 | 05 | [05_SysTick_Reg_c](05_SysTick_Reg_c) | 레지스터 | 1ms 틱, `millis()`, 논블로킹 |
-| 06 | [06_NVIC_Priority_HAL_c](06_NVIC_Priority_HAL_c) | HAL, NVIC | 선점/서브 우선순위, 인터럽트 중첩 |
+| 06 | [06_NVIC_Priority_c](06_NVIC_Priority_c) | HAL, NVIC | 선점/서브 우선순위, 인터럽트 중첩 |
 | 07 | [07_AFIO_Remap_Reg_c](07_AFIO_Remap_Reg_c) | 레지스터 | JTAG 핀 해방, 타이머 핀 리맵 |
 | 08 | [08_HardFault_Diagnosis_Reg_c](08_HardFault_Diagnosis_Reg_c) | 레지스터+ASM | 폴트 원인 진단(CFSR, 스택 프레임) |
-| 09 | [09_MCO_ClockOut_HAL_c](09_MCO_ClockOut_HAL_c) | HAL | 클럭을 핀으로 출력 |
+| 09 | [09_MCO_ClockOut_c](09_MCO_ClockOut_c) | HAL | 클럭을 핀으로 출력 |
 | 10 | [10_DWT_Profiling_Reg_c](10_DWT_Profiling_Reg_c) | 레지스터 | 사이클 단위 실행 시간 측정 |
-| 11 | [11_NonBlocking_StateMachine_HAL_c](11_NonBlocking_StateMachine_HAL_c) | HAL | 상태 머신, 디바운스 |
+| 11 | [11_NonBlocking_StateMachine_c](11_NonBlocking_StateMachine_c) | HAL | 상태 머신, 디바운스 |
 | 12 | [12_DeviceInfo_UniqueID_Reg_c](12_DeviceInfo_UniqueID_Reg_c) | 레지스터 | 고유 ID, 리셋 원인 |
 
 ## 이 그룹에서 배우는 것

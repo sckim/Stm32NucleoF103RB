@@ -27,4 +27,4 @@ FreeRTOS 같은 RTOS가 "여러 작업을 동시에 실행하는 것처럼" 보�
 
 ## 관련 예제
 
-`08_Clock_System/06_NVIC_Priority_HAL_c`(우선순위), `08_Clock_System/08_HardFault_Diagnosis_Reg_c`(스택 프레임).
+`08_Clock_System/06_NVIC_Priority_c`(우선순위), `08_Clock_System/08_HardFault_Diagnosis_Reg_c`(스택 프레임).

@@ -24,4 +24,4 @@ B1(PC13)을 누를 때마다 RCC/FLASH 레지스터로 SYSCLK를 **HSI 8MHz ↔ 
 
 ## 관련 예제
 
-`09_MCO_ClockOut_HAL_c`(HAL 버전 MCO), HAL의 `SystemClock_Config`(모든 HAL 예제).
+`09_MCO_ClockOut_c`(HAL 버전 MCO), HAL의 `SystemClock_Config`(모든 HAL 예제).

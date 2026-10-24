@@ -2,6 +2,8 @@
 
 > 계층: **HAL** + PWR + EXTI — Claude 작성, 검토 전 (컴파일만 확인)
 
+> CubeMX(`Stop_Mode_EXTI.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 **Stop 모드**에 진입하고 버튼(EXTI)으로 깨운다. SRAM과 레지스터 값이 유지되므로 깨어난 뒤 이어서 실행된다.
 
 ## 핵심 학습 내용

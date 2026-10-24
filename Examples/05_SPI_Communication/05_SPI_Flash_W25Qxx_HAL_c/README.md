@@ -2,6 +2,8 @@
 
 > 계층: **HAL** — Claude 작성, 검토 전 (PlatformIO 빌드만 확인)
 
+> CubeMX(`SPI_Flash_W25Qxx.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 **SPI NOR Flash(W25Qxx)** 제어: JEDEC ID, 4KB 섹터 소거, 256바이트 페이지 프로그램, 읽기 검증. 내부 Flash(`01_Flash_Write`)와 같은 "1→0 으로만 쓰기, 소거는 섹터 단위" 규칙을 SPI 명령으로 경험한다.
 
 ## 핵심 학습 내용

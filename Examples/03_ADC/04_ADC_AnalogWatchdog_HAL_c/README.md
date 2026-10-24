@@ -2,6 +2,8 @@
 
 > 계층: **HAL** + DMA — Claude 작성, 검토 전 (컴파일만 확인)
 
+> CubeMX(`ADC_AnalogWatchdog.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 ADC가 변환할 때마다 **하드웨어가** 결과를 상·하한과 비교하고, 창(window)을 벗어나면 인터럽트를 낸다. CPU가 값을 계속 읽어 비교할 필요가 없다.
 
 ## 핵심 학습 내용

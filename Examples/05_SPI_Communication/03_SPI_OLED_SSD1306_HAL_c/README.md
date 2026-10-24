@@ -2,6 +2,8 @@
 
 > 계층: **HAL** — Claude 작성, 검토 전 (컴파일만 확인)
 
+> CubeMX(`SPI_OLED_SSD1306.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 SPI 로 **SSD1306 OLED**를 구동한다 (7핀 SPI 모듈). I2C 예제와 같은 화면을 그리며, 통신 방식 차이가 핵심이다: I2C 는 제어 바이트로, SPI 는 별도 **D/C 핀**으로 명령/데이터를 구분한다.
 
 ## 핵심 학습 내용

@@ -1,3 +1,20 @@
+/* USER CODE BEGIN Header */
+/**
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2026 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /**
  * 05_ADC_Vrefint_VDDA_HAL_c  —  [계층: HAL]  내부 기준전압(Vrefint)으로 실제 VDDA 를 측정하고 ADC 값을 보정
  *
@@ -19,20 +36,51 @@
  *
  * 인터럽트를 사용하지 않는다 (폴링 변환).
  */
+/* USER CODE END Header */
+/* Includes ------------------------------------------------------------------*/
 #include "main.h"
+
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
+/* USER CODE END Includes */
 
+/* Private typedef -----------------------------------------------------------*/
+/* USER CODE BEGIN PTD */
+
+/* USER CODE END PTD */
+
+/* Private define ------------------------------------------------------------*/
+/* USER CODE BEGIN PD */
 #define VREFINT_MV 1200UL          /* 전형값. 정밀도가 필요하면 개체별로 측정/보정 */
 #define N_AVG      16U
 
+/* USER CODE END PD */
+
+/* Private macro -------------------------------------------------------------*/
+/* USER CODE BEGIN PM */
+
+/* USER CODE END PM */
+
+/* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
 UART_HandleTypeDef huart2;
 
-void SystemClock_Config(void);
-static void MX_USART2_UART_Init(void);
-static void MX_ADC1_Init(void);
+/* USER CODE BEGIN PV */
+/* USER CODE END PV */
 
+/* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_ADC1_Init(void);
+static void MX_USART2_UART_Init(void);
+/* USER CODE BEGIN PFP */
+
+/* USER CODE END PFP */
+
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
 /* 지정 채널을 N_AVG 번 폴링 변환해 평균 */
 static uint32_t adc_read_avg(uint32_t channel)
 {
@@ -52,110 +100,257 @@ static uint32_t adc_read_avg(uint32_t channel)
     HAL_ADC_Stop(&hadc1);
     return sum / N_AVG;
 }
+/* USER CODE END 0 */
 
+/**
+  * @brief  The application entry point.
+  * @retval int
+  */
 int main(void)
 {
-    HAL_Init();
-    SystemClock_Config();
-    MX_USART2_UART_Init();
-    MX_ADC1_Init();
-    HAL_ADCEx_Calibration_Start(&hadc1);
 
-    char msg[112];
-    while (1)
-    {
-        uint32_t raw_vref = adc_read_avg(ADC_CHANNEL_VREFINT);
-        uint32_t raw_a0   = adc_read_avg(ADC_CHANNEL_0);
+  /* USER CODE BEGIN 1 */
+  char msg[112];
+  /* USER CODE END 1 */
 
-        uint32_t vdda_mv = (raw_vref != 0) ? VREFINT_MV * 4095UL / raw_vref : 0;   /* VDDA = Vrefint x 4095 / raw */
-        uint32_t a0_naive = raw_a0 * 3300UL / 4095UL;                              /* VDDA=3.3V 가정 */
-        uint32_t a0_corr  = raw_a0 * vdda_mv / 4095UL;                             /* 실측 VDDA 기준 */
+  /* MCU Configuration--------------------------------------------------------*/
 
-        int n = snprintf(msg, sizeof msg, "raw_vref=%4lu -> VDDA=%4lu mV | A0 raw=%4lu : assume3.3V=%4lu mV, corrected=%4lu mV\r\n",
-                         (unsigned long)raw_vref, (unsigned long)vdda_mv, (unsigned long)raw_a0,
-                         (unsigned long)a0_naive, (unsigned long)a0_corr);
-        HAL_UART_Transmit(&huart2, (uint8_t *)msg, (uint16_t)n, 100);
-        HAL_Delay(1000);
-    }
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
+
+  /* USER CODE BEGIN Init */
+
+  /* USER CODE END Init */
+
+  /* Configure the system clock */
+  SystemClock_Config();
+
+  /* USER CODE BEGIN SysInit */
+
+  /* USER CODE END SysInit */
+
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_ADC1_Init();
+  MX_USART2_UART_Init();
+  /* USER CODE BEGIN 2 */
+  HAL_ADCEx_Calibration_Start(&hadc1);                       /* ADC1->CR2.CAL */
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+  while (1)
+  {
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+    uint32_t raw_vref = adc_read_avg(ADC_CHANNEL_VREFINT);
+    uint32_t raw_a0   = adc_read_avg(ADC_CHANNEL_0);
+
+    uint32_t vdda_mv = (raw_vref != 0) ? VREFINT_MV * 4095UL / raw_vref : 0;   /* VDDA = Vrefint x 4095 / raw */
+    uint32_t a0_naive = raw_a0 * 3300UL / 4095UL;                              /* VDDA=3.3V 가정 */
+    uint32_t a0_corr  = raw_a0 * vdda_mv / 4095UL;                             /* 실측 VDDA 기준 */
+
+    int n = snprintf(msg, sizeof msg, "raw_vref=%4lu -> VDDA=%4lu mV | A0 raw=%4lu : assume3.3V=%4lu mV, corrected=%4lu mV\r\n",
+                     (unsigned long)raw_vref, (unsigned long)vdda_mv, (unsigned long)raw_a0,
+                     (unsigned long)a0_naive, (unsigned long)a0_corr);
+    HAL_UART_Transmit(&huart2, (uint8_t *)msg, (uint16_t)n, 100);
+    HAL_Delay(1000);
+  }
+  /* USER CODE END 3 */
 }
 
-void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc)
-{
-    if (hadc->Instance != ADC1) return;
-    GPIO_InitTypeDef g = {0};
-    __HAL_RCC_ADC1_CLK_ENABLE();
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    g.Pin = GPIO_PIN_0;  g.Mode = GPIO_MODE_ANALOG;
-    HAL_GPIO_Init(GPIOA, &g);
-}
-
-static void MX_ADC1_Init(void)
-{
-    RCC_PeriphCLKInitTypeDef pc = {0};
-    pc.PeriphClockSelection = RCC_PERIPHCLK_ADC;
-    pc.AdcClockSelection = RCC_ADCPCLK2_DIV6;                     /* 10.67MHz (최대 14MHz) */
-    if (HAL_RCCEx_PeriphCLKConfig(&pc) != HAL_OK) Error_Handler();
-
-    hadc1.Instance = ADC1;
-    hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
-    hadc1.Init.ContinuousConvMode = DISABLE;
-    hadc1.Init.DiscontinuousConvMode = DISABLE;
-    hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
-    hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-    hadc1.Init.NbrOfConversion = 1;
-    if (HAL_ADC_Init(&hadc1) != HAL_OK) Error_Handler();
-}
-
-/* USART2 (ST-Link 가상 COM, PA2=TX / PA3=RX) 기본 폴링 송신용 MSP: 클럭/핀만 설정 */
-void HAL_UART_MspInit(UART_HandleTypeDef *huart)
-{
-    if (huart->Instance != USART2) return;
-    GPIO_InitTypeDef g = {0};
-    __HAL_RCC_USART2_CLK_ENABLE();   /* RCC->APB1ENR.USART2EN */
-    __HAL_RCC_GPIOA_CLK_ENABLE();    /* RCC->APB2ENR.IOPAEN   */
-    g.Pin = GPIO_PIN_2;  g.Mode = GPIO_MODE_AF_PP;  g.Speed = GPIO_SPEED_FREQ_HIGH;   /* TX: CNF=10, MODE=11 */
-    HAL_GPIO_Init(GPIOA, &g);
-    g.Pin = GPIO_PIN_3;  g.Mode = GPIO_MODE_INPUT;  g.Pull = GPIO_NOPULL;            /* RX: CNF=01 (플로팅 입력) */
-    HAL_GPIO_Init(GPIOA, &g);
-}
-
-static void MX_USART2_UART_Init(void)
-{
-    huart2.Instance = USART2;
-    huart2.Init.BaudRate = 115200;
-    huart2.Init.WordLength = UART_WORDLENGTH_8B;
-    huart2.Init.StopBits = UART_STOPBITS_1;
-    huart2.Init.Parity = UART_PARITY_NONE;
-    huart2.Init.Mode = UART_MODE_TX_RX;
-    huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-    huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-    if (HAL_UART_Init(&huart2) != HAL_OK) Error_Handler();
-}
-
-/* HSI(8MHz)/2 x16 = 64MHz. Nucleo 는 HSE 가 ST-Link 에서 오므로 HSI 로 단순화 */
+/**
+  * @brief System Clock Configuration
+  * @retval None
+  */
 void SystemClock_Config(void)
 {
-    RCC_OscInitTypeDef o = {0};
-    RCC_ClkInitTypeDef c = {0};
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
-    o.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-    o.HSIState = RCC_HSI_ON;
-    o.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-    o.PLL.PLLState = RCC_PLL_ON;
-    o.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
-    o.PLL.PLLMUL = RCC_PLL_MUL16;
-    if (HAL_RCC_OscConfig(&o) != HAL_OK) Error_Handler();
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL16;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
-    c.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
-    c.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-    c.AHBCLKDivider = RCC_SYSCLK_DIV1;
-    c.APB1CLKDivider = RCC_HCLK_DIV2;          /* APB1 = 32MHz (최대 36MHz) */
-    c.APB2CLKDivider = RCC_HCLK_DIV1;          /* APB2 = 64MHz */
-    if (HAL_RCC_ClockConfig(&c, FLASH_LATENCY_2) != HAL_OK) Error_Handler();
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
+  PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV6;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
 
+/**
+  * @brief ADC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC1_Init(void)
+{
+
+  /* USER CODE BEGIN ADC1_Init 0 */
+
+  /* USER CODE END ADC1_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC1_Init 1 */
+
+  /* USER CODE END ADC1_Init 1 */
+
+  /** Common config
+  */
+  hadc1.Instance = ADC1;
+  hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc1.Init.ContinuousConvMode = ENABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion = 1;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_0;
+  sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+  /* 초기 채널 구성(CH0, 239.5 사이클)은 CubeMX 형식상 둔 것이다. 실제 변환 채널(Vrefint/CH0)은
+   * adc_read_avg() 가 HAL_ADC_ConfigChannel() 로 매번 다시 설정한다 (ADC1->SQR3.SQ1, SMPR1/SMPR2).
+   * ADC1->CR2.CONT = 1 (연속 변환). ADC 클럭 prescaler (RCC->CFGR.ADCPRE, 64/6) 는 SystemClock_Config() */
+  /* USER CODE END ADC1_Init 2 */
+
+}
+
+/**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
+  * @brief GPIO Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_GPIO_Init(void)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  /* USER CODE BEGIN MX_GPIO_Init_1 */
+
+  /* USER CODE END MX_GPIO_Init_1 */
+
+  /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : LD2_Pin */
+  GPIO_InitStruct.Pin = LD2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+
+  /* USER CODE BEGIN MX_GPIO_Init_2 */
+
+  /* USER CODE END MX_GPIO_Init_2 */
+}
+
+/* USER CODE BEGIN 4 */
+/* USER CODE END 4 */
+
+/**
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
 void Error_Handler(void)
 {
-    __disable_irq();
-    while (1) {}
+  /* USER CODE BEGIN Error_Handler_Debug */
+  /* User can add his own implementation to report the HAL error return state */
+  __disable_irq();
+  while (1) {
+  }
+  /* USER CODE END Error_Handler_Debug */
 }
+#ifdef USE_FULL_ASSERT
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t *file, uint32_t line)
+{
+  /* USER CODE BEGIN 6 */
+  /* User can add his own implementation to report the file name and line
+     number, ex: printf("Wrong parameters value: file %s on line %d\r\n", file,
+     line) */
+  /* USER CODE END 6 */
+}
+#endif /* USE_FULL_ASSERT */

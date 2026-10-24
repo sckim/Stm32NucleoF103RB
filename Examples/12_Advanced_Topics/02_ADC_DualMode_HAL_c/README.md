@@ -2,6 +2,8 @@
 
 > 계층: **HAL + DMA** — Claude 작성, 검토 전 (PlatformIO 빌드만 확인)
 
+> CubeMX(`ADC_DualMode.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 ADC1 과 ADC2 를 **동시에** 트리거해 두 신호를 같은 순간에 샘플링한다(듀얼 모드, 정규 동시). 한 ADC 로 채널을 번갈아 읽을 때 생기는 시간차(skew)가 없어서 전력(전압×전류)이나 위상 측정에 쓴다.
 
 ## 핵심 학습 내용

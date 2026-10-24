@@ -2,6 +2,8 @@
 
 > 계층: **HAL** + TIM + DMA — Claude 작성, 검토 전 (컴파일만 확인)
 
+> CubeMX(`ADC_DMA_TimTrigger.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 타이머가 정확한 주기(1kHz)로 ADC 변환을 시작시키고, DMA가 결과를 원형 버퍼에 저장한다. CPU는 버퍼가 반/전부 찼을 때만 개입한다.
 
 ## 핵심 학습 내용

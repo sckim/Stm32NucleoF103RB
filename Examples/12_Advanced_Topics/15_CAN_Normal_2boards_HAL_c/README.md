@@ -2,6 +2,8 @@
 
 > 계층: **HAL** — Claude 작성, 검토 전 (PlatformIO 빌드만 확인)
 
+> CubeMX(`CAN_Normal_2boards.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 **실제 CAN 버스(Normal 모드)**: 보드 2장 + 3.3V CAN 트랜시버. 루프백과 달리 **상대 노드가 ACK 를 줘야** 송신이 성공한다. 오류 카운터(TEC/REC)와 버스오프 복구를 관찰한다.
 
 ## 핵심 학습 내용

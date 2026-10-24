@@ -2,6 +2,8 @@
 
 > 계층: **HAL** — Claude 작성, 검토 전 (컴파일만 확인)
 
+> CubeMX(`I2C_OLED_SSD1306.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 I2C 로 **SSD1306 128x64 OLED**를 구동한다. RAM 에 1KB 프레임버퍼를 두고 그린 뒤 통째로 전송하는 정석 패턴이며, 선/사각형/공 애니메이션과 프레임 번호·FPS 숫자를 표시한다.
 
 ## 핵심 학습 내용

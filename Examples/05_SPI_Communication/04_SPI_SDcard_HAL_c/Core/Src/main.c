@@ -1,3 +1,20 @@
+/* USER CODE BEGIN Header */
+/**
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2026 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /**
  * 04_SPI_SDcard_HAL_c  —  [계층: HAL]  SPI 모드로 SD 카드 초기화와 섹터 읽기 (파일시스템 없이 raw 블록 접근)
  *
@@ -22,23 +39,53 @@
  *
  * 인터럽트를 사용하지 않는다 (블로킹 SPI).
  */
+/* USER CODE END Header */
+/* Includes ------------------------------------------------------------------*/
 #include "main.h"
+
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
+/* USER CODE END Includes */
 
-#define CS_LOW()   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET)
-#define CS_HIGH()  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET)
+/* Private typedef -----------------------------------------------------------*/
+/* USER CODE BEGIN PTD */
 
+/* USER CODE END PTD */
+
+/* Private define ------------------------------------------------------------*/
+/* USER CODE BEGIN PD */
+#define CS_LOW()   HAL_GPIO_WritePin(SD_CS_GPIO_Port, SD_CS_Pin, GPIO_PIN_RESET)
+#define CS_HIGH()  HAL_GPIO_WritePin(SD_CS_GPIO_Port, SD_CS_Pin, GPIO_PIN_SET)
+
+/* USER CODE END PD */
+
+/* Private macro -------------------------------------------------------------*/
+/* USER CODE BEGIN PM */
+
+/* USER CODE END PM */
+
+/* Private variables ---------------------------------------------------------*/
 SPI_HandleTypeDef hspi1;
 UART_HandleTypeDef huart2;
 
+/* USER CODE BEGIN PV */
 static int is_sdhc;             /* 1 = 블록(섹터) 주소, 0 = 바이트 주소 */
+/* USER CODE END PV */
 
+/* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_SPI1_Init(void);
 static void MX_USART2_UART_Init(void);
-static void MX_SPI1_Init(uint32_t prescaler);
+/* USER CODE BEGIN PFP */
+static void SPI1_Reinit(uint32_t prescaler);
 
+/* USER CODE END PFP */
+
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
 static void print(const char *s) { HAL_UART_Transmit(&huart2, (uint8_t *)s, (uint16_t)strlen(s), 200); }
 
 /* ---------------- SPI 1바이트 교환 ---------------- */
@@ -67,7 +114,7 @@ static uint8_t sd_cmd(uint8_t cmd, uint32_t arg)
 /* 초기화. 성공 시 1 */
 static int sd_init(void)
 {
-    MX_SPI1_Init(SPI_BAUDRATEPRESCALER_256);                /* 64MHz/256 = 250kHz (초기화는 400kHz 이하) */
+    SPI1_Reinit(SPI_BAUDRATEPRESCALER_256);             /* 64MHz/256 = 250kHz (초기화는 400kHz 이하) */
     CS_HIGH();
     for (int i = 0; i < 10; i++) xfer(0xFF);                /* 80 클럭 */
 
@@ -102,7 +149,7 @@ static int sd_init(void)
         deselect(); print("v1 card not supported by this example\r\n"); return 0;
     }
     deselect();
-    MX_SPI1_Init(SPI_BAUDRATEPRESCALER_8);                  /* 이후 8MHz */
+    SPI1_Reinit(SPI_BAUDRATEPRESCALER_8);               /* 이후 8MHz */
     return 1;
 }
 
@@ -145,130 +192,257 @@ static uint32_t sd_capacity_mb(void)
     uint32_t blen = csd[5] & 0x0F;
     return (uint32_t)(((uint64_t)(c_size + 1) << (mult + 2 + blen)) >> 20);
 }
+/* USER CODE END 0 */
 
+/**
+  * @brief  The application entry point.
+  * @retval int
+  */
 int main(void)
 {
-    HAL_Init();
-    SystemClock_Config();
-    MX_GPIO_Init();
-    MX_USART2_UART_Init();
 
-    print("\r\n[SD card over SPI] initializing...\r\n");
-    if (!sd_init()) { print("init failed\r\n"); Error_Handler(); }
+  /* USER CODE BEGIN 1 */
+  /* USER CODE END 1 */
 
-    char m[128];
-    snprintf(m, sizeof m, "card type: %s,  capacity: %lu MB\r\n", is_sdhc ? "SDHC/SDXC (block addressing)" : "SDSC (byte addressing)",
-             (unsigned long)sd_capacity_mb());
-    print(m);
+  /* MCU Configuration--------------------------------------------------------*/
 
-    static uint8_t sec[512];
-    if (!sd_read_block(0, sec)) { print("read sector 0 failed\r\n"); Error_Handler(); }
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
 
-    print("sector 0, first 16 bytes:");
-    for (int i = 0; i < 16; i++) { snprintf(m, sizeof m, " %02X", sec[i]); print(m); }
-    print("\r\n");
-    snprintf(m, sizeof m, "signature @510 = %02X %02X  (%s)\r\n", sec[510], sec[511],
-             (sec[510] == 0x55 && sec[511] == 0xAA) ? "valid MBR/boot sector" : "no MBR signature");
-    print(m);
-    if (sec[510] == 0x55 && sec[511] == 0xAA)
-    {
-        uint32_t lba = sec[454] | (sec[455] << 8) | (sec[456] << 16) | ((uint32_t)sec[457] << 24);
-        snprintf(m, sizeof m, "partition 1: type=0x%02X  start LBA=%lu\r\n", sec[450], (unsigned long)lba);
-        print(m);
-    }
+  /* USER CODE BEGIN Init */
 
-    while (1) { HAL_Delay(1000); }                          /* (LD2 는 SPI SCK 와 같은 핀이라 점멸 표시를 쓰지 않는다) */
+  /* USER CODE END Init */
+
+  /* Configure the system clock */
+  SystemClock_Config();
+
+  /* USER CODE BEGIN SysInit */
+
+  /* USER CODE END SysInit */
+
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_SPI1_Init();
+  MX_USART2_UART_Init();
+  /* USER CODE BEGIN 2 */
+  print("\r\n[SD card over SPI] initializing...\r\n");
+  if (!sd_init()) { print("init failed\r\n"); Error_Handler(); }
+
+  char m[128];
+  snprintf(m, sizeof m, "card type: %s,  capacity: %lu MB\r\n", is_sdhc ? "SDHC/SDXC (block addressing)" : "SDSC (byte addressing)",
+           (unsigned long)sd_capacity_mb());
+  print(m);
+
+  static uint8_t sec[512];
+  if (!sd_read_block(0, sec)) { print("read sector 0 failed\r\n"); Error_Handler(); }
+
+  print("sector 0, first 16 bytes:");
+  for (int i = 0; i < 16; i++) { snprintf(m, sizeof m, " %02X", sec[i]); print(m); }
+  print("\r\n");
+  snprintf(m, sizeof m, "signature @510 = %02X %02X  (%s)\r\n", sec[510], sec[511],
+           (sec[510] == 0x55 && sec[511] == 0xAA) ? "valid MBR/boot sector" : "no MBR signature");
+  print(m);
+  if (sec[510] == 0x55 && sec[511] == 0xAA)
+  {
+      uint32_t lba = sec[454] | (sec[455] << 8) | (sec[456] << 16) | ((uint32_t)sec[457] << 24);
+      snprintf(m, sizeof m, "partition 1: type=0x%02X  start LBA=%lu\r\n", sec[450], (unsigned long)lba);
+      print(m);
+  }
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+  while (1)
+  {
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+    HAL_Delay(1000);                          /* (LD2 는 SPI SCK 와 같은 핀이라 점멸 표시를 쓰지 않는다) */
+  }
+  /* USER CODE END 3 */
 }
 
-void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
-{
-    if (hspi->Instance != SPI1) return;
-    GPIO_InitTypeDef g = {0};
-    __HAL_RCC_SPI1_CLK_ENABLE();
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    g.Pin = GPIO_PIN_5 | GPIO_PIN_7;  g.Mode = GPIO_MODE_AF_PP;  g.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(GPIOA, &g);
-    g.Pin = GPIO_PIN_6;  g.Mode = GPIO_MODE_INPUT;  g.Pull = GPIO_PULLUP;                   /* MISO */
-    HAL_GPIO_Init(GPIOA, &g);
-}
-
-static void MX_SPI1_Init(uint32_t prescaler)
-{
-    if (hspi1.State != HAL_SPI_STATE_RESET) HAL_SPI_DeInit(&hspi1);
-    hspi1.Instance = SPI1;
-    hspi1.Init.Mode = SPI_MODE_MASTER;
-    hspi1.Init.Direction = SPI_DIRECTION_2LINES;
-    hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
-    hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;              /* SD 카드 SPI 모드 = 모드 0 */
-    hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
-    hspi1.Init.NSS = SPI_NSS_SOFT;
-    hspi1.Init.BaudRatePrescaler = prescaler;
-    hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
-    hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
-    hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
-    hspi1.Init.CRCPolynomial = 10;
-    if (HAL_SPI_Init(&hspi1) != HAL_OK) Error_Handler();
-}
-
-static void MX_GPIO_Init(void)
-{
-    GPIO_InitTypeDef g = {0};
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
-    g.Pin = GPIO_PIN_4;  g.Mode = GPIO_MODE_OUTPUT_PP;  g.Pull = GPIO_NOPULL;  g.Speed = GPIO_SPEED_FREQ_HIGH;   /* CS */
-    HAL_GPIO_Init(GPIOA, &g);
-}
-
-/* USART2 (ST-Link 가상 COM, PA2=TX / PA3=RX) 기본 폴링 송신용 MSP: 클럭/핀만 설정 */
-void HAL_UART_MspInit(UART_HandleTypeDef *huart)
-{
-    if (huart->Instance != USART2) return;
-    GPIO_InitTypeDef g = {0};
-    __HAL_RCC_USART2_CLK_ENABLE();   /* RCC->APB1ENR.USART2EN */
-    __HAL_RCC_GPIOA_CLK_ENABLE();    /* RCC->APB2ENR.IOPAEN   */
-    g.Pin = GPIO_PIN_2;  g.Mode = GPIO_MODE_AF_PP;  g.Speed = GPIO_SPEED_FREQ_HIGH;   /* TX: CNF=10, MODE=11 */
-    HAL_GPIO_Init(GPIOA, &g);
-    g.Pin = GPIO_PIN_3;  g.Mode = GPIO_MODE_INPUT;  g.Pull = GPIO_NOPULL;            /* RX: CNF=01 (플로팅 입력) */
-    HAL_GPIO_Init(GPIOA, &g);
-}
-
-static void MX_USART2_UART_Init(void)
-{
-    huart2.Instance = USART2;
-    huart2.Init.BaudRate = 115200;
-    huart2.Init.WordLength = UART_WORDLENGTH_8B;
-    huart2.Init.StopBits = UART_STOPBITS_1;
-    huart2.Init.Parity = UART_PARITY_NONE;
-    huart2.Init.Mode = UART_MODE_TX_RX;
-    huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-    huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-    if (HAL_UART_Init(&huart2) != HAL_OK) Error_Handler();
-}
-
-/* HSI(8MHz)/2 x16 = 64MHz. Nucleo 는 HSE 가 ST-Link 에서 오므로 HSI 로 단순화 */
+/**
+  * @brief System Clock Configuration
+  * @retval None
+  */
 void SystemClock_Config(void)
 {
-    RCC_OscInitTypeDef o = {0};
-    RCC_ClkInitTypeDef c = {0};
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-    o.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-    o.HSIState = RCC_HSI_ON;
-    o.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-    o.PLL.PLLState = RCC_PLL_ON;
-    o.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
-    o.PLL.PLLMUL = RCC_PLL_MUL16;
-    if (HAL_RCC_OscConfig(&o) != HAL_OK) Error_Handler();
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL16;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
-    c.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
-    c.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-    c.AHBCLKDivider = RCC_SYSCLK_DIV1;
-    c.APB1CLKDivider = RCC_HCLK_DIV2;          /* APB1 = 32MHz (최대 36MHz) */
-    c.APB2CLKDivider = RCC_HCLK_DIV1;          /* APB2 = 64MHz */
-    if (HAL_RCC_ClockConfig(&c, FLASH_LATENCY_2) != HAL_OK) Error_Handler();
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
 
+/**
+  * @brief GPIO Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_GPIO_Init(void)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  /* USER CODE BEGIN MX_GPIO_Init_1 */
+
+  /* USER CODE END MX_GPIO_Init_1 */
+
+  /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(SD_CS_GPIO_Port, SD_CS_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pin : SD_CS_Pin */
+  GPIO_InitStruct.Pin = SD_CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(SD_CS_GPIO_Port, &GPIO_InitStruct);
+
+  /* USER CODE BEGIN MX_GPIO_Init_2 */
+
+  /* USER CODE END MX_GPIO_Init_2 */
+}
+
+/**
+  * @brief SPI1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_SPI1_Init(void)
+{
+
+  /* USER CODE BEGIN SPI1_Init 0 */
+
+  /* USER CODE END SPI1_Init 0 */
+
+  /* USER CODE BEGIN SPI1_Init 1 */
+
+  /* USER CODE END SPI1_Init 1 */
+  /* SPI1 parameter configuration*/
+  hspi1.Instance = SPI1;
+  hspi1.Init.Mode = SPI_MODE_MASTER;
+  hspi1.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi1.Init.NSS = SPI_NSS_SOFT;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
+  hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi1.Init.CRCPolynomial = 10;
+  if (HAL_SPI_Init(&hspi1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN SPI1_Init 2 */
+
+  /* USER CODE END SPI1_Init 2 */
+
+}
+
+/**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
+
+}
+
+/* USER CODE BEGIN 4 */
+/* SPI1 분주비 변경: HAL_SPI_DeInit(MspDeInit: SPI1EN/핀 해제) -> BR 변경 -> HAL_SPI_Init(MspInit 재실행)
+ * SPI1->CR1.BR[2:0] 은 SPE=0 상태에서만 바꿀 수 있으므로 HAL 이 SPE 를 끄고 다시 쓴다.
+ * MX_SPI1_Init() 은 CubeMX 가 생성하는 고정값 초기화라, 런타임 변경용 함수를 USER CODE 에 따로 둔다. */
+static void SPI1_Reinit(uint32_t prescaler)
+{
+  if (hspi1.State != HAL_SPI_STATE_RESET) HAL_SPI_DeInit(&hspi1);
+  hspi1.Init.BaudRatePrescaler = prescaler;               /* CR1.BR[2:0] */
+  if (HAL_SPI_Init(&hspi1) != HAL_OK) Error_Handler();
+}
+/* USER CODE END 4 */
+
+/**
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
 void Error_Handler(void)
 {
-    __disable_irq();
-    while (1) {}
+  /* USER CODE BEGIN Error_Handler_Debug */
+  /* User can add his own implementation to report the HAL error return state */
+  __disable_irq();
+  while (1) {
+  }
+  /* USER CODE END Error_Handler_Debug */
 }
+#ifdef USE_FULL_ASSERT
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t *file, uint32_t line)
+{
+  /* USER CODE BEGIN 6 */
+  /* User can add his own implementation to report the file name and line
+     number, ex: printf("Wrong parameters value: file %s on line %d\r\n", file,
+     line) */
+  /* USER CODE END 6 */
+}
+#endif /* USE_FULL_ASSERT */

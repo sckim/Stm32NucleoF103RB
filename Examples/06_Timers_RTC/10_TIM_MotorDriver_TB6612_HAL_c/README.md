@@ -2,6 +2,8 @@
 
 > 계층: **HAL** — Claude 작성, 검토 전 (PlatformIO 빌드만 확인)
 
+> CubeMX(`TIM_MotorDriver_TB6612.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 **H-브리지 모터 드라이버(TB6612FNG)** 로 DC 모터 제어: 20kHz PWM 속도, 방향 핀 2개, **쇼트 브레이크 vs 코스트**, STBY, B1 비상 정지.
 
 ## 핵심 학습 내용

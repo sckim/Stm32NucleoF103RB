@@ -2,6 +2,8 @@
 
 > 계층: **HAL + DMA** — Claude 작성, 검토 전 (컴파일만 확인)
 
+> CubeMX(`ADC_Injected.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 ADC **주입(injected) 채널**: 정규 변환이 연속으로 도는 중에도 급한 측정이 우선 끼어들어 실행된다. 결과는 채널별 전용 레지스터(`JDR1`~`JDR4`)에 저장되어 덮어써지지 않는다.
 
 ## 핵심 학습 내용

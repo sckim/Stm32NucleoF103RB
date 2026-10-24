@@ -2,6 +2,8 @@
 
 > 계층: **HAL** + TIM — Claude 작성, 검토 전 (컴파일만 확인)
 
+> CubeMX(`TIM_PWM.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 TIM2_CH1(PA0)에 1kHz PWM을 출력하고 듀티를 0~100%로 왕복시켜 LED를 숨쉬듯 점멸시킨다.
 
 ## 핵심 학습 내용

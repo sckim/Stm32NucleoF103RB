@@ -1,3 +1,20 @@
+/* USER CODE BEGIN Header */
+/**
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2026 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /**
  * 07_IWDG_HAL_c  —  [계층: HAL]  독립 워치독(IWDG): 저속 내부 클럭(LSI)으로 도는 "마지막 안전장치"
  *
@@ -23,128 +40,303 @@
  *
  * ISR: 인터럽트를 사용하지 않는다 (IWDG 는 인터럽트 없이 리셋만 한다).
  */
+/* USER CODE END Header */
+/* Includes ------------------------------------------------------------------*/
 #include "main.h"
+
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
+/* USER CODE END Includes */
 
+/* Private typedef -----------------------------------------------------------*/
+/* USER CODE BEGIN PTD */
+
+/* USER CODE END PTD */
+
+/* Private define ------------------------------------------------------------*/
+/* USER CODE BEGIN PD */
+
+/* USER CODE END PD */
+
+/* Private macro -------------------------------------------------------------*/
+/* USER CODE BEGIN PM */
+
+/* USER CODE END PM */
+
+/* Private variables ---------------------------------------------------------*/
 IWDG_HandleTypeDef hiwdg;
+
 UART_HandleTypeDef huart2;
 
+/* USER CODE BEGIN PV */
+/* USER CODE END PV */
+
+/* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_IWDG_Init(void);
 static void MX_USART2_UART_Init(void);
+/* USER CODE BEGIN PFP */
 
+/* USER CODE END PFP */
+
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
 static void print(const char *s) { HAL_UART_Transmit(&huart2, (uint8_t *)s, (uint16_t)strlen(s), 100); }
+/* USER CODE END 0 */
 
+/**
+  * @brief  The application entry point.
+  * @retval int
+  */
 int main(void)
 {
-    HAL_Init();
-    SystemClock_Config();
-    MX_GPIO_Init();
-    MX_USART2_UART_Init();
 
-    /* 리셋 원인 (워치독을 켜기 전에 읽고 지운다) */
-    char msg[96];
-    int n = snprintf(msg, sizeof msg, "\r\n[boot] reset cause:%s%s%s%s%s\r\n",
-                     __HAL_RCC_GET_FLAG(RCC_FLAG_IWDGRST) ? " IWDG" : "",
-                     __HAL_RCC_GET_FLAG(RCC_FLAG_WWDGRST) ? " WWDG" : "",
-                     __HAL_RCC_GET_FLAG(RCC_FLAG_SFTRST)  ? " SOFTWARE" : "",
-                     __HAL_RCC_GET_FLAG(RCC_FLAG_PORRST)  ? " POWER-ON" : "",
-                     __HAL_RCC_GET_FLAG(RCC_FLAG_PINRST)  ? " NRST-PIN" : "");
-    HAL_UART_Transmit(&huart2, (uint8_t *)msg, (uint16_t)n, 100);
-    if (__HAL_RCC_GET_FLAG(RCC_FLAG_IWDGRST)) print("*** the previous run was reset by the independent watchdog ***\r\n");
-    __HAL_RCC_CLEAR_RESET_FLAGS();                                            /* CSR.RMVF = 1 */
+  /* USER CODE BEGIN 1 */
+  char msg[96];
+  uint32_t t_refresh;
+  /* USER CODE END 1 */
 
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
-    HAL_Delay(1000);                                                          /* 부팅 표시 (워치독 시작 전이라 길어도 안전) */
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+  /* MCU Configuration--------------------------------------------------------*/
 
-    __HAL_DBGMCU_FREEZE_IWDG();                                               /* 디버거 중단점에서 카운터 정지 */
-    hiwdg.Instance = IWDG;
-    hiwdg.Init.Prescaler = IWDG_PRESCALER_64;                                 /* IWDG->PR : 40kHz/64 = 625Hz */
-    hiwdg.Init.Reload = 624;                                                  /* IWDG->RLR : (624+1)/625Hz = 1.0s */
-    if (HAL_IWDG_Init(&hiwdg) != HAL_OK) Error_Handler();                     /* KR=0xCCCC 로 시작 (이후 끌 수 없음) */
-    print("watchdog started: timeout ~1s (0.67~1.33s by LSI tolerance), refresh every 0.5s, press B1 to simulate a hang\r\n");
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
 
-    uint32_t t_refresh = HAL_GetTick();
-    while (1)
+  /* USER CODE BEGIN Init */
+  __HAL_DBGMCU_FREEZE_IWDG();                          /* DBGMCU->CR.DBG_IWDG_STOP = 1: 디버거 중단점에서 카운터 정지 (IWDG 시작 전에 설정) */
+  /* USER CODE END Init */
+
+  /* Configure the system clock */
+  SystemClock_Config();
+
+  /* USER CODE BEGIN SysInit */
+
+  /* USER CODE END SysInit */
+
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_IWDG_Init();
+  MX_USART2_UART_Init();
+  /* USER CODE BEGIN 2 */
+  /* 리셋 원인 (RCC->CSR). IWDG 는 CubeMX 구조상 MX_IWDG_Init() 에서 이미 시작됐지만 CSR 플래그에는 영향이 없다 */
+  int n = snprintf(msg, sizeof msg, "\r\n[boot] reset cause:%s%s%s%s%s\r\n",
+                   __HAL_RCC_GET_FLAG(RCC_FLAG_IWDGRST) ? " IWDG" : "",
+                   __HAL_RCC_GET_FLAG(RCC_FLAG_WWDGRST) ? " WWDG" : "",
+                   __HAL_RCC_GET_FLAG(RCC_FLAG_SFTRST)  ? " SOFTWARE" : "",
+                   __HAL_RCC_GET_FLAG(RCC_FLAG_PORRST)  ? " POWER-ON" : "",
+                   __HAL_RCC_GET_FLAG(RCC_FLAG_PINRST)  ? " NRST-PIN" : "");
+  HAL_UART_Transmit(&huart2, (uint8_t *)msg, (uint16_t)n, 100);
+  if (__HAL_RCC_GET_FLAG(RCC_FLAG_IWDGRST)) print("*** the previous run was reset by the independent watchdog ***\r\n");
+  __HAL_RCC_CLEAR_RESET_FLAGS();                                            /* CSR.RMVF = 1 */
+
+  /* 부팅 표시: LD2 를 1초 켠다. 워치독이 이미 동작 중이므로(타임아웃 ~1s) 250ms 씩 나눠 기다리며 리프레시한다 */
+  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+  for (int i = 0; i < 4; i++)
+  {
+    HAL_Delay(250);
+    HAL_IWDG_Refresh(&hiwdg);                                               /* IWDG->KR = 0xAAAA */
+  }
+  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+
+  print("watchdog started: timeout ~1s (0.67~1.33s by LSI tolerance), refresh every 0.5s, press B1 to simulate a hang\r\n");
+
+  t_refresh = HAL_GetTick();
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+  while (1)
+  {
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+    if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET)   /* GPIOC->IDR bit13 (B1: 누르면 Low) */
     {
-        if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_RESET)
-        {
-            print("B1: simulating a hang (no more refresh) -> reset in ~1s\r\n");
-            while (1) {}                                                      /* 멈춘 프로그램: 리프레시 없음 */
-        }
-
-        if (HAL_GetTick() - t_refresh >= 500)
-        {
-            t_refresh += 500;
-            HAL_IWDG_Refresh(&hiwdg);                                         /* IWDG->KR = 0xAAAA */
-            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-        }
+      print("B1: simulating a hang (no more refresh) -> reset in ~1s\r\n");
+      while (1) {}                                                      /* 멈춘 프로그램: 리프레시 없음 */
     }
+
+    if (HAL_GetTick() - t_refresh >= 500)
+    {
+      t_refresh += 500;
+      HAL_IWDG_Refresh(&hiwdg);                                         /* IWDG->KR = 0xAAAA */
+      HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+    }
+  }
+  /* USER CODE END 3 */
 }
 
-static void MX_GPIO_Init(void)
-{
-    GPIO_InitTypeDef g = {0};
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    __HAL_RCC_GPIOC_CLK_ENABLE();
-    g.Pin = GPIO_PIN_5;  g.Mode = GPIO_MODE_OUTPUT_PP;  g.Pull = GPIO_NOPULL;  g.Speed = GPIO_SPEED_FREQ_LOW;   /* LD2 */
-    HAL_GPIO_Init(GPIOA, &g);
-    g.Pin = GPIO_PIN_13;  g.Mode = GPIO_MODE_INPUT;                                                          /* B1 */
-    HAL_GPIO_Init(GPIOC, &g);
-}
-
-/* USART2 (ST-Link 가상 COM, PA2=TX / PA3=RX) 기본 폴링 송신용 MSP: 클럭/핀만 설정 */
-void HAL_UART_MspInit(UART_HandleTypeDef *huart)
-{
-    if (huart->Instance != USART2) return;
-    GPIO_InitTypeDef g = {0};
-    __HAL_RCC_USART2_CLK_ENABLE();   /* RCC->APB1ENR.USART2EN */
-    __HAL_RCC_GPIOA_CLK_ENABLE();    /* RCC->APB2ENR.IOPAEN   */
-    g.Pin = GPIO_PIN_2;  g.Mode = GPIO_MODE_AF_PP;  g.Speed = GPIO_SPEED_FREQ_HIGH;   /* TX: CNF=10, MODE=11 */
-    HAL_GPIO_Init(GPIOA, &g);
-    g.Pin = GPIO_PIN_3;  g.Mode = GPIO_MODE_INPUT;  g.Pull = GPIO_NOPULL;            /* RX: CNF=01 (플로팅 입력) */
-    HAL_GPIO_Init(GPIOA, &g);
-}
-
-static void MX_USART2_UART_Init(void)
-{
-    huart2.Instance = USART2;
-    huart2.Init.BaudRate = 115200;
-    huart2.Init.WordLength = UART_WORDLENGTH_8B;
-    huart2.Init.StopBits = UART_STOPBITS_1;
-    huart2.Init.Parity = UART_PARITY_NONE;
-    huart2.Init.Mode = UART_MODE_TX_RX;
-    huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-    huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-    if (HAL_UART_Init(&huart2) != HAL_OK) Error_Handler();
-}
-
-/* HSI(8MHz)/2 x16 = 64MHz. Nucleo 는 HSE 가 ST-Link 에서 오므로 HSI 로 단순화 */
+/**
+  * @brief System Clock Configuration
+  * @retval None
+  */
 void SystemClock_Config(void)
 {
-    RCC_OscInitTypeDef o = {0};
-    RCC_ClkInitTypeDef c = {0};
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-    o.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-    o.HSIState = RCC_HSI_ON;
-    o.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-    o.PLL.PLLState = RCC_PLL_ON;
-    o.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
-    o.PLL.PLLMUL = RCC_PLL_MUL16;
-    if (HAL_RCC_OscConfig(&o) != HAL_OK) Error_Handler();
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL16;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
-    c.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
-    c.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-    c.AHBCLKDivider = RCC_SYSCLK_DIV1;
-    c.APB1CLKDivider = RCC_HCLK_DIV2;          /* APB1 = 32MHz (최대 36MHz) */
-    c.APB2CLKDivider = RCC_HCLK_DIV1;          /* APB2 = 64MHz */
-    if (HAL_RCC_ClockConfig(&c, FLASH_LATENCY_2) != HAL_OK) Error_Handler();
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
 
+/**
+  * @brief IWDG Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_IWDG_Init(void)
+{
+
+  /* USER CODE BEGIN IWDG_Init 0 */
+
+  /* USER CODE END IWDG_Init 0 */
+
+  /* USER CODE BEGIN IWDG_Init 1 */
+
+  /* USER CODE END IWDG_Init 1 */
+  hiwdg.Instance = IWDG;
+  hiwdg.Init.Prescaler = IWDG_PRESCALER_64;
+  hiwdg.Init.Reload = 624;
+  if (HAL_IWDG_Init(&hiwdg) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN IWDG_Init 2 */
+  /* [레지스터] IWDG->KR = 0x5555 (PR/RLR 접근 허용), IWDG->PR = 64 분주 (40kHz/64 = 625Hz), IWDG->RLR = 624 ((624+1)/625Hz = 1.0s),
+   * IWDG->KR = 0xCCCC 로 시작 (이후 리셋 외에는 끌 수 없고 LSI 도 자동으로 켜진다). F1 의 IWDG 는 MspInit 이 없다. */
+  /* USER CODE END IWDG_Init 2 */
+
+}
+
+/**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+  /* USART2 (ST-Link 가상 COM, PA2=TX / PA3=RX) 기본 폴링 송신용. 클럭/핀 설정은 stm32f1xx_hal_msp.c 의 HAL_UART_MspInit 에 있다. */
+  /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
+  * @brief GPIO Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_GPIO_Init(void)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  /* USER CODE BEGIN MX_GPIO_Init_1 */
+
+  /* USER CODE END MX_GPIO_Init_1 */
+
+  /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : B1_Pin */
+  GPIO_InitStruct.Pin = B1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : LD2_Pin */
+  GPIO_InitStruct.Pin = LD2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+
+  /* USER CODE BEGIN MX_GPIO_Init_2 */
+
+  /* USER CODE END MX_GPIO_Init_2 */
+}
+
+/* USER CODE BEGIN 4 */
+/* USER CODE END 4 */
+
+/**
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
 void Error_Handler(void)
 {
-    __disable_irq();
-    while (1) {}
+  /* USER CODE BEGIN Error_Handler_Debug */
+  /* User can add his own implementation to report the HAL error return state */
+  __disable_irq();
+  while (1) {
+  }
+  /* USER CODE END Error_Handler_Debug */
 }
+#ifdef USE_FULL_ASSERT
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t *file, uint32_t line)
+{
+  /* USER CODE BEGIN 6 */
+  /* User can add his own implementation to report the file name and line
+     number, ex: printf("Wrong parameters value: file %s on line %d\r\n", file,
+     line) */
+  /* USER CODE END 6 */
+}
+#endif /* USE_FULL_ASSERT */

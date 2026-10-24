@@ -2,6 +2,8 @@
 
 > 계층: **HAL + 레지스터(OPM 비트)** — Claude 작성, 검토 전 (컴파일만 확인)
 
+> CubeMX(`TIM_OnePulse_HCSR04.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 **원 펄스 모드(OPM)** 로 정확한 10µs 트리거를 만들고, **입력 캡처**로 에코 폭을 재서 HC-SR04 초음파 센서의 거리를 측정한다.
 
 ## 핵심 학습 내용

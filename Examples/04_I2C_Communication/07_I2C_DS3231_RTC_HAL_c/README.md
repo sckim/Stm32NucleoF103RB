@@ -2,6 +2,8 @@
 
 > 계층: **HAL** — Claude 작성, 검토 전 (PlatformIO 빌드만 확인)
 
+> CubeMX(`I2C_DS3231_RTC.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 I2C 외장 RTC **DS3231**: BCD 시각 읽기/쓰기, 내장 온도 센서, 전원이 끊겼는지 알려 주는 OSF 플래그. 부팅 시 컴파일 시각으로 설정할 수 있다.
 
 ## 핵심 학습 내용

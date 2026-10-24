@@ -2,6 +2,8 @@
 
 > 계층: **HAL** — Claude 작성, 검토 전 (PlatformIO 빌드만 확인)
 
+> CubeMX(`TIM_Cascade32.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 타이머 **마스터/슬레이브 연결**로 만든 32비트 카운터(스톱워치 약 71분). TIM3 의 넘침(TRGO)을 TIM2 의 외부 클럭(ITR2)으로 써서 16비트 두 개를 잇는다.
 
 ## 핵심 학습 내용

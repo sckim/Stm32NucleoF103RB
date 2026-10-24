@@ -2,6 +2,8 @@
 
 > 계층: **HAL** + 고급 타이머 TIM1 — Claude 작성, 검토 전 (컴파일만 확인)
 
+> CubeMX(`TIM1_DeadTime_Break.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 모터 구동(하프브리지)에서 상·하단 스위치가 동시에 켜져 전원이 단락(shoot-through)되는 것을 막는 기능을 다룬다: **상보 PWM + 데드타임 + 브레이크**.
 
 ## 핵심 학습 내용

@@ -1,3 +1,20 @@
+/* USER CODE BEGIN Header */
+/**
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2026 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /**
  * 04_TIM1_DeadTime_Break_HAL_c  —  [계층: HAL]  고급 타이머 TIM1: 상보 PWM + 데드타임 + 브레이크
  *
@@ -29,184 +46,339 @@
  *   TIM1_BRK_IRQHandler (stm32f1xx_it.c, 진짜 ISR) -> HAL_TIM_IRQHandler()
  *     -> HAL_TIMEx_BreakCallback() (이 파일) : 브레이크 발생 통지
  */
+/* USER CODE END Header */
+/* Includes ------------------------------------------------------------------*/
 #include "main.h"
+
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
+/* USER CODE END Includes */
 
+/* Private typedef -----------------------------------------------------------*/
+/* USER CODE BEGIN PTD */
+
+/* USER CODE END PTD */
+
+/* Private define ------------------------------------------------------------*/
+/* USER CODE BEGIN PD */
+
+/* USER CODE END PD */
+
+/* Private macro -------------------------------------------------------------*/
+/* USER CODE BEGIN PM */
+
+/* USER CODE END PM */
+
+/* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim1;
 UART_HandleTypeDef huart2;
 
+/* USER CODE BEGIN PV */
 static volatile uint8_t break_flag;
+/* USER CODE END PV */
 
+/* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_USART2_UART_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_USART2_UART_Init(void);
+/* USER CODE BEGIN PFP */
 
+/* USER CODE END PFP */
+
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
+/* USER CODE END 0 */
+
+/**
+  * @brief  The application entry point.
+  * @retval int
+  */
 int main(void)
 {
-    HAL_Init();
-    SystemClock_Config();
-    MX_GPIO_Init();
-    MX_USART2_UART_Init();
-    MX_TIM1_Init();
 
-    const char *banner = "\r\n[TIM1 complementary PWM 20kHz, dead-time ~1us] B1: software break\r\n";
-    HAL_UART_Transmit(&huart2, (uint8_t *)banner, (uint16_t)strlen(banner), 100);
+  /* USER CODE BEGIN 1 */
+  /* USER CODE END 1 */
 
-    while (1)
+  /* MCU Configuration--------------------------------------------------------*/
+
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
+
+  /* USER CODE BEGIN Init */
+
+  /* USER CODE END Init */
+
+  /* Configure the system clock */
+  SystemClock_Config();
+
+  /* USER CODE BEGIN SysInit */
+
+  /* USER CODE END SysInit */
+
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_TIM1_Init();
+  MX_USART2_UART_Init();
+  /* USER CODE BEGIN 2 */
+  __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_BREAK);       /* DIER.BIE = 1 */
+
+  if (HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1) != HAL_OK) Error_Handler();      /* CCER.CC1E, BDTR.MOE, CR1.CEN */
+  if (HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1) != HAL_OK) Error_Handler();   /* CCER.CC1NE */
+
+  const char *banner = "\r\n[TIM1 complementary PWM 20kHz, dead-time ~1us] B1: software break\r\n";
+  HAL_UART_Transmit(&huart2, (uint8_t *)banner, (uint16_t)strlen(banner), 100);
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+  while (1)
+  {
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+    if (break_flag)
     {
-        if (break_flag)
-        {
-            break_flag = 0;
-            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);              /* LD2 ON: 브레이크 상태 표시 */
-            const char *m = "BREAK! outputs disabled (MOE=0), re-enable in 2s\r\n";
-            HAL_UART_Transmit(&huart2, (uint8_t *)m, (uint16_t)strlen(m), 100);
+      break_flag = 0;
+      HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);              /* LD2 ON: 브레이크 상태 표시 */
+      const char *m = "BREAK! outputs disabled (MOE=0), re-enable in 2s\r\n";
+      HAL_UART_Transmit(&huart2, (uint8_t *)m, (uint16_t)strlen(m), 100);
 
-            HAL_Delay(2000);
+      HAL_Delay(2000);
 
-            __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_BREAK);                    /* SR.BIF = 0 (브레이크 입력이 해제된 후에) */
-            __HAL_TIM_MOE_ENABLE(&htim1);                                    /* BDTR.MOE = 1 : 출력 재개 */
-            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
-            m = "PWM resumed\r\n";
-            HAL_UART_Transmit(&huart2, (uint8_t *)m, (uint16_t)strlen(m), 100);
-        }
-
-        if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_RESET)          /* B1 눌림 */
-        {
-            HAL_Delay(30);
-            htim1.Instance->EGR |= TIM_EGR_BG;                               /* EGR.BG = 1 : 소프트웨어 브레이크 발생 */
-            while (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_RESET) {}
-        }
+      __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_BREAK);                    /* SR.BIF = 0 (브레이크 입력이 해제된 후에) */
+      __HAL_TIM_MOE_ENABLE(&htim1);                                    /* BDTR.MOE = 1 : 출력 재개 */
+      HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+      m = "PWM resumed\r\n";
+      HAL_UART_Transmit(&huart2, (uint8_t *)m, (uint16_t)strlen(m), 100);
     }
+
+    if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET)          /* B1 눌림 (GPIOC->IDR bit13) */
+    {
+      HAL_Delay(30);
+      htim1.Instance->EGR |= TIM_EGR_BG;                               /* EGR.BG = 1 : 소프트웨어 브레이크 발생 */
+      while (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET) {}
+    }
+  }
+  /* USER CODE END 3 */
 }
 
+/**
+  * @brief System Clock Configuration
+  * @retval None
+  */
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL16;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/**
+  * @brief TIM1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM1_Init(void)
+{
+
+  /* USER CODE BEGIN TIM1_Init 0 */
+
+  /* USER CODE END TIM1_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
+
+  /* USER CODE BEGIN TIM1_Init 1 */
+
+  /* USER CODE END TIM1_Init 1 */
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 0;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 3199;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_PWM_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 1600;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
+  sBreakDeadTimeConfig.DeadTime = 64;
+  sBreakDeadTimeConfig.BreakState = TIM_BREAK_ENABLE;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  if (HAL_TIMEx_ConfigBreakDeadTime(&htim1, &sBreakDeadTimeConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM1_Init 2 */
+  /* 20kHz = 64MHz / 3200 (PSC=0, ARR=3199), CCR1=1600 (50%).
+   * BDTR.DTG = 64 (약 1us 데드타임), BDTR.BKE=1, BKP=1 (High 활성), AOE=0 (MOE 는 소프트웨어가 복구)
+   * CR2.OIS1/OIS1N = 0 (브레이크/IDLE 시 출력 상태), CCER.CC1P/CC1NP = 0 */
+  /* USER CODE END TIM1_Init 2 */
+  HAL_TIM_MspPostInit(&htim1);
+
+}
+
+/**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
+  * @brief GPIO Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_GPIO_Init(void)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  /* USER CODE BEGIN MX_GPIO_Init_1 */
+
+  /* USER CODE END MX_GPIO_Init_1 */
+
+  /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : B1_Pin */
+  GPIO_InitStruct.Pin = B1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : LD2_Pin */
+  GPIO_InitStruct.Pin = LD2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+
+  /* USER CODE BEGIN MX_GPIO_Init_2 */
+
+  /* USER CODE END MX_GPIO_Init_2 */
+}
+
+/* USER CODE BEGIN 4 */
 /* ------------------------------------------------------------------------- */
 /* HAL 콜백 (ISR 아님, HAL_TIM_IRQHandler 가 호출)                              */
 /* ------------------------------------------------------------------------- */
 void HAL_TIMEx_BreakCallback(TIM_HandleTypeDef *htim)
 {
-    if (htim->Instance == TIM1) break_flag = 1;      /* ISR 에서는 플래그만, 후처리는 main */
+  if (htim->Instance == TIM1) break_flag = 1;      /* ISR 에서는 플래그만, 후처리는 main */
 }
+/* USER CODE END 4 */
 
-void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim)
-{
-    if (htim->Instance != TIM1) return;
-    __HAL_RCC_TIM1_CLK_ENABLE();                     /* RCC->APB2ENR.TIM1EN */
-    HAL_NVIC_SetPriority(TIM1_BRK_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(TIM1_BRK_IRQn);
-}
-
-static void MX_TIM1_Init(void)
-{
-    GPIO_InitTypeDef g = {0};
-    TIM_OC_InitTypeDef oc = {0};
-    TIM_BreakDeadTimeConfigTypeDef bd = {0};
-
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    __HAL_RCC_GPIOB_CLK_ENABLE();
-
-    g.Pin = GPIO_PIN_8;   g.Mode = GPIO_MODE_AF_PP;  g.Speed = GPIO_SPEED_FREQ_HIGH;    /* CH1 */
-    HAL_GPIO_Init(GPIOA, &g);
-    g.Pin = GPIO_PIN_13;  g.Mode = GPIO_MODE_AF_PP;  g.Speed = GPIO_SPEED_FREQ_HIGH;    /* CH1N */
-    HAL_GPIO_Init(GPIOB, &g);
-    g.Pin = GPIO_PIN_12;  g.Mode = GPIO_MODE_INPUT;  g.Pull = GPIO_PULLDOWN;            /* BKIN: 평소 Low 유지 */
-    HAL_GPIO_Init(GPIOB, &g);
-
-    htim1.Instance = TIM1;
-    htim1.Init.Prescaler = 0;
-    htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-    htim1.Init.Period = 3200 - 1;                    /* 20kHz */
-    htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-    htim1.Init.RepetitionCounter = 0;
-    htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-    if (HAL_TIM_PWM_Init(&htim1) != HAL_OK) Error_Handler();
-
-    oc.OCMode = TIM_OCMODE_PWM1;
-    oc.Pulse = 1600;                                 /* 50% */
-    oc.OCPolarity = TIM_OCPOLARITY_HIGH;             /* CCER.CC1P = 0 */
-    oc.OCNPolarity = TIM_OCNPOLARITY_HIGH;           /* CCER.CC1NP = 0 : CH1N = CH1 의 반전(데드타임 포함) */
-    oc.OCFastMode = TIM_OCFAST_DISABLE;
-    oc.OCIdleState = TIM_OCIDLESTATE_RESET;          /* CR2.OIS1 : 브레이크/IDLE 시 출력 상태 */
-    oc.OCNIdleState = TIM_OCNIDLESTATE_RESET;        /* CR2.OIS1N */
-    if (HAL_TIM_PWM_ConfigChannel(&htim1, &oc, TIM_CHANNEL_1) != HAL_OK) Error_Handler();
-
-    bd.OffStateRunMode = TIM_OSSR_DISABLE;
-    bd.OffStateIDLEMode = TIM_OSSI_DISABLE;
-    bd.LockLevel = TIM_LOCKLEVEL_OFF;
-    bd.DeadTime = 64;                                /* BDTR.DTG : 64 x 15.6ns = 약 1us */
-    bd.BreakState = TIM_BREAK_ENABLE;                /* BDTR.BKE */
-    bd.BreakPolarity = TIM_BREAKPOLARITY_HIGH;       /* BDTR.BKP : High 에서 브레이크 */
-    bd.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;/* BDTR.AOE = 0 : MOE 를 소프트웨어가 복구 */
-    if (HAL_TIMEx_ConfigBreakDeadTime(&htim1, &bd) != HAL_OK) Error_Handler();
-
-    __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_BREAK);       /* DIER.BIE = 1 */
-
-    if (HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1) != HAL_OK) Error_Handler();      /* CCER.CC1E, BDTR.MOE, CR1.CEN */
-    if (HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1) != HAL_OK) Error_Handler();   /* CCER.CC1NE */
-}
-
-static void MX_GPIO_Init(void)
-{
-    GPIO_InitTypeDef g = {0};
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    __HAL_RCC_GPIOC_CLK_ENABLE();
-    g.Pin = GPIO_PIN_5;  g.Mode = GPIO_MODE_OUTPUT_PP;  g.Pull = GPIO_NOPULL;  g.Speed = GPIO_SPEED_FREQ_LOW;  /* LD2 */
-    HAL_GPIO_Init(GPIOA, &g);
-    g.Pin = GPIO_PIN_13; g.Mode = GPIO_MODE_INPUT;      g.Pull = GPIO_NOPULL;                                /* B1 */
-    HAL_GPIO_Init(GPIOC, &g);
-}
-
-/* USART2 (ST-Link 가상 COM, PA2=TX / PA3=RX) 기본 폴링 송신용 MSP: 클럭/핀만 설정 */
-void HAL_UART_MspInit(UART_HandleTypeDef *huart)
-{
-    if (huart->Instance != USART2) return;
-    GPIO_InitTypeDef g = {0};
-    __HAL_RCC_USART2_CLK_ENABLE();   /* RCC->APB1ENR.USART2EN */
-    __HAL_RCC_GPIOA_CLK_ENABLE();    /* RCC->APB2ENR.IOPAEN   */
-    g.Pin = GPIO_PIN_2;  g.Mode = GPIO_MODE_AF_PP;  g.Speed = GPIO_SPEED_FREQ_HIGH;   /* TX: CNF=10, MODE=11 */
-    HAL_GPIO_Init(GPIOA, &g);
-    g.Pin = GPIO_PIN_3;  g.Mode = GPIO_MODE_INPUT;  g.Pull = GPIO_NOPULL;            /* RX: CNF=01 (플로팅 입력) */
-    HAL_GPIO_Init(GPIOA, &g);
-}
-
-static void MX_USART2_UART_Init(void)
-{
-    huart2.Instance = USART2;
-    huart2.Init.BaudRate = 115200;
-    huart2.Init.WordLength = UART_WORDLENGTH_8B;
-    huart2.Init.StopBits = UART_STOPBITS_1;
-    huart2.Init.Parity = UART_PARITY_NONE;
-    huart2.Init.Mode = UART_MODE_TX_RX;
-    huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-    huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-    if (HAL_UART_Init(&huart2) != HAL_OK) Error_Handler();
-}
-
-/* HSI(8MHz)/2 x16 = 64MHz. Nucleo 는 HSE 가 ST-Link 에서 오므로 HSI 로 단순화 */
-void SystemClock_Config(void)
-{
-    RCC_OscInitTypeDef o = {0};
-    RCC_ClkInitTypeDef c = {0};
-
-    o.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-    o.HSIState = RCC_HSI_ON;
-    o.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-    o.PLL.PLLState = RCC_PLL_ON;
-    o.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
-    o.PLL.PLLMUL = RCC_PLL_MUL16;
-    if (HAL_RCC_OscConfig(&o) != HAL_OK) Error_Handler();
-
-    c.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
-    c.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-    c.AHBCLKDivider = RCC_SYSCLK_DIV1;
-    c.APB1CLKDivider = RCC_HCLK_DIV2;          /* APB1 = 32MHz (최대 36MHz) */
-    c.APB2CLKDivider = RCC_HCLK_DIV1;          /* APB2 = 64MHz */
-    if (HAL_RCC_ClockConfig(&c, FLASH_LATENCY_2) != HAL_OK) Error_Handler();
-}
-
+/**
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
 void Error_Handler(void)
 {
-    __disable_irq();
-    while (1) {}
+  /* USER CODE BEGIN Error_Handler_Debug */
+  /* User can add his own implementation to report the HAL error return state */
+  __disable_irq();
+  while (1) {
+  }
+  /* USER CODE END Error_Handler_Debug */
 }
+#ifdef USE_FULL_ASSERT
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t *file, uint32_t line)
+{
+  /* USER CODE BEGIN 6 */
+  /* User can add his own implementation to report the file name and line
+     number, ex: printf("Wrong parameters value: file %s on line %d\r\n", file,
+     line) */
+  /* USER CODE END 6 */
+}
+#endif /* USE_FULL_ASSERT */

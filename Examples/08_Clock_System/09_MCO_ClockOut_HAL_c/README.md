@@ -2,6 +2,8 @@
 
 > 계층: **HAL** + RCC — Claude 작성, 검토 전 (컴파일만 확인)
 
+> CubeMX(`MCO_ClockOut.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 **MCO(Microcontroller Clock Output)** 로 내부 클럭을 PA8(D7)로 내보내 오실로스코프로 확인한다.
 
 ## 핵심 학습 내용

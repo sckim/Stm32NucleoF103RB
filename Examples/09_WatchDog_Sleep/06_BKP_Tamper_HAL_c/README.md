@@ -2,6 +2,8 @@
 
 > 계층: **HAL(UART/클럭) + 레지스터(BKP)** — Claude 작성, 검토 전 (컴파일만 확인)
 
+> CubeMX(`BKP_Tamper.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 **백업 레지스터(BKP)와 탬퍼 감지**: VBAT/리셋을 넘어 값이 유지되는 `BKP_DRx`를 다루고, **TAMPER 핀(PC13 = 보드의 B1)** 에 지정된 레벨이 감지되면 하드웨어가 모든 백업 레지스터를 지우는 것을 손으로 확인한다.
 
 ## 핵심 학습 내용

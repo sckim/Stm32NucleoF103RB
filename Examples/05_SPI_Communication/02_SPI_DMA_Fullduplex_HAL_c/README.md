@@ -2,6 +2,8 @@
 
 > 계층: **HAL** + DMA — Claude 작성, 검토 전 (컴파일만 확인)
 
+> CubeMX(`SPI_DMA_Fullduplex.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 SPI1 전이중 전송을 DMA에 맡기고, 그 동안 CPU가 다른 일을 한 횟수를 세어 폴링 방식과 비교한다.
 
 ## 핵심 학습 내용

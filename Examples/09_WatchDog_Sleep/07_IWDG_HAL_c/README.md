@@ -2,6 +2,8 @@
 
 > 계층: **HAL** — Claude 작성, 검토 전 (PlatformIO 빌드만 확인)
 
+> CubeMX(`IWDG.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 **독립 워치독(IWDG)**: 저속 내부 클럭 LSI(약 40kHz)로 돌아 메인 클럭이 죽어도 살아 있는 "마지막 안전장치". 한 번 켜면 리셋 외에는 끌 수 없다.
 
 ## 핵심 학습 내용

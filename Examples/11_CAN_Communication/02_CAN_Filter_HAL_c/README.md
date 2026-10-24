@@ -2,6 +2,8 @@
 
 > 계층: **HAL** — Claude 작성, 검토 전 (컴파일만 확인)
 
+> CubeMX(`CAN_Filter.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 bxCAN **수신 필터(acceptance filter)**: ID 리스트/마스크 모드, 16/32비트 스케일, 표준/확장 프레임, FIFO0/FIFO1 분배. 루프백 모드라 트랜시버 없이 시험한다.
 
 ## 핵심 학습 내용

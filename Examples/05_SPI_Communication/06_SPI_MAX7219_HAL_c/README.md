@@ -2,6 +2,8 @@
 
 > 계층: **HAL** — Claude 작성, 검토 전 (PlatformIO 빌드만 확인)
 
+> CubeMX(`SPI_MAX7219.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 **MAX7219 8x8 LED 매트릭스** 구동. 16비트 프레임(레지스터 주소 + 데이터)과 CS(LOAD) 상승 에지 반영이라는 시프트 레지스터형 SPI 장치의 전형을 익힌다.
 
 ## 핵심 학습 내용

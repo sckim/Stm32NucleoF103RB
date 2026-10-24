@@ -2,6 +2,8 @@
 
 > 계층: **HAL** — Claude 작성, 검토 전 (컴파일만 확인)
 
+> CubeMX(`DMA_Priority.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 **DMA 채널 우선순위와 중재(arbiter)**: 채널1·채널2 가 각각 4KB 메모리 복사를 동시에 시작할 때 어느 쪽이 먼저 끝나는지 DWT 사이클로 측정한다. B1 버튼으로 세 가지 설정을 순환한다.
 
 ## 핵심 학습 내용

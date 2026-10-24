@@ -1,3 +1,20 @@
+/* USER CODE BEGIN Header */
+/**
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2026 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /**
  * 02_DMA_Circular_GPIO_HAL_c  —  [계층: HAL]  원형(circular) DMA + 타이머 요청으로 GPIO 포트에 패턴을 자동 출력 (핑퐁 버퍼)
  *
@@ -24,25 +41,55 @@
  *   DMA1_Channel2_IRQHandler (stm32f1xx_it.c, 진짜 ISR) -> HAL_DMA_IRQHandler()
  *     -> half_cb (HT) / full_cb (TC)  (HAL_DMA_RegisterCallback 으로 등록한 이 파일의 함수)
  */
+/* USER CODE END Header */
+/* Includes ------------------------------------------------------------------*/
 #include "main.h"
+
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
+/* USER CODE END Includes */
 
+/* Private typedef -----------------------------------------------------------*/
+/* USER CODE BEGIN PTD */
+
+/* USER CODE END PTD */
+
+/* Private define ------------------------------------------------------------*/
+/* USER CODE BEGIN PD */
 #define N 64                                  /* 전체 샘플 수 (반 = 32) */
 
+/* USER CODE END PD */
+
+/* Private macro -------------------------------------------------------------*/
+/* USER CODE BEGIN PM */
+
+/* USER CODE END PM */
+
+/* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim2;
 DMA_HandleTypeDef hdma_tim2_up;
 UART_HandleTypeDef huart2;
 
+/* USER CODE BEGIN PV */
 static uint16_t buf[N];
 static volatile uint8_t pattern;              /* 0/1/2 : main 이 1초마다 변경 */
 static volatile uint32_t half_count, full_count;
+/* USER CODE END PV */
 
+/* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
+static void MX_TIM2_Init(void);
 static void MX_USART2_UART_Init(void);
-static void MX_TIM2_DMA_Init(void);
+/* USER CODE BEGIN PFP */
 
+/* USER CODE END PFP */
+
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
 /* 반 버퍼(32개)를 현재 패턴으로 채운다. phase = 이 절반이 패턴 안에서 시작하는 위치 */
 static void fill_half(uint16_t *p, uint32_t start)
 {
@@ -60,137 +107,290 @@ static void fill_half(uint16_t *p, uint32_t start)
     }
 }
 
-int main(void)
-{
-    HAL_Init();
-    SystemClock_Config();
-    MX_GPIO_Init();
-    MX_USART2_UART_Init();
-
-    fill_half(&buf[0], 0);
-    fill_half(&buf[N / 2], N / 2);
-    MX_TIM2_DMA_Init();
-
-    /* DMA 시작: 메모리 buf -> GPIOC->ODR, 원형. TIM2 업데이트마다 1샘플 */
-    if (HAL_DMA_Start_IT(&hdma_tim2_up, (uint32_t)buf, (uint32_t)&GPIOC->ODR, N) != HAL_OK) Error_Handler();
-    __HAL_TIM_ENABLE_DMA(&htim2, TIM_DMA_UPDATE);        /* DIER.UDE = 1 */
-    if (HAL_TIM_Base_Start(&htim2) != HAL_OK) Error_Handler();
-
-    char msg[96];
-    uint32_t t_sw = HAL_GetTick();
-    while (1)
-    {
-        if (HAL_GetTick() - t_sw >= 1000)
-        {
-            t_sw += 1000;
-            pattern = (uint8_t)((pattern + 1) % 3);      /* 콜백들이 다음 반 버퍼부터 새 패턴으로 채운다 */
-            static const char *const nm[3] = { "knight-rider", "binary ramp", "triangle" };
-            int n = snprintf(msg, sizeof msg, "pattern=%s  HT=%lu TC=%lu (기대: 각각 약 156/s)\r\n",
-                             nm[pattern], (unsigned long)half_count, (unsigned long)full_count);
-            HAL_UART_Transmit(&huart2, (uint8_t *)msg, (uint16_t)n, 100);
-        }
-    }
-}
-
 /* ------------------------------------------------------------------------- */
 /* DMA 콜백 (ISR 문맥): HT = 앞 절반 전송 완료, TC = 뒤 절반 전송 완료                */
 /* ------------------------------------------------------------------------- */
 static void half_cb(DMA_HandleTypeDef *h) { (void)h; fill_half(&buf[0], 0);          half_count++; }   /* 앞 절반이 비었음 -> 채움 */
 static void full_cb(DMA_HandleTypeDef *h) { (void)h; fill_half(&buf[N / 2], N / 2);  full_count++; }   /* 뒤 절반이 비었음 -> 채움 */
 
-void HAL_TIM_Base_MspInit(TIM_HandleTypeDef *htim)
+/* USER CODE END 0 */
+
+/**
+  * @brief  The application entry point.
+  * @retval int
+  */
+int main(void)
 {
-    if (htim->Instance == TIM2) __HAL_RCC_TIM2_CLK_ENABLE();
+
+  /* USER CODE BEGIN 1 */
+  /* USER CODE END 1 */
+
+  /* MCU Configuration--------------------------------------------------------*/
+
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
+
+  /* USER CODE BEGIN Init */
+
+  /* USER CODE END Init */
+
+  /* Configure the system clock */
+  SystemClock_Config();
+
+  /* USER CODE BEGIN SysInit */
+
+  /* USER CODE END SysInit */
+
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_TIM2_Init();
+  MX_USART2_UART_Init();
+  /* USER CODE BEGIN 2 */
+  /* 앞/뒤 절반을 첫 패턴(pattern=0)으로 미리 채운다 */
+  fill_half(&buf[0], 0);
+  fill_half(&buf[N / 2], N / 2);
+
+  /* DMA 콜백 등록: HT -> half_cb, TC -> full_cb. HAL_DMA_Start_IT 가 XferHalfCpltCallback 이 NULL 이 아닐 때만
+   * CCR.HTIE 를 켜므로 반드시 Start_IT 보다 먼저 등록한다 (HAL_DMA_IRQHandler 가 ISR 안에서 호출) */
+  HAL_DMA_RegisterCallback(&hdma_tim2_up, HAL_DMA_XFER_HALFCPLT_CB_ID, half_cb);
+  HAL_DMA_RegisterCallback(&hdma_tim2_up, HAL_DMA_XFER_CPLT_CB_ID, full_cb);
+
+  /* DMA 시작: 메모리 buf -> GPIOC->ODR, 원형 (CCR.CIRC=1, MX_TIM2 의 DMA 설정은 HAL_TIM_Base_MspInit). TIM2 업데이트마다 1샘플 */
+  if (HAL_DMA_Start_IT(&hdma_tim2_up, (uint32_t)buf, (uint32_t)&GPIOC->ODR, N) != HAL_OK) Error_Handler();
+  __HAL_TIM_ENABLE_DMA(&htim2, TIM_DMA_UPDATE);        /* TIM2->DIER.UDE(bit8) = 1 */
+  if (HAL_TIM_Base_Start(&htim2) != HAL_OK) Error_Handler();   /* TIM2->CR1.CEN = 1 */
+
+  char msg[96];
+  uint32_t t_sw = HAL_GetTick();
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+  while (1)
+  {
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+    if (HAL_GetTick() - t_sw >= 1000)
+    {
+      t_sw += 1000;
+      pattern = (uint8_t)((pattern + 1) % 3);      /* 콜백들이 다음 반 버퍼부터 새 패턴으로 채운다 */
+      static const char *const nm[3] = { "knight-rider", "binary ramp", "triangle" };
+      int n = snprintf(msg, sizeof msg, "pattern=%s  HT=%lu TC=%lu (기대: 각각 약 156/s)\r\n",
+              nm[pattern], (unsigned long)half_count, (unsigned long)full_count);
+      HAL_UART_Transmit(&huart2, (uint8_t *)msg, (uint16_t)n, 100);
+    }
+  }
+  /* USER CODE END 3 */
 }
 
-static void MX_TIM2_DMA_Init(void)
-{
-    __HAL_RCC_DMA1_CLK_ENABLE();
-
-    /* TIM2 : 64MHz / (PSC+1) / (ARR+1) = 10kHz  -> PSC = 63, ARR = 99 (64MHz/64 = 1MHz, /100 = 10kHz) */
-    htim2.Instance = TIM2;
-    htim2.Init.Prescaler = 64 - 1;
-    htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-    htim2.Init.Period = 100 - 1;
-    htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-    htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-    if (HAL_TIM_Base_Init(&htim2) != HAL_OK) Error_Handler();
-
-    hdma_tim2_up.Instance = DMA1_Channel2;                          /* TIM2_UP 는 DMA1 채널2 (RM0008 13.3.7) */
-    hdma_tim2_up.Init.Direction = DMA_MEMORY_TO_PERIPH;
-    hdma_tim2_up.Init.PeriphInc = DMA_PINC_DISABLE;                 /* ODR 주소 고정 */
-    hdma_tim2_up.Init.MemInc = DMA_MINC_ENABLE;
-    hdma_tim2_up.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-    hdma_tim2_up.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
-    hdma_tim2_up.Init.Mode = DMA_CIRCULAR;                          /* CCR.CIRC = 1 */
-    hdma_tim2_up.Init.Priority = DMA_PRIORITY_HIGH;
-    if (HAL_DMA_Init(&hdma_tim2_up) != HAL_OK) Error_Handler();
-    HAL_DMA_RegisterCallback(&hdma_tim2_up, HAL_DMA_XFER_HALFCPLT_CB_ID, half_cb);
-    HAL_DMA_RegisterCallback(&hdma_tim2_up, HAL_DMA_XFER_CPLT_CB_ID, full_cb);
-
-    HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 1, 0);
-    HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
-}
-
-static void MX_GPIO_Init(void)
-{
-    GPIO_InitTypeDef g = {0};
-    __HAL_RCC_GPIOC_CLK_ENABLE();
-    g.Pin = 0x00FF;                                                 /* PC0..PC7 출력 */
-    g.Mode = GPIO_MODE_OUTPUT_PP;  g.Pull = GPIO_NOPULL;  g.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(GPIOC, &g);
-}
-
-/* USART2 (ST-Link 가상 COM, PA2=TX / PA3=RX) 기본 폴링 송신용 MSP: 클럭/핀만 설정 */
-void HAL_UART_MspInit(UART_HandleTypeDef *huart)
-{
-    if (huart->Instance != USART2) return;
-    GPIO_InitTypeDef g = {0};
-    __HAL_RCC_USART2_CLK_ENABLE();   /* RCC->APB1ENR.USART2EN */
-    __HAL_RCC_GPIOA_CLK_ENABLE();    /* RCC->APB2ENR.IOPAEN   */
-    g.Pin = GPIO_PIN_2;  g.Mode = GPIO_MODE_AF_PP;  g.Speed = GPIO_SPEED_FREQ_HIGH;   /* TX: CNF=10, MODE=11 */
-    HAL_GPIO_Init(GPIOA, &g);
-    g.Pin = GPIO_PIN_3;  g.Mode = GPIO_MODE_INPUT;  g.Pull = GPIO_NOPULL;            /* RX: CNF=01 (플로팅 입력) */
-    HAL_GPIO_Init(GPIOA, &g);
-}
-
-static void MX_USART2_UART_Init(void)
-{
-    huart2.Instance = USART2;
-    huart2.Init.BaudRate = 115200;
-    huart2.Init.WordLength = UART_WORDLENGTH_8B;
-    huart2.Init.StopBits = UART_STOPBITS_1;
-    huart2.Init.Parity = UART_PARITY_NONE;
-    huart2.Init.Mode = UART_MODE_TX_RX;
-    huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-    huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-    if (HAL_UART_Init(&huart2) != HAL_OK) Error_Handler();
-}
-
-/* HSI(8MHz)/2 x16 = 64MHz. Nucleo 는 HSE 가 ST-Link 에서 오므로 HSI 로 단순화 */
+/**
+  * @brief System Clock Configuration
+  * @retval None
+  */
 void SystemClock_Config(void)
 {
-    RCC_OscInitTypeDef o = {0};
-    RCC_ClkInitTypeDef c = {0};
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-    o.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-    o.HSIState = RCC_HSI_ON;
-    o.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-    o.PLL.PLLState = RCC_PLL_ON;
-    o.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
-    o.PLL.PLLMUL = RCC_PLL_MUL16;
-    if (HAL_RCC_OscConfig(&o) != HAL_OK) Error_Handler();
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL16;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
-    c.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
-    c.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-    c.AHBCLKDivider = RCC_SYSCLK_DIV1;
-    c.APB1CLKDivider = RCC_HCLK_DIV2;          /* APB1 = 32MHz (최대 36MHz) */
-    c.APB2CLKDivider = RCC_HCLK_DIV1;          /* APB2 = 64MHz */
-    if (HAL_RCC_ClockConfig(&c, FLASH_LATENCY_2) != HAL_OK) Error_Handler();
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
 
+/**
+  * @brief GPIO Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_GPIO_Init(void)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  /* USER CODE BEGIN MX_GPIO_Init_1 */
+
+  /* USER CODE END MX_GPIO_Init_1 */
+
+  /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pins : PC0 PC1 PC2 PC3 PC4 PC5 PC6 PC7 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : LD2_Pin */
+  GPIO_InitStruct.Pin = LD2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+
+  /* USER CODE BEGIN MX_GPIO_Init_2 */
+
+  /* USER CODE END MX_GPIO_Init_2 */
+}
+
+/**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Channel2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 1, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
+
+}
+
+/**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 63;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 99;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+  /* TIM2 클럭 64MHz / (PSC+1=64) / (ARR+1=100) = 10kHz 업데이트 이벤트 = DMA 요청 주기.
+   * TIM2->PSC = 63, TIM2->ARR = 99. DIER.UDE / CR1.CEN 은 main() USER CODE 2 에서 설정 */
+  /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
+
+}
+
+/* USER CODE BEGIN 4 */
+/* USER CODE END 4 */
+
+/**
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
 void Error_Handler(void)
 {
-    __disable_irq();
-    while (1) {}
+  /* USER CODE BEGIN Error_Handler_Debug */
+  /* User can add his own implementation to report the HAL error return state */
+  __disable_irq();
+  while (1) {
+  }
+  /* USER CODE END Error_Handler_Debug */
 }
+#ifdef USE_FULL_ASSERT
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t *file, uint32_t line)
+{
+  /* USER CODE BEGIN 6 */
+  /* User can add his own implementation to report the file name and line
+     number, ex: printf("Wrong parameters value: file %s on line %d\r\n", file,
+     line) */
+  /* USER CODE END 6 */
+}
+#endif /* USE_FULL_ASSERT */

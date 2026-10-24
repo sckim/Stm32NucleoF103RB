@@ -2,6 +2,8 @@
 
 > 계층: **HAL + DMA** — Claude 작성, 검토 전 (컴파일만 확인)
 
+> CubeMX(`I2C_MPU6050_DMA.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 `HAL_I2C_Mem_Read_DMA()`로 **논블로킹 I2C**: 읽기를 시작만 하고 CPU 는 다른 일을 하다가 완료 콜백에서 결과를 받는다. `03_I2C_MPU6050_HAL_c`의 블로킹 방식과 대비된다.
 
 ## 핵심 학습 내용

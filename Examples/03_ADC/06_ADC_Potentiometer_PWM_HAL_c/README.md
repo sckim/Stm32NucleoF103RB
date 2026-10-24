@@ -2,6 +2,8 @@
 
 > 계층: **HAL + DMA** — Claude 작성, 검토 전 (PlatformIO 빌드만 확인)
 
+> CubeMX(`ADC_Potentiometer_PWM.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 가변저항으로 LED 밝기를 조절한다. **센서 → 처리 → 액추에이터**를 ADC(입력)와 TIM PWM(출력)으로 가장 단순하게 보여 주는 예제이며, 이동 평균, 히스테리시스, 감마 보정을 함께 익힌다.
 
 ## 핵심 학습 내용

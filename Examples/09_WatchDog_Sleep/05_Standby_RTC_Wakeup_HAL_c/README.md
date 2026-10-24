@@ -2,6 +2,8 @@
 
 > 계층: **HAL** + PWR + RTC — Claude 작성, 검토 전 (컴파일만 확인)
 
+> CubeMX(`Standby_RTC_Wakeup.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 **Standby 모드** 진입, **RTC 알람**(10초 뒤)으로 웨이크업, **백업 레지스터(BKP)** 로 상태를 유지한다.
 
 ## 핵심 학습 내용

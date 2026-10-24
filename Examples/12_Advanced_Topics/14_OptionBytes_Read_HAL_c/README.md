@@ -2,6 +2,8 @@
 
 > 계층: **HAL** — Claude 작성, 검토 전 (PlatformIO 빌드만 확인)
 
+> CubeMX(`OptionBytes_Read.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 **옵션 바이트 읽기 전용** 조회: 읽기 보호(RDP), 쓰기 보호(WRP), USER 설정, 원시 옵션 바이트 메모리와 `FLASH->OBR/WRPR`. 옵션 바이트를 **바꾸지 않는다**.
 
 ## 핵심 학습 내용

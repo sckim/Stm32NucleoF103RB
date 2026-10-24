@@ -2,6 +2,8 @@
 
 > 계층: **HAL** — Claude 작성, 검토 전 (PlatformIO 빌드만 확인)
 
+> CubeMX(`I2C_EEPROM_AT24C.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 I2C **EEPROM(AT24C32/64 등)** 읽기/쓰기. 16비트 메모리 주소, **페이지 경계**, **ACK 폴링**(쓰기 사이클 대기)이라는 EEPROM 특유의 규칙을 다룬다.
 
 ## 핵심 학습 내용

@@ -2,6 +2,8 @@
 
 > 계층: **HAL** + DMA — Claude 작성, 검토 전 (컴파일만 확인)
 
+> CubeMX(`DMA_MemToMem.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+
 256워드(1KB) 배열을 CPU 반복문과 DMA로 각각 복사하고 DWT 사이클 카운터로 시간을 비교한다.
 
 ## 핵심 학습 내용

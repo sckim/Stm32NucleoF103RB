@@ -1,3 +1,20 @@
+/* USER CODE BEGIN Header */
+/**
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2026 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /**
  * 03_I2C_Slave_Loopback_HAL_c  —  [계층: HAL]  I2C 슬레이브 모드: 보드 한 장 안에서 I2C1(마스터) <-> I2C2(슬레이브) 시험
  *
@@ -26,64 +43,311 @@
  *   I2C2_EV_IRQHandler / I2C2_ER_IRQHandler (stm32f1xx_it.c, 진짜 ISR) -> HAL_I2C_EV_IRQHandler / HAL_I2C_ER_IRQHandler
  *     -> HAL_I2C_AddrCallback / HAL_I2C_SlaveRxCpltCallback / HAL_I2C_SlaveTxCpltCallback / HAL_I2C_ListenCpltCallback / ErrorCallback (이 파일)
  */
+/* USER CODE END Header */
+/* Includes ------------------------------------------------------------------*/
 #include "main.h"
+
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
+/* USER CODE END Includes */
 
+/* Private typedef -----------------------------------------------------------*/
+/* USER CODE BEGIN PTD */
+
+/* USER CODE END PTD */
+
+/* Private define ------------------------------------------------------------*/
+/* USER CODE BEGIN PD */
 #define SLAVE_ADDR (0x32 << 1)
 
-I2C_HandleTypeDef hi2c1;      /* 마스터 */
-I2C_HandleTypeDef hi2c2;      /* 슬레이브 */
+/* USER CODE END PD */
+
+/* Private macro -------------------------------------------------------------*/
+/* USER CODE BEGIN PM */
+
+/* USER CODE END PM */
+
+/* Private variables ---------------------------------------------------------*/
+I2C_HandleTypeDef hi2c1;
+I2C_HandleTypeDef hi2c2;
 UART_HandleTypeDef huart2;
 
+/* USER CODE BEGIN PV */
+/* hi2c1 = 마스터, hi2c2 = 슬레이브 */
 static uint8_t regs[16];               /* 슬레이브의 가상 레지스터 파일 */
 static uint8_t rx_frame[2];            /* 슬레이브가 받은 2바이트 [reg, value] */
 static uint8_t ptr;                    /* 읽기 포인터 */
 static volatile uint32_t slave_writes, slave_reads;
+/* USER CODE END PV */
 
+/* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_I2C1_Init(void);
+static void MX_I2C2_Init(void);
 static void MX_USART2_UART_Init(void);
-static void MX_I2C1_Master_Init(void);
-static void MX_I2C2_Slave_Init(void);
+/* USER CODE BEGIN PFP */
 
+/* USER CODE END PFP */
+
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
+
+/* USER CODE END 0 */
+
+/**
+  * @brief  The application entry point.
+  * @retval int
+  */
 int main(void)
 {
-    HAL_Init();
-    SystemClock_Config();
-    MX_USART2_UART_Init();
-    MX_I2C1_Master_Init();
-    MX_I2C2_Slave_Init();
 
-    if (HAL_I2C_EnableListen_IT(&hi2c2) != HAL_OK) Error_Handler();    /* 슬레이브: 주소 호출 대기 시작 */
+  /* USER CODE BEGIN 1 */
 
-    char msg[112];
-    uint32_t pass = 0, fail = 0;
-    for (uint32_t round = 0; ; round++)
-    {
-        uint8_t reg = (uint8_t)(round % 12);                           /* reg .. reg+3 이 배열 안에 있도록 */
-        uint8_t val = (uint8_t)(0xA0 + (round & 0x0F));
+  /* USER CODE END 1 */
 
-        /* 쓰기: [reg, val] */
-        uint8_t wr[2] = { reg, val };
-        HAL_StatusTypeDef s1 = HAL_I2C_Master_Transmit(&hi2c1, SLAVE_ADDR, wr, 2, 50);
+  /* MCU Configuration--------------------------------------------------------*/
 
-        /* 읽기: [0x80|reg, 0] 로 포인터 설정 후 4바이트 수신 */
-        uint8_t setp[2] = { (uint8_t)(0x80 | reg), 0 };
-        uint8_t got[4] = {0};
-        HAL_StatusTypeDef s2 = HAL_I2C_Master_Transmit(&hi2c1, SLAVE_ADDR, setp, 2, 50);
-        HAL_StatusTypeDef s3 = HAL_I2C_Master_Receive(&hi2c1, SLAVE_ADDR, got, 4, 50);
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
 
-        int ok = (s1 == HAL_OK && s2 == HAL_OK && s3 == HAL_OK && got[0] == val);
-        if (ok) pass++; else fail++;
+  /* USER CODE BEGIN Init */
 
-        int n = snprintf(msg, sizeof msg, "wrote regs[%u]=0x%02X, read back 0x%02X 0x%02X 0x%02X 0x%02X  %s  (slave writes=%lu reads=%lu, pass=%lu fail=%lu)\r\n",
-                         reg, val, got[0], got[1], got[2], got[3], ok ? "PASS" : "FAIL",
-                         (unsigned long)slave_writes, (unsigned long)slave_reads, (unsigned long)pass, (unsigned long)fail);
-        HAL_UART_Transmit(&huart2, (uint8_t *)msg, (uint16_t)n, 100);
-        HAL_Delay(500);
-    }
+  /* USER CODE END Init */
+
+  /* Configure the system clock */
+  SystemClock_Config();
+
+  /* USER CODE BEGIN SysInit */
+
+  /* USER CODE END SysInit */
+
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_I2C1_Init();
+  MX_I2C2_Init();
+  MX_USART2_UART_Init();
+  /* USER CODE BEGIN 2 */
+  if (HAL_I2C_EnableListen_IT(&hi2c2) != HAL_OK) Error_Handler();    /* 슬레이브: 주소 호출 대기 시작 */
+
+  char msg[112];
+  uint32_t pass = 0, fail = 0;
+  uint32_t round = 0;
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+  while (1)
+  {
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+    uint8_t reg = (uint8_t)(round % 12);                           /* reg .. reg+3 이 배열 안에 있도록 */
+    uint8_t val = (uint8_t)(0xA0 + (round & 0x0F));
+
+    /* 쓰기: [reg, val] */
+    uint8_t wr[2] = { reg, val };
+    HAL_StatusTypeDef s1 = HAL_I2C_Master_Transmit(&hi2c1, SLAVE_ADDR, wr, 2, 50);
+
+    /* 읽기: [0x80|reg, 0] 로 포인터 설정 후 4바이트 수신 */
+    uint8_t setp[2] = { (uint8_t)(0x80 | reg), 0 };
+    uint8_t got[4] = {0};
+    HAL_StatusTypeDef s2 = HAL_I2C_Master_Transmit(&hi2c1, SLAVE_ADDR, setp, 2, 50);
+    HAL_StatusTypeDef s3 = HAL_I2C_Master_Receive(&hi2c1, SLAVE_ADDR, got, 4, 50);
+
+    int ok = (s1 == HAL_OK && s2 == HAL_OK && s3 == HAL_OK && got[0] == val);
+    if (ok) pass++; else fail++;
+
+    int n = snprintf(msg, sizeof msg, "wrote regs[%u]=0x%02X, read back 0x%02X 0x%02X 0x%02X 0x%02X  %s  (slave writes=%lu reads=%lu, pass=%lu fail=%lu)\r\n",
+                     reg, val, got[0], got[1], got[2], got[3], ok ? "PASS" : "FAIL",
+                     (unsigned long)slave_writes, (unsigned long)slave_reads, (unsigned long)pass, (unsigned long)fail);
+    HAL_UART_Transmit(&huart2, (uint8_t *)msg, (uint16_t)n, 100);
+    HAL_Delay(500);
+    round++;
+  }
+  /* USER CODE END 3 */
 }
 
+/**
+  * @brief System Clock Configuration
+  * @retval None
+  */
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL16;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/**
+  * @brief I2C1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C1_Init(void)
+{
+
+  /* USER CODE BEGIN I2C1_Init 0 */
+
+
+  /* USER CODE END I2C1_Init 0 */
+
+  /* USER CODE BEGIN I2C1_Init 1 */
+
+
+  /* USER CODE END I2C1_Init 1 */
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.ClockSpeed = 100000;
+  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C1_Init 2 */
+  /* I2C1 = 마스터 (자기 주소 없음). 100kHz 표준 모드: I2C1->CR2.FREQ = 32(APB1 MHz), CCR/TRISE 는 HAL 이 계산 */
+  /* USER CODE END I2C1_Init 2 */
+
+}
+
+/**
+  * @brief I2C2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C2_Init(void)
+{
+
+  /* USER CODE BEGIN I2C2_Init 0 */
+
+
+  /* USER CODE END I2C2_Init 0 */
+
+  /* USER CODE BEGIN I2C2_Init 1 */
+
+
+  /* USER CODE END I2C2_Init 1 */
+  hi2c2.Instance = I2C2;
+  hi2c2.Init.ClockSpeed = 100000;
+  hi2c2.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c2.Init.OwnAddress1 = 100;
+  hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c2.Init.OwnAddress2 = 0;
+  hi2c2.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c2.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C2_Init 2 */
+  /* I2C2 = 슬레이브. OwnAddress1 = 100 = SLAVE_ADDR(0x32 << 1)  -> I2C2->OAR1 (7비트 주소는 [7:1])
+   * 클럭 스트레칭 사용 (CR1.NOSTRETCH = 0). 이벤트/오류 인터럽트는 HAL_I2C_MspInit 에서 NVIC 에 등록(I2C2_EV/ER). */
+  /* USER CODE END I2C2_Init 2 */
+
+}
+
+/**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
+  * @brief GPIO Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_GPIO_Init(void)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  /* USER CODE BEGIN MX_GPIO_Init_1 */
+
+  /* USER CODE END MX_GPIO_Init_1 */
+
+  /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : LD2_Pin */
+  GPIO_InitStruct.Pin = LD2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+
+  /* USER CODE BEGIN MX_GPIO_Init_2 */
+
+  /* USER CODE END MX_GPIO_Init_2 */
+}
+
+/* USER CODE BEGIN 4 */
 /* ------------------------------------------------------------------------- */
 /* HAL 콜백 (ISR 문맥): I2C2 = 슬레이브                                          */
 /* ------------------------------------------------------------------------- */
@@ -125,105 +389,35 @@ void HAL_I2C_ErrorCallback(I2C_HandleTypeDef *hi2c)
         HAL_I2C_EnableListen_IT(hi2c);
     }
 }
+/* USER CODE END 4 */
 
-void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
-{
-    GPIO_InitTypeDef g = {0};
-    __HAL_RCC_GPIOB_CLK_ENABLE();
-    if (hi2c->Instance == I2C1)
-    {
-        __HAL_RCC_I2C1_CLK_ENABLE();
-        g.Pin = GPIO_PIN_6 | GPIO_PIN_7;  g.Mode = GPIO_MODE_AF_OD;  g.Pull = GPIO_PULLUP;  g.Speed = GPIO_SPEED_FREQ_HIGH;
-        HAL_GPIO_Init(GPIOB, &g);
-    }
-    else if (hi2c->Instance == I2C2)
-    {
-        __HAL_RCC_I2C2_CLK_ENABLE();                          /* RCC->APB1ENR.I2C2EN */
-        g.Pin = GPIO_PIN_10 | GPIO_PIN_11;  g.Mode = GPIO_MODE_AF_OD;  g.Pull = GPIO_PULLUP;  g.Speed = GPIO_SPEED_FREQ_HIGH;
-        HAL_GPIO_Init(GPIOB, &g);
-        HAL_NVIC_SetPriority(I2C2_EV_IRQn, 0, 0);  HAL_NVIC_EnableIRQ(I2C2_EV_IRQn);
-        HAL_NVIC_SetPriority(I2C2_ER_IRQn, 0, 0);  HAL_NVIC_EnableIRQ(I2C2_ER_IRQn);
-    }
-}
-
-static void MX_I2C1_Master_Init(void)
-{
-    hi2c1.Instance = I2C1;
-    hi2c1.Init.ClockSpeed = 100000;
-    hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
-    hi2c1.Init.OwnAddress1 = 0;
-    hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-    hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-    hi2c1.Init.OwnAddress2 = 0;
-    hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-    hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-    if (HAL_I2C_Init(&hi2c1) != HAL_OK) Error_Handler();
-}
-
-static void MX_I2C2_Slave_Init(void)
-{
-    hi2c2.Instance = I2C2;
-    hi2c2.Init.ClockSpeed = 100000;
-    hi2c2.Init.DutyCycle = I2C_DUTYCYCLE_2;
-    hi2c2.Init.OwnAddress1 = SLAVE_ADDR;                      /* OAR1 : 슬레이브 주소 */
-    hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-    hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-    hi2c2.Init.OwnAddress2 = 0;
-    hi2c2.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-    hi2c2.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-    if (HAL_I2C_Init(&hi2c2) != HAL_OK) Error_Handler();
-}
-
-/* USART2 (ST-Link 가상 COM, PA2=TX / PA3=RX) 기본 폴링 송신용 MSP: 클럭/핀만 설정 */
-void HAL_UART_MspInit(UART_HandleTypeDef *huart)
-{
-    if (huart->Instance != USART2) return;
-    GPIO_InitTypeDef g = {0};
-    __HAL_RCC_USART2_CLK_ENABLE();   /* RCC->APB1ENR.USART2EN */
-    __HAL_RCC_GPIOA_CLK_ENABLE();    /* RCC->APB2ENR.IOPAEN   */
-    g.Pin = GPIO_PIN_2;  g.Mode = GPIO_MODE_AF_PP;  g.Speed = GPIO_SPEED_FREQ_HIGH;   /* TX: CNF=10, MODE=11 */
-    HAL_GPIO_Init(GPIOA, &g);
-    g.Pin = GPIO_PIN_3;  g.Mode = GPIO_MODE_INPUT;  g.Pull = GPIO_NOPULL;            /* RX: CNF=01 (플로팅 입력) */
-    HAL_GPIO_Init(GPIOA, &g);
-}
-
-static void MX_USART2_UART_Init(void)
-{
-    huart2.Instance = USART2;
-    huart2.Init.BaudRate = 115200;
-    huart2.Init.WordLength = UART_WORDLENGTH_8B;
-    huart2.Init.StopBits = UART_STOPBITS_1;
-    huart2.Init.Parity = UART_PARITY_NONE;
-    huart2.Init.Mode = UART_MODE_TX_RX;
-    huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-    huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-    if (HAL_UART_Init(&huart2) != HAL_OK) Error_Handler();
-}
-
-/* HSI(8MHz)/2 x16 = 64MHz. Nucleo 는 HSE 가 ST-Link 에서 오므로 HSI 로 단순화 */
-void SystemClock_Config(void)
-{
-    RCC_OscInitTypeDef o = {0};
-    RCC_ClkInitTypeDef c = {0};
-
-    o.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-    o.HSIState = RCC_HSI_ON;
-    o.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-    o.PLL.PLLState = RCC_PLL_ON;
-    o.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;
-    o.PLL.PLLMUL = RCC_PLL_MUL16;
-    if (HAL_RCC_OscConfig(&o) != HAL_OK) Error_Handler();
-
-    c.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
-    c.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-    c.AHBCLKDivider = RCC_SYSCLK_DIV1;
-    c.APB1CLKDivider = RCC_HCLK_DIV2;          /* APB1 = 32MHz (최대 36MHz) */
-    c.APB2CLKDivider = RCC_HCLK_DIV1;          /* APB2 = 64MHz */
-    if (HAL_RCC_ClockConfig(&c, FLASH_LATENCY_2) != HAL_OK) Error_Handler();
-}
-
+/**
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
 void Error_Handler(void)
 {
-    __disable_irq();
-    while (1) {}
+  /* USER CODE BEGIN Error_Handler_Debug */
+  /* User can add his own implementation to report the HAL error return state */
+  __disable_irq();
+  while (1) {
+  }
+  /* USER CODE END Error_Handler_Debug */
 }
+#ifdef USE_FULL_ASSERT
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t *file, uint32_t line)
+{
+  /* USER CODE BEGIN 6 */
+  /* User can add his own implementation to report the file name and line
+     number, ex: printf("Wrong parameters value: file %s on line %d\r\n", file,
+     line) */
+  /* USER CODE END 6 */
+}
+#endif /* USE_FULL_ASSERT */

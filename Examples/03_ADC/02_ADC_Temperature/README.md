@@ -1,4 +1,4 @@
-# 02_ADC_Temperature_c
+# 02_ADC_Temperature
 
 > 계층: **HAL** — 검토 전 (컴파일만 확인)
 
@@ -28,4 +28,4 @@ ADC1의 **내부 온도 센서 채널(CH16)** 을 읽어 섭씨로 환산하고 
 
 ## 관련 예제
 
-`01_ADC_Single`(외부 핀 한 채널), `03_ADC_Multi_c`(여러 채널, Vrefint 포함), `06_ADC_Vrefint_VDDA_c`(VDDA 보정).
+`01_ADC_Single`(외부 핀 한 채널), `03_ADC_Multi`(여러 채널, Vrefint 포함), `06_ADC_Vrefint_VDDA_c`(VDDA 보정).

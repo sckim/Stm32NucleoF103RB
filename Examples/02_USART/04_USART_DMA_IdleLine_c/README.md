@@ -24,4 +24,4 @@ DMA가 수신 데이터를 버퍼에 채우고, 라인이 조용해지는 순간
 
 ## 관련 예제
 
-`02_USART_Interrupt`(바이트별 인터럽트), `03_USART_RingBuffer_c`(링 버퍼), DMA 기초 `07_DMA/01_DMA_MemToMem_c`.
+`02_USART_Interrupt`(바이트별 인터럽트), `03_USART_RingBuffer`(링 버퍼), DMA 기초 `07_DMA/01_DMA_MemToMem_c`.

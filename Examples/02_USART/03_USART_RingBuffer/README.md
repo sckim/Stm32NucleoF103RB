@@ -1,4 +1,4 @@
-# 03_USART_RingBuffer_c
+# 03_USART_RingBuffer
 
 > 계층: **HAL** — 검토 전 (컴파일만 확인)
 

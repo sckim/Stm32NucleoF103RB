@@ -5,8 +5,8 @@ STM32F103의 12비트 ADC1(약 1µs 변환, 채널 0~17)을 폴링에서 시작�
 | 번호 | 예제 | 계층 | 핵심 |
 |---|---|---|---|
 | 01 | [01_ADC_Single](01_ADC_Single) | HAL | 외부 핀 PA0(CH0) 한 채널, 연속 변환 + 폴링, 교정, mV 환산 |
-| 02 | [02_ADC_Temperature_c](02_ADC_Temperature_c) | HAL | 내부 온도 센서(CH16) → 섭씨 환산, 긴 샘플링 시간 |
-| 03 | [03_ADC_Multi_c](03_ADC_Multi_c) | HAL | 스캔 + 불연속 모드로 4채널(A0/A1/A2/Vrefint) 폴링 |
+| 02 | [02_ADC_Temperature](02_ADC_Temperature) | HAL | 내부 온도 센서(CH16) → 섭씨 환산, 긴 샘플링 시간 |
+| 03 | [03_ADC_Multi](03_ADC_Multi) | HAL | 스캔 + 불연속 모드로 4채널(A0/A1/A2/Vrefint) 폴링 |
 | 04 | [04_ADC_DMA_TimTrigger_c](04_ADC_DMA_TimTrigger_c) | HAL, TIM, DMA | TIM3 TRGO 1kHz 트리거, 2채널 스캔, DMA 원형 |
 | 05 | [05_ADC_AnalogWatchdog_c](05_ADC_AnalogWatchdog_c) | HAL, DMA | 전압 창 이탈을 하드웨어가 감시 |
 | 06 | [06_ADC_Vrefint_VDDA_c](06_ADC_Vrefint_VDDA_c) | HAL | Vrefint로 실제 VDDA 측정 후 보정 |
@@ -21,4 +21,4 @@ STM32F103의 12비트 ADC1(약 1µs 변환, 채널 0~17)을 폴링에서 시작�
 
 ## 공통
 
-ADC 클럭은 PCLK2(64MHz)/6 = 10.67MHz. 입력 예제(`03_ADC_Multi_c`(+PA4), `04_ADC_DMA_TimTrigger_c`, `05_ADC_AnalogWatchdog_c`, `06_ADC_Vrefint_VDDA_c`)는 PA0/PA1에 가변저항(0~3.3V) 연결 (미연결 시 플로팅 값).
+ADC 클럭은 PCLK2(64MHz)/6 = 10.67MHz. 입력 예제(`03_ADC_Multi`(+PA4), `04_ADC_DMA_TimTrigger_c`, `05_ADC_AnalogWatchdog_c`, `06_ADC_Vrefint_VDDA_c`)는 PA0/PA1에 가변저항(0~3.3V) 연결 (미연결 시 플로팅 값).

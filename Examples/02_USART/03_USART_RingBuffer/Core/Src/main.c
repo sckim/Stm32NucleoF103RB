@@ -166,9 +166,12 @@ int main(void)
     {
       if (c == '\r' || c == '\n')
       {
-        int n = snprintf(msg, sizeof msg, "\r\n[rx=%lu, dropped=%lu, max_used=%lu/%lu]\r\n",
+        uint32_t h = rb.head, t = rb.tail;   /* 출력 시점의 인덱스 스냅샷 (비었으면 head == tail) */
+        int n = snprintf(msg, sizeof msg,
+                         "\r\n[rx=%lu, dropped=%lu, max_used=%lu/%lu, head=%lu, tail=%lu]\r\n",
                          (unsigned long)rx_total, (unsigned long)dropped,
-                         (unsigned long)max_used, (unsigned long)(RB_SIZE - 1U));
+                         (unsigned long)max_used, (unsigned long)(RB_SIZE - 1U),
+                         (unsigned long)h, (unsigned long)t);
         HAL_UART_Transmit(&huart2, (uint8_t *)msg, (uint16_t)n, 100);
       }
       else

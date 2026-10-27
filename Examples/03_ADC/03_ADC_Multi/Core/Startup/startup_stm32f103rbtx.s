@@ -95,7 +95,7 @@ LoopFillZerobss:
   bcc FillZerobss
 
 /* Call static constructors */
-  bl __libc_init_array
+    bl __libc_init_array
 /* Call the application's entry point.*/
   bl main
   bx lr
@@ -112,7 +112,7 @@ LoopFillZerobss:
     .section .text.Default_Handler,"ax",%progbits
 Default_Handler:
 Infinite_Loop:
-  b Infinite_Loo.p
+  b Infinite_Loop
   .size Default_Handler, .-Default_Handler
 /******************************************************************************
 *
@@ -125,7 +125,9 @@ Infinite_Loop:
   .type g_pfnVectors, %object
   .size g_pfnVectors, .-g_pfnVectors
 
+
 g_pfnVectors:
+
   .word _estack
   .word Reset_Handler
   .word NMI_Handler

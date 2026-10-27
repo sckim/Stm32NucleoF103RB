@@ -25,7 +25,7 @@
  *   HAL_ADC_Start               : ADC1_CR2.ADON (연속/단일 모드 설정은 CONT 비트)
  *   HAL_ADC_PollForConversion   : ADC1_SR.EOC 폴링
  *   HAL_ADC_GetValue            : ADC1_DR 읽기 (읽으면 EOC 가 자동으로 지워짐)
- *   샘플링 시간 13.5 사이클 (ADC1_SMPR2), 변환 12.5 사이클
+ *   샘플링 시간 239.5 사이클 (ADC1_SMPR2), 변환 12.5 사이클
  *
  * 인터럽트/콜백 없음 (폴링 변환). ISR 은 SysTick_Handler(HAL_Delay 용)뿐이다.
  * printf 의 UART 출력은 01_USART_printf 와 같은 방식이다.
@@ -140,13 +140,16 @@ int main(void)
   while (1)
   {
     // ADC1_SR.EOC 플래그 대기 후 ADC1_DR에서 PA0(ADC1_IN0) 변환값(12bit, 0~4095) 읽기
-    HAL_ADC_PollForConversion(&hadc1, 100);
+    if (HAL_ADC_PollForConversion(&hadc1, 100) != HAL_OK)
+    {
+      Error_Handler();
+    }
     adc1 = HAL_ADC_GetValue(&hadc1);
     printf("ADC PA0 = %d (%d mV)\r\n", adc1, (int)(adc1 * 3300UL / 4095));
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    HAL_Delay(1000);
+    HAL_Delay(200);
   }
   /* USER CODE END 3 */
 }
@@ -232,7 +235,7 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_13CYCLES_5;
+  sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();

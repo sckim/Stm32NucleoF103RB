@@ -1,4 +1,4 @@
-# 03_ADC_Multi_c
+# 03_ADC_Multi
 
 > 계층: **HAL** — 검토 전 (컴파일만 확인)
 

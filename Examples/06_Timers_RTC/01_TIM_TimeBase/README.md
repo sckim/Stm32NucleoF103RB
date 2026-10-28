@@ -17,6 +17,16 @@ TIM3을 **1ms 주기 인터럽트**의 시간 기준으로 쓰고, 1000번(=1초
 ## 동작
 
 LD2가 1초 주기로 토글된다 (1ms 인터럽트 × 1000).
+동시에 USART2(ST-LINK 가상 COM, 115200 8N1)로 1초마다 경과 시간을 출력한다.
+
+```
+TIM3 TimeBase start (1ms update IRQ, print every 1s)
+[1 s] LD2 toggle
+[2 s] LD2 toggle
+...
+```
+
+printf는 UART 블로킹 송신이라 콜백(ISR 문맥)에서 직접 부르지 않는다. 콜백은 `gSecondFlag`만 세우고, 출력은 main 루프에서 한다.
 
 ## 관련 예제
 

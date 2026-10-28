@@ -17,7 +17,7 @@ loop  :  for 각 핀(D2 … D13, A4, A5)
          HAL_UART_Transmit("Hello, AD2\r\n")
 ```
 
-- 한 바퀴 시간 ≈ 핀 14개 × 1000ms + 메시지 송신 약 12.5ms(12글자 × 10비트 / 9600bps) ≈ **14초**.
+- 한 바퀴 시간 ≈ 핀 14개 × 1000ms + 메시지 송신 약 1.04ms(12글자 × 10비트 / 115200bps) ≈ **14초**.
 - D13(PA5)은 온보드 LD2와 같은 핀이다. 1초 동안 켜지므로 LED로도 순서를 눈으로 확인할 수 있다.
 - 로직 분석기로 빠른 펄스를 보고 싶다면 `HAL_Delay()` 값을 줄인다 (실습 과제 1).
 
@@ -54,7 +54,7 @@ CubeMX에서 각 핀에 라벨을 붙여 `main.h`에 `D2_Pin` / `D2_GPIO_Port` �
 - **초기 상태 LOW**: `MX_GPIO_Init()`이 `HAL_GPIO_Init()`(→ `GPIOx_CRL/CRH`) 전에 `HAL_GPIO_WritePin(RESET)`(→ `GPIOx_BSRR`)을 먼저 호출해, 출력으로 바뀌는 순간 핀이 HIGH로 튀지 않게 한다.
 - **JTAG 핀 해방 (`AFIO_MAPR.SWJ_CFG[2:0]`)**: PB3/PB4는 리셋 직후 JTAG 용도로 점유되어 있다. CubeMX에서 SYS의 Debug를 **Serial Wire**로 두면 `HAL_MspInit()`(`stm32f1xx_hal_msp.c`)에 `__HAL_AFIO_REMAP_SWJ_NOJTAG()`가 생성되어 **JTAG-DP만 끄고 SW-DP(ST-LINK 디버깅)는 유지**한다. 이 매크로 호출 전에 `__HAL_RCC_AFIO_CLK_ENABLE()`(`RCC_APB2ENR.AFIOEN`)도 함께 생성된다.
 - **USART2 HAL 초기화**
-  1. `MX_USART2_UART_Init()`에서 `huart2.Init`(9600, 8N1, TX/RX)를 채우고 `HAL_UART_Init()` 호출. `USART2->BRR`은 HAL이 PCLK1 기준으로 계산한다.
+  1. `MX_USART2_UART_Init()`에서 `huart2.Init`(115200, 8N1, TX/RX)를 채우고 `HAL_UART_Init()` 호출. `USART2->BRR`은 HAL이 PCLK1 기준으로 계산한다.
   2. `HAL_UART_Init()`이 내부에서 **`HAL_UART_MspInit()` 콜백**(`stm32f1xx_hal_msp.c`)을 호출한다. 여기서 `__HAL_RCC_USART2_CLK_ENABLE()`(`RCC_APB1ENR.USART2EN`)과 PA2/PA3의 `GPIO_MODE_AF_PP` 설정이 이루어진다.
 - **송신 폴링**: `HAL_UART_Transmit()`이 `SR.TXE`/`SR.TC` 플래그 대기를 내부에서 처리한다. 인터럽트는 쓰지 않는다.
 - **`HAL_Delay()`와 SysTick**: `HAL_Init()`이 SysTick을 1ms로 설정하고, `SysTick_Handler`(`stm32f1xx_it.c`)가 `HAL_IncTick()`으로 `uwTick`을 증가시킨다. `HAL_Delay()`는 이 값을 기준으로 대기한다.
@@ -63,7 +63,7 @@ CubeMX에서 각 핀에 라벨을 붙여 `main.h`에 `D2_Pin` / `D2_GPIO_Port` �
 
 CubeMX가 생성한 `SystemClock_Config()`는 **HSI → PLL ×16 = SYSCLK 64MHz**, `APB1 = /2 (32MHz)`, `APB2 = 64MHz`로 설정한다 (다른 CubeMX 예제와 동일). 레지스터 버전은 리셋 기본값 HSI 8MHz를 그대로 썼지만, HAL 버전은 클럭이 올라가 있다.
 
-- UART 보레이트 분주값은 HAL이 PCLK1(32MHz) 기준으로 자동 계산하므로 보레이트는 여전히 **9600**이다.
+- UART 보레이트 분주값은 HAL이 PCLK1(32MHz) 기준으로 자동 계산하므로 보레이트는 여전히 **115200**이다.
 - 클럭을 바꾸고 싶으면 `.ioc`의 Clock Configuration에서 수정한 뒤 코드를 재생성한다.
 
 ## ISR / 콜백
@@ -79,8 +79,8 @@ USART2는 인터럽트 없이 폴링으로 보내므로 `USART2_IRQHandler`는 �
 ## 하드웨어 / 확인 방법
 
 - NUCLEO-F103RB 보드, USB 케이블 (ST-LINK).
-- **시리얼 출력**: D1(PA2)은 ST-LINK 가상 COM 포트로도 연결되어 있다. 이 예제의 보드레이트는 **9600**이며 `platformio.ini`의 `monitor_speed = 9600`과 일치한다. `monitor_port = COM5`는 작성자 PC 기준이다.
-- **로직 분석기/오실로스코프**: D2~D13, A4, A5에 채널을 연결하면 핀이 위 표의 순서대로 하나씩 1초 펄스를 내는 것을 볼 수 있다. D1(PA2)에서는 UART 프레임 (`Hello, AD2\r\n`, 9600 8N1)을 디코드할 수 있다.
+- **시리얼 출력**: D1(PA2)은 ST-LINK 가상 COM 포트로도 연결되어 있다. 이 예제의 보드레이트는 **115200**이며 `platformio.ini`의 `monitor_speed = 115200`과 일치한다. `monitor_port = COM9`는 작성자 PC 기준이다.
+- **로직 분석기/오실로스코프**: D2~D13, A4, A5에 채널을 연결하면 핀이 위 표의 순서대로 하나씩 1초 펄스를 내는 것을 볼 수 있다. D1(PA2)에서는 UART 프레임 (`Hello, AD2\r\n`, 115200 8N1)을 디코드할 수 있다.
 - 한 번에 한 핀만 HIGH이므로, 배선이 서로 단락되었거나 핀 번호가 어긋난 경우 다른 채널에 같은 펄스가 함께 나타나서 구별된다.
 
 ## 폴더 구성
@@ -123,7 +123,7 @@ Arduino 핀과 MCU 핀의 대응은 보드 배선이므로 [UM1724](../../../Doc
 1. **펄스 폭 바꾸기**: `HAL_Delay(1000)`을 `HAL_Delay(1)`로 바꿔 로직 분석기에서 약 1ms 펄스가 순서대로 나오는지 확인한다. 한 바퀴 시간이 어떻게 바뀌는지 계산해 본다.
 2. **D14/D15 추가**: CubeMX에서 PB9, PB8을 `GPIO_Output`으로 추가하고 `arduino_pins[]`에 넣는다. 핀 14개가 16개가 되고 한 바퀴 시간이 어떻게 달라지는지 계산해 본다.
 3. **SWJ 설정 실험**: CubeMX에서 SYS Debug를 JTAG+SWD(Full SWJ)로 바꿔 재생성하면 `__HAL_AFIO_REMAP_SWJ_NOJTAG()`가 사라진다. D3(PB3)/D5(PB4)에서 펄스가 나오는지 확인하고, 디버거의 `AFIO > MAPR`로 값이 어떻게 달라지는지 본다.
-4. **보드레이트 바꾸기**: `huart2.Init.BaudRate`를 115200으로 바꾸고 `platformio.ini`의 `monitor_speed`도 맞춘다. 실제 보드레이트 오차를 `USART2->BRR` 값으로 계산해 본다.
+4. **보드레이트 바꾸기**: `huart2.Init.BaudRate`를 9600으로 바꾸고 `platformio.ini`의 `monitor_speed`도 맞춘다. 실제 보드레이트 오차를 `USART2->BRR` 값으로 계산해 본다.
 5. **송신 인터럽트 방식으로 바꾸기**: `HAL_UART_Transmit()`을 `HAL_UART_Transmit_IT()`로 바꾸고 CubeMX에서 USART2 global interrupt를 켠 뒤, `HAL_UART_TxCpltCallback()`으로 완료를 확인한다. 폴링 방식과 CPU 대기 시간을 비교한다.
 
 ## 관련 예제

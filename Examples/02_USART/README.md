@@ -4,7 +4,7 @@ ST-Link 가상 COM 포트(USART2: PA2=TX, PA3=RX)로 PC와 통신한다. 단순 
 
 | 번호 | 예제 | 계층 | 핵심 |
 |---|---|---|---|
-| 01 | [01_USART_printf](01_USART_printf) | HAL | `printf`를 UART로 리다이렉션 (9600bps) |
+| 01 | [01_USART_printf](01_USART_printf) | HAL | `printf`를 UART로 리다이렉션 (115200bps) |
 | 02 | [02_USART_Interrupt](02_USART_Interrupt) | HAL, NVIC | 1바이트 수신 인터럽트, 콜백→플래그→main |
 | 03 | [03_USART_RingBuffer](03_USART_RingBuffer) | HAL | ISR→main lock-free 링 버퍼, 오버플로 실험 |
 | 04 | [04_USART_DMA_IdleLine_c](04_USART_DMA_IdleLine_c) | HAL, DMA | DMA 원형 수신 + IDLE 라인으로 가변 길이 패킷 |
@@ -20,4 +20,4 @@ ST-Link 가상 COM 포트(USART2: PA2=TX, PA3=RX)로 PC와 통신한다. 단순 
 
 ## 공통
 
-터미널: 115200 8N1 (`01_USART_printf`만 9600). 별도 배선 없음 (보드 USB로 충분).
+터미널: 115200 8N1. 별도 배선 없음 (보드 USB로 충분).

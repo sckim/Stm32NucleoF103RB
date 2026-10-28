@@ -41,7 +41,7 @@ Nucleo-F103RB(Cortex-M3, 64MHz, Flash 128KB / SRAM 20KB) 보드로 GPIO부터 �
 
 - VS Code + PlatformIO: 폴더를 열어 Build / Upload (`platformio.ini`에 `framework = stm32cube`, `cmsis`, `arduino` 중 하나가 지정됨)
 - 일부 예제는 STM32CubeIDE 프로젝트(`.ioc`, `.project`, `.cproject`)도 포함한다. CubeMX 재생성 시 `/* USER CODE BEGIN ... */` ~ `/* USER CODE END ... */` 바깥은 덮어써진다.
-- 시리얼 출력 예제는 ST-Link 가상 COM 포트(USART2, PA2=TX / PA3=RX)를 사용한다. 대부분 115200 8N1이며, `01_USART_printf`는 9600이다.
+- 시리얼 출력 예제는 ST-Link 가상 COM 포트(USART2, PA2=TX / PA3=RX)를 사용한다. 모두 115200 8N1이다.
 
 ## Nucleo-F103RB 공통 핀
 

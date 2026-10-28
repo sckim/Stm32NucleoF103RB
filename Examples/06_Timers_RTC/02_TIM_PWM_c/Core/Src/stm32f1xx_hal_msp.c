@@ -56,7 +56,9 @@
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
-/**
+
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
+                    /**
   * Initializes the Global MSP.
   */
 void HAL_MspInit(void)
@@ -95,7 +97,6 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef* htim_pwm)
     /* USER CODE END TIM2_MspInit 0 */
     /* Peripheral clock enable */
     __HAL_RCC_TIM2_CLK_ENABLE();
-
     /* USER CODE BEGIN TIM2_MspInit 1 */
     /* __HAL_RCC_TIM2_CLK_ENABLE() = RCC->APB1ENR.TIM2EN (HAL_TIM_PWM_Init 이 호출하는 MSP; 핀은 HAL_TIM_MspPostInit) */
     /* USER CODE END TIM2_MspInit 1 */
@@ -125,11 +126,9 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
     /* USER CODE BEGIN TIM2_MspPostInit 1 */
     /* PA0 = TIM2_CH1 (기본 매핑, AFIO 리맵 불필요). GPIOA->CRL: CNF0=10(AF push-pull), MODE0=11(50MHz) */
     /* USER CODE END TIM2_MspPostInit 1 */
-
   }
 
 }
-
 /**
   * @brief TIM_PWM MSP De-Initialization
   * This function freeze the hardware resources used in this example
@@ -145,7 +144,6 @@ void HAL_TIM_PWM_MspDeInit(TIM_HandleTypeDef* htim_pwm)
     /* USER CODE END TIM2_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_TIM2_CLK_DISABLE();
-
     /* USER CODE BEGIN TIM2_MspDeInit 1 */
 
     /* USER CODE END TIM2_MspDeInit 1 */

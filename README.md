@@ -57,7 +57,7 @@
 | 05 | [`05_SPI_Communication/05_SPI_Flash_W25Qxx_c`](Examples/05_SPI_Communication/05_SPI_Flash_W25Qxx_c) | HAL, SPI | (검토 전) SPI NOR Flash(W25Qxx): JEDEC ID, 섹터 소거, 페이지 프로그램 |
 | 06 | [`05_SPI_Communication/06_SPI_MAX7219_c`](Examples/05_SPI_Communication/06_SPI_MAX7219_c) | HAL, SPI | (검토 전) MAX7219 8x8 LED 매트릭스, 16비트 프레임/LOAD 반영 |
 | 01 | [`06_Timers_RTC/01_TIM_TimeBase`](Examples/06_Timers_RTC/01_TIM_TimeBase) | HAL, TIM | 타이머 주기 인터럽트(`HAL_TIM_PeriodElapsedCallback`)로 LED 토글 |
-| 02 | [`06_Timers_RTC/02_TIM_PWM_c`](Examples/06_Timers_RTC/02_TIM_PWM_c) | HAL, TIM | (검토 전) TIM2_CH1(PA0) 1kHz PWM, LED 밝기 왕복 |
+| 02 | [`06_Timers_RTC/02_TIM_PWM`](Examples/06_Timers_RTC/02_TIM_PWM) | HAL, TIM | TIM2_CH1(PA0) 1kHz PWM, LED 밝기 왕복 |
 | 03 | [`06_Timers_RTC/03_TIM_InputCapture_c`](Examples/06_Timers_RTC/03_TIM_InputCapture_c) | HAL, TIM | (검토 전) 입력 캡처로 주기/주파수 측정 (TIM3 PWM 테스트 신호 포함) |
 | 04 | [`06_Timers_RTC/04_TIM1_DeadTime_Break_c`](Examples/06_Timers_RTC/04_TIM1_DeadTime_Break_c) | HAL, TIM1 | (검토 전) 상보 PWM + 데드타임(약 1us) + 브레이크 입력/소프트웨어 브레이크 |
 | 05 | [`06_Timers_RTC/05_RTC_Calendar_c`](Examples/06_Timers_RTC/05_RTC_Calendar_c) | HAL+레지스터, RTC | (검토 전) F1 RTC(32비트 카운터)를 Unix 시간으로 쓰는 달력 시계, 1초 인터럽트 |

@@ -30,4 +30,4 @@ printf는 UART 블로킹 송신이라 콜백(ISR 문맥)에서 직접 부르지 
 
 ## 관련 예제
 
-PWM `02_TIM_PWM_c`, 입력 캡처 `03_TIM_InputCapture_c`. 인터럽트 우선순위 `08_Clock_System/06_NVIC_Priority_c`.
+PWM `02_TIM_PWM`, 입력 캡처 `03_TIM_InputCapture_c`. 인터럽트 우선순위 `08_Clock_System/06_NVIC_Priority_c`.

@@ -5,7 +5,7 @@ STM32F103의 범용 타이머(TIM2~4)·고급 타이머(TIM1)를 시간 기준, 
 | 번호 | 예제 | 계층 | 핵심 |
 |---|---|---|---|
 | 01 | [01_TIM_TimeBase](01_TIM_TimeBase) | HAL | 타이머 1ms 주기 인터럽트 |
-| 02 | [02_TIM_PWM_c](02_TIM_PWM_c) | HAL | PWM 출력, LED 밝기 |
+| 02 | [02_TIM_PWM](02_TIM_PWM) | HAL | PWM 출력, LED 밝기 |
 | 03 | [03_TIM_InputCapture_c](03_TIM_InputCapture_c) | HAL | 입력 캡처로 주파수 측정 |
 | 04 | [04_TIM1_DeadTime_Break_c](04_TIM1_DeadTime_Break_c) | HAL | 상보 PWM, 데드타임, 브레이크 |
 | 05 | [05_RTC_Calendar_c](05_RTC_Calendar_c) | HAL+레지스터 | 32비트 카운터 기반 달력 |

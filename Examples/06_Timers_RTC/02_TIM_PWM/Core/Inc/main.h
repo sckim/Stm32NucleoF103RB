@@ -61,6 +61,8 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define PWM_OUT_Pin GPIO_PIN_0
 #define PWM_OUT_GPIO_Port GPIOA
+#define PWM_OUT2_Pin GPIO_PIN_1
+#define PWM_OUT2_GPIO_Port GPIOA
 #define LD2_Pin GPIO_PIN_5
 #define LD2_GPIO_Port GPIOA
 #define TMS_Pin GPIO_PIN_13

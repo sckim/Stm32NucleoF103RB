@@ -23,4 +23,4 @@ PWMA=PA0, AIN1=PB0, AIN2=PB1, STBY=PB2. 모터 전원(VM)은 **외부 전원**, 
 
 ## 관련 예제
 
-`09_TIM_Servo_c`, `02_TIM_PWM_c`, `04_TIM1_DeadTime_Break_c`(브리지의 데드타임).
+`09_TIM_Servo_c`, `02_TIM_PWM`, `04_TIM1_DeadTime_Break_c`(브리지의 데드타임).

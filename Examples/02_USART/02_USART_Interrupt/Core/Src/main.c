@@ -253,7 +253,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
   if (huart->Instance == USART2)
   {
     rx_data = rx_byte;
-    rx_ready = 1;
+    rx_ready = 1;  //flag set: main 루프에서 처리하도록 알림
     HAL_UART_Receive_IT(&huart2, &rx_byte, 1);   /* 다음 바이트를 위해 재무장(필수) */
   }
 }

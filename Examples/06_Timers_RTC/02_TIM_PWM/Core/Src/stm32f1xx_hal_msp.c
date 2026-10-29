@@ -97,6 +97,7 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef* htim_pwm)
     /* USER CODE END TIM2_MspInit 0 */
     /* Peripheral clock enable */
     __HAL_RCC_TIM2_CLK_ENABLE();
+
     /* USER CODE BEGIN TIM2_MspInit 1 */
     /* __HAL_RCC_TIM2_CLK_ENABLE() = RCC->APB1ENR.TIM2EN (HAL_TIM_PWM_Init 이 호출하는 MSP; 핀은 HAL_TIM_MspPostInit) */
     /* USER CODE END TIM2_MspInit 1 */
@@ -117,8 +118,10 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
     __HAL_RCC_GPIOA_CLK_ENABLE();
     /**TIM2 GPIO Configuration
     PA0-WKUP     ------> TIM2_CH1
+    // PA1           ------> TIM2_CH2
     */
     GPIO_InitStruct.Pin = PWM_OUT_Pin;
+    // GPIO_InitStruct.Pin = PWM_OUT_Pin | PWM_OUT2_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(PWM_OUT_GPIO_Port, &GPIO_InitStruct);
@@ -144,6 +147,13 @@ void HAL_TIM_PWM_MspDeInit(TIM_HandleTypeDef* htim_pwm)
     /* USER CODE END TIM2_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_TIM2_CLK_DISABLE();
+
+    /**TIM2 GPIO Configuration
+    PA0-WKUP     ------> TIM2_CH1
+    PA1     ------> TIM2_CH2
+    */
+    HAL_GPIO_DeInit(GPIOA, PWM_OUT_Pin | PWM_OUT2_Pin);
+
     /* USER CODE BEGIN TIM2_MspDeInit 1 */
 
     /* USER CODE END TIM2_MspDeInit 1 */

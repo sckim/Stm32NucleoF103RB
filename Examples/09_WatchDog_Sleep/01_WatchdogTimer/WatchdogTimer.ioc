@@ -175,6 +175,6 @@ VP_WWDG_VS_WWDG.Signal=WWDG_VS_WWDG
 WWDG.Counter=127
 WWDG.IPParameters=Prescaler,Window,Counter
 WWDG.Prescaler=WWDG_PRESCALER_8
-WWDG.Window=80
+WWDG.Window=96
 board=NUCLEO-F103RB
 boardIOC=true

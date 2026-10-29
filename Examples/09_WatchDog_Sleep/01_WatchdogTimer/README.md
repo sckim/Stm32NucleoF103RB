@@ -7,12 +7,27 @@ WWDG를 초기화하고 main 루프에서 주기적으로 `HAL_WWDG_Refresh()`�
 ## 핵심 학습 내용
 
 - **워치독 패턴**: 초기화 → 정상 동작 중 주기적 리프레시(킥) → 프로그램이 멈춰 리프레시를 못 하면 하드웨어가 리셋.
-- **WWDG 설정 (`MX_WWDG_Init`)**: `Prescaler = WWDG_PRESCALER_8`, `Window = 64`, `Counter = 64`, `EWIMode = DISABLE`. 7비트 다운카운터가 `0x3F` 아래로 내려가면 리셋되며, 카운터가 윈도우 값보다 클 때 리프레시해도 리셋된다.
+- **WWDG 설정 (`MX_WWDG_Init`)**: `Prescaler = WWDG_PRESCALER_8`, `Window = 96(0x60)`, `Counter = 127(0x7F)`, `EWIMode = DISABLE`. 7비트 다운카운터가 `0x3F` 아래로 내려가면 리셋되며, 카운터가 윈도우 값보다 클 때 리프레시해도 리셋된다.
 - 루프는 `HAL_Delay(50)` 후 `HAL_WWDG_Refresh(&hwwdg)`를 호출하고, 20회(=약 1초)마다 LD2를 토글한다.
+- 부팅 시 `RCC_CSR.WWDGRSTF`를 읽어 리셋 원인을 USART2(115200bps)로 출력한다 (`Reset by WWDG` / `Power-on / NRST reset`).
 
-## 확인해 볼 점 (코드 기준 계산)
+## 타이밍 계산
 
-WWDG 카운터 틱은 `4096 × 8 / PCLK1(32MHz) ≈ 1.024ms`이다. `Counter = 64(0x40)`에서 시작하면 리셋 임계(0x3F)까지 약 1틱(≈1ms)뿐인데 루프의 리프레시 주기는 50ms이므로, **이 설정에서는 리프레시 전에 리셋이 반복될 가능성이 크다.** 정상 동작(LD2 점멸)하지 않는다면 `Counter`를 `0x7F` 쪽으로 늘리고 `Window`를 그보다 작게 잡는 식으로 타이밍을 다시 계산해 보자. 계산 방법과 동작하는 예는 `02_WWDG_c` 참고.
+WWDG 카운터 틱은 `4096 × 8 / PCLK1(32MHz) ≈ 1.024ms`이다.
+
+| 구분 | 계산 | 시간 |
+|---|---|---|
+| 이른 한계 (윈도우) | 0x7F → 0x60, 31틱 | ≈ 31.7ms |
+| 늦은 한계 (타임아웃) | 0x7F → 0x3F, 64틱 | ≈ 65.5ms |
+
+리프레시 허용 구간은 약 32~65ms이고, 루프 주기 50ms는 그 안에 있으므로 정상 동작한다.
+
+## 동작 확인
+
+- **정상**: LD2가 1초마다 토글되고, 시리얼 터미널에는 전원 투입 시 `Power-on / NRST reset`이 한 번만 출력된다.
+- **늦은 리프레시**: `HAL_Delay(50)` → `HAL_Delay(100)` → `Reset by WWDG`가 반복 출력되고 LD2는 켜지지 않는다.
+- **이른 리프레시**: `HAL_Delay(50)` → `HAL_Delay(10)` → 윈도우 위반으로 같은 리셋 루프가 생긴다 (WWDG만의 특성).
+- **디버깅**: 브레이크포인트에서 멈춰도 WWDG는 계속 카운트하므로, 단계 실행이 필요하면 `__HAL_DBGMCU_FREEZE_WWDG()`(`DBGMCU_CR.DBG_WWDG_STOP`)를 호출한다.
 
 ## 참고: IWDG와의 차이
 

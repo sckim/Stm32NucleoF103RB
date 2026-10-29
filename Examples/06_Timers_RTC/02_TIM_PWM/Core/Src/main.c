@@ -16,7 +16,7 @@
  ******************************************************************************
  */
 /**
- * 02_TIM_PWM_c  —  [계층: HAL]  TIM2 CH1 PWM 출력 (LED 밝기 조절 / 서보 응용)
+ * 02_TIM_PWM  —  [계층: HAL]  TIM2 CH1/CH2 PWM 출력 (LED 밝기 조절 / 서보 응용)
  *
  * 동작
  *   - TIM2_CH1(PA0 = Nucleo 'A0')에 1kHz PWM 출력, 듀티를 0~100% 왕복시켜 LED 를 숨쉬듯 점멸.
@@ -107,8 +107,9 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  /* PWM 시작: TIM2->CCER.CC1E = 1 (CH1 출력 활성), TIM2->CR1.CEN = 1 (카운터 시작) */
+  /* PWM 시작: CCER.CC1E/CC2E = 1 (CH1/CH2 출력 활성), CR1.CEN = 1 (카운터 시작) */
   if (HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1) != HAL_OK) Error_Handler();
+//   if (HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2) != HAL_OK) Error_Handler();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -119,6 +120,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
     __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, (uint32_t)duty);   /* TIM2->CCR1 = duty */
+    // __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, (uint32_t)duty);   /* TIM2->CCR2 = duty */
 
     duty += step;
     if (duty >= 999) step = -1;
@@ -208,8 +210,12 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
+//   if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+//   {
+//     Error_Handler();
+//   }
   /* USER CODE BEGIN TIM2_Init 2 */
-  /* PSC=64-1 -> 1MHz, ARR=1000-1 -> 1kHz, CCR1 초기값 0 (CCMR1.OC1M=110 PWM1, CR1.ARPE=1) */
+  /* PSC=64-1 -> 1MHz, ARR=1000-1 -> 1kHz, CCR1/CCR2 초기값 0 (OC1M/OC2M=110 PWM1, CR1.ARPE=1) */
   /* USER CODE END TIM2_Init 2 */
   HAL_TIM_MspPostInit(&htim2);
 

@@ -204,9 +204,7 @@ void SysTick_Handler(void)
 void USART2_IRQHandler(void)
 {
   /* USER CODE BEGIN USART2_IRQn 0 */
-  /* [ISR] 벡터 테이블이 직접 호출하는 진짜 ISR.
-   * 아래 HAL_UART_IRQHandler()가 USART2->SR 의 RXNE/ORE 등을 해석하고,
-   * 수신 완료 시 사용자 콜백 HAL_UART_RxCpltCallback() (main.c) 을 호출한다. */
+
   /* USER CODE END USART2_IRQn 0 */
   HAL_UART_IRQHandler(&huart2);
   /* USER CODE BEGIN USART2_IRQn 1 */

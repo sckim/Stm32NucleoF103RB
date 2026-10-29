@@ -24,9 +24,17 @@
  * 하드웨어 대응 (RM0008)
  *   WWDG_CR.T[6:0] : 7비트 다운카운터. 0x3F 로 내려가면(T6 = 0) 리셋
  *   WWDG_CR.WDGA   : 한 번 켜면 리셋 전까지 끌 수 없다
- *   WWDG_CFR.W[6:0], WDGTB : 윈도우 값, 분주비 (여기서는 Window = 64, Prescaler = 8)
+ *   WWDG_CFR.W[6:0], WDGTB : 윈도우 값, 분주비 (여기서는 Window = 0x60, Prescaler = 8)
  *   카운트 주기 = PCLK1 / 4096 / 분주비  (PCLK1 = 32MHz)
  *   HAL_WWDG_Refresh : WWDG_CR 에 카운터 값을 다시 기록
+ *   RCC_CSR.WWDGRSTF : 직전 리셋이 WWDG 에 의한 것이면 1 (부팅 시 UART 로 출력)
+ *
+ * 타이밍 계산 (정상 모드)
+ *   1틱 = 4096 x 8 / 32MHz ≈ 1.024ms
+ *   Counter = 0x7F(127) 에서 시작
+ *   - 늦은 한계 : 0x7F -> 0x3F 까지 64틱 ≈ 65.5ms   (이보다 늦으면 리셋)
+ *   - 이른 한계 : 0x7F -> 0x60 까지 31틱 ≈ 31.7ms   (이보다 빨리 리프레시해도 리셋)
+ *   => 리프레시 허용 구간 ≈ 32 ~ 65ms, 루프 주기 50ms 는 이 구간 안에 있다.
  *
  * ISR 과 콜백의 구분
  *   HAL_GPIO_EXTI_Callback (이 파일) : 사용자 콜백 정의가 있으나 EXTI 입력은 이 예제의 핵심이 아니다.
@@ -221,7 +229,17 @@ static void MX_WWDG_Init(void)
 {
 
   /* USER CODE BEGIN WWDG_Init 0 */
-
+  /* WWDG 가 켜지기 전에 리셋 원인을 출력한다 (USART2 는 이미 초기화된 상태).
+   * RCC_CSR.WWDGRSTF = 1 이면 직전 리셋이 WWDG 리셋이다.                     */
+  if (__HAL_RCC_GET_FLAG(RCC_FLAG_WWDGRST))
+  {
+    HAL_UART_Transmit(&huart2, (uint8_t *)"Reset by WWDG\r\n", 15, 100);
+  }
+  else
+  {
+    HAL_UART_Transmit(&huart2, (uint8_t *)"Power-on / NRST reset\r\n", 23, 100);
+  }
+  __HAL_RCC_CLEAR_RESET_FLAGS();   /* RCC_CSR.RMVF = 1 : 리셋 플래그 모두 클리어 */
   /* USER CODE END WWDG_Init 0 */
 
   /* USER CODE BEGIN WWDG_Init 1 */
@@ -229,8 +247,8 @@ static void MX_WWDG_Init(void)
   /* USER CODE END WWDG_Init 1 */
   hwwdg.Instance = WWDG;
   hwwdg.Init.Prescaler = WWDG_PRESCALER_8;
-  hwwdg.Init.Window = 64;
-  hwwdg.Init.Counter = 64;
+  hwwdg.Init.Window = 96;
+  hwwdg.Init.Counter = 127;
   hwwdg.Init.EWIMode = WWDG_EWI_DISABLE;
   if (HAL_WWDG_Init(&hwwdg) != HAL_OK)
   {

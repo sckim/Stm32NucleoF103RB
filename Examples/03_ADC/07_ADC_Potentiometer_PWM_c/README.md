@@ -23,4 +23,4 @@ PA1 에 가변저항 가운데 단자(양끝 3.3V/GND), PA0 → 330Ω → LED �
 
 ## 관련 예제
 
-`05_ADC_AnalogWatchdog_c`(연속 변환 + DMA 패턴), `06_Timers_RTC/02_TIM_PWM_c`.
+`05_ADC_AnalogWatchdog_c`(연속 변환 + DMA 패턴), `06_Timers_RTC/02_TIM_PWM`.

@@ -3,6 +3,7 @@
 	(generator "pcbnew")
 	(generator_version "10.0")
 	(layer "F.Cu")
+	(attr allow_missing_courtyard)
 	(property "Reference" "REF**"
 		(at 0 0 180)
 		(layer "F.SilkS")

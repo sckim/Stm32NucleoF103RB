@@ -15,6 +15,7 @@
 |---|---|
 | `Docs/` | 데이터시트, 레퍼런스 매뉴얼 등 STM32F103 관련 공식 문서(PDF) |
 | `Examples/` | 실습 예제 프로젝트 모음 |
+| `Schematics/AD2_extension/` | AD2 확장 키트 KiCad 회로도/PCB ([README](Schematics/AD2_extension/README.md)) — 2026-10 `01_Lectures` 저장소의 `Schematics/AD2_extension`에서 이동 |
 | `Simulation/` | Proteus 회로 시뮬레이션 프로젝트 |
 
 ## 실습 예제 (`Examples/`)

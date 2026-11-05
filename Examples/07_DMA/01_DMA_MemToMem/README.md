@@ -1,6 +1,8 @@
-# 01_DMA_MemToMem_c
+# 01_DMA_MemToMem
 
-> 계층: **HAL** + DMA — 검토 전 (컴파일만 확인)
+> 계층: **HAL** + DMA
+
+교안: [01_DMA_MemToMem 교안.html](01_DMA_MemToMem%20교안.html)
 
 > CubeMX(`DMA_MemToMem.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
 
@@ -8,7 +10,7 @@
 
 ## 핵심 학습 내용
 
-- **DMA 설정** (RM0008 13장): `DMA1_Channel1->CCR`의 `MEM2MEM=1`, `DIR=1`(주변장치 주소 = 소스), `PINC=1`, `MINC=1`, `PSIZE=MSIZE=32비트`. `CPAR` = 소스, `CMAR` = 목적지, `CNDTR` = 전송 개수.
+- **DMA 설정** (RM0008 13장): `DMA1_Channel1->CCR`의 `MEM2MEM=1`, `DIR=0`(HAL이 그대로 둠, 메모리→메모리에서는 `CPAR`가 소스), `PINC=1`, `MINC=1`, `PSIZE=MSIZE=32비트`. `CPAR` = 소스, `CMAR` = 목적지, `CNDTR` = 전송 개수.
 - DMA는 CPU를 쓰지 않고 버스 마스터로 복사하며, 완료되면 `ISR.TCIF1` → 인터럽트.
 - **콜백 등록 방식**: `HAL_DMA_RegisterCallback()`으로 `dma_done_cb()`를 등록한다 (다른 예제의 고정 이름 콜백과 다른 방식).
 - **성능 측정**: DWT 사이클 카운터로 CPU 복사와 DMA 복사 시간을 비교. 데이터가 SRAM 안에서 왕복하므로 버스 경합 때문에 DMA가 CPU 루프보다 극적으로 빠르지는 않을 수 있다. **이 예제의 핵심은 "전송 중 CPU가 자유로움"을 확인하는 것이다.**

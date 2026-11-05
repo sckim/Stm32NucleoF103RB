@@ -23,4 +23,4 @@
 
 ## 관련 예제
 
-`07_DMA/01_DMA_MemToMem_c`, `07_DMA/02_DMA_Circular_GPIO_c`, `08_Clock_System/10_DWT_Profiling_Reg_c`.
+`07_DMA/01_DMA_MemToMem`, `07_DMA/02_DMA_Circular_GPIO`, `08_Clock_System/10_DWT_Profiling_Reg_c`.

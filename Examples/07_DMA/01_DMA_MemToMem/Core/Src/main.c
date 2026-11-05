@@ -16,14 +16,14 @@
  ******************************************************************************
  */
 /**
- * 01_DMA_MemToMem_c  —  [계층: HAL]  DMA1 채널1 메모리->메모리 복사
+ * 01_DMA_MemToMem  —  [계층: HAL]  DMA1 채널1 메모리->메모리 복사
  *
  * 동작
  *   - 256워드(1KB) 배열을 (1) CPU 반복문, (2) DMA 로 각각 복사하고 DWT 사이클 카운터로 시간을 비교한다.
  *   - 부팅 시 1회, 이후 B1(PC13) 버튼을 누를 때마다 다시 측정하여 USART2(115200)로 출력.
  *
  * DMA 설정 (RM0008 13장)
- *   DMA1_Channel1->CCR: MEM2MEM=1, DIR=1(주변장치 주소 = 소스), PINC=1, MINC=1, PSIZE=MSIZE=32비트
+ *   DMA1_Channel1->CCR: MEM2MEM=1, DIR=0(HAL이 그대로 둠, CPAR = 소스), PINC=1, MINC=1, PSIZE=MSIZE=32비트
  *   DMA1_Channel1->CPAR = 소스 주소, CMAR = 목적지 주소, CNDTR = 전송 개수
  *   DMA 는 CPU 를 쓰지 않고 버스 마스터로 복사 -> 완료되면 ISR.TCIF1 -> 인터럽트
  *

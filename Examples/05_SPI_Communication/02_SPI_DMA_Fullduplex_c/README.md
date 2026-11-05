@@ -24,4 +24,4 @@ SPI1 전이중 전송을 DMA에 맡기고, 그 동안 CPU가 다른 일을 한 �
 
 ## 관련 예제
 
-`01_SPI_Loopback_c`(폴링), `02_USART/04_USART_DMA_IdleLine_c`, `07_DMA/01_DMA_MemToMem_c`.
+`01_SPI_Loopback_c`(폴링), `02_USART/04_USART_DMA_IdleLine_c`, `07_DMA/01_DMA_MemToMem`.

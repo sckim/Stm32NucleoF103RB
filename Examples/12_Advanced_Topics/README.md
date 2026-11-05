@@ -13,7 +13,7 @@
 | 03 | [03_I2C_Slave_Loopback_c](03_I2C_Slave_Loopback_c) | HAL | 슬레이브 모드, 리슨/주소 일치 콜백 | 04_I2C_Communication/01_I2C_Scan |
 | 04 | [04_SPI_Slave_Loopback_c](04_SPI_Slave_Loopback_c) | HAL | 슬레이브 모드, 하드웨어 NSS, 응답 장전 | 05_SPI_Communication/01_SPI_Loopback_c |
 | 05 | [05_TIM_Cascade32_c](05_TIM_Cascade32_c) | HAL | 마스터/슬레이브로 잇는 32비트 카운터, 스톱워치 | 06_Timers_RTC/01_TIM_TimeBase |
-| 06 | [06_DMA_Priority_c](06_DMA_Priority_c) | HAL | 채널 우선순위와 중재, 완료 시각 측정 | 07_DMA/01_DMA_MemToMem_c |
+| 06 | [06_DMA_Priority_c](06_DMA_Priority_c) | HAL | 채널 우선순위와 중재, 완료 시각 측정 | 07_DMA/01_DMA_MemToMem |
 | 07 | [07_PendSV_ContextSwitch_Reg_c](07_PendSV_ContextSwitch_Reg_c) | 레지스터+ASM | 미니 선점형 RTOS | 08_Clock_System/03_ExceptionModel_VectorTable_Reg_c (예외 진입/복귀 기초) |
 | 08 | [08_HSE_PLL_72MHz_Reg_c](08_HSE_PLL_72MHz_Reg_c) | 레지스터 | HSE+PLL 72MHz, 실패 시 HSI 복귀 | 08_Clock_System/04_Clock_Config_Reg_c (PLL 전환 기초) |
 | 09 | [09_ITM_SWO_Printf_Reg_c](09_ITM_SWO_Printf_Reg_c) | 레지스터 | SWO 로 printf (UART 없이) | 02_USART/01_USART_printf (UART printf 로 이미 디버깅 가능) |

@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>DMA 메모리 복사 교안</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: 한 열 교안(최대 860px). 색 고정: CPU(main)=파랑(c0), ISR/콜백=주황(c1), DMA=청록(dma), 타이머=보라(tim). (ADC DMA·I2C DMA 교안과 같은 토큰) */
+
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --surface2:#E7ECF0; --fg:#14222C; --muted:#52636F; --line:#CBD5DC;
+  --c0:#1D4ED8; --c0-soft:#DCE6FB; --c1:#C2410C; --c1-soft:#FDE6DA; --dma:#0F766E; --dma-soft:#D5F0EC; --tim:#7E22CE; --tim-soft:#EEDFFB;
+  --code-bg:#0F1B24; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#9A3412; --warn-bg:#FFF1E6; --ok:#166534; --ok-bg:#E4F5EA; --bad:#B91C1C;
+  --font-body:"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --dma:#2DD4BF; --dma-soft:#10332F; --tim:#C79BF5; --tim-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; --bad:#F87171; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --dma:#2DD4BF; --dma-soft:#10332F; --tim:#C79BF5; --tim-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; --bad:#F87171; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.75;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:860px;margin:0 auto}
+header{padding-block:40px 8px}
+.kicker{font-family:var(--font-mono);font-size:13px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.25;margin:8px 0 12px;text-wrap:balance;font-weight:700}
+.lead{color:var(--muted);margin:0;max-width:62ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0;padding:0;list-style:none}
+nav.toc a{display:block;padding:6px 12px;border:1px solid var(--line);border-radius:6px;color:var(--fg);text-decoration:none;font-size:14px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--dma);outline:2px solid var(--dma);outline-offset:1px}
+section{margin-top:56px}
+h2{font-size:24px;line-height:1.35;margin:0 0 12px;text-wrap:balance;font-weight:700}
+h3{font-size:18px;margin:28px 0 8px;font-weight:700}
+p{margin:0 0 14px;max-width:68ch}
+ul,ol{margin:0 0 14px;padding-left:22px;max-width:68ch}
+li{margin-bottom:4px}
+code{font-family:var(--font-mono);font-size:.9em;background:var(--surface2);padding:1px 6px;border-radius:4px}
+.k0{color:var(--c0);font-weight:700} .k1{color:var(--c1);font-weight:700} .kt{color:var(--tim);font-weight:700} .kd{color:var(--dma);font-weight:700}
+.box{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:16px 18px;margin:16px 0}
+.box.warn{background:var(--warn-bg);border-color:var(--warn)} .box.ok{background:var(--ok-bg);border-color:var(--ok)}
+.box > :last-child{margin-bottom:0}
+.label{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.tablewrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:15px;background:var(--surface)}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--surface2);font-weight:700;white-space:nowrap}
+td.m,th.m{font-family:var(--font-mono);font-size:13.5px}
+td.n{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+
+/* diagrams */
+.diag{max-width:760px;margin:18px auto}
+.diag svg{display:block;width:100%;height:auto}
+.dg .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.dg .bx.tim{stroke:var(--tim);fill:var(--tim-soft)} .dg .bx.dma{stroke:var(--dma);fill:var(--dma-soft)}
+.dg .bx.cpu{stroke:var(--c0);fill:var(--c0-soft)} .dg .bx.isr{stroke:var(--c1);fill:var(--c1-soft)}
+.dg .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.dg .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.dg .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+.dg .wd{stroke:var(--dma);stroke-width:2;fill:none}
+.dg .wi{stroke:var(--c1);stroke-width:1.6;fill:none;stroke-dasharray:5 4}
+.dg .ah{fill:var(--muted)}
+
+/* 회로 연결도(schem): 선=fg, 몸체=surface2, SCL=c0, SDA=c1, 3.3V=c2(이 교안엔 없어 tim으로 대체), GND=muted */
+.schem{max-width:880px;margin:18px auto}
+.schem svg{display:block;width:100%;height:auto}
+.schem figcaption{font-size:14.5px;color:var(--muted);margin-top:8px;line-height:1.65}
+.schem .body{fill:var(--surface2);stroke:var(--fg);stroke-width:1.5}
+.schem .mod{fill:none;stroke:var(--fg);stroke-width:1.2;stroke-dasharray:6 4}
+.schem .pin{fill:var(--surface);stroke:var(--fg);stroke-width:1.2}
+.schem .w{stroke:var(--fg);stroke-width:1.6;fill:none}
+.schem .w.scl{stroke:var(--c0)} .schem .w.sda{stroke:var(--c1)} .schem .w.pwr{stroke:var(--ok)} .schem .w.gnd{stroke:var(--muted)}
+.schem .res{fill:var(--surface);stroke:var(--fg);stroke-width:1.4}
+.schem .dot{fill:var(--fg)}
+.schem text{font-family:var(--font-mono);font-size:12px;fill:var(--fg)}
+.schem text.t{font-family:var(--font-body);font-size:14px;font-weight:700}
+.schem text.m{fill:var(--muted)}
+.schem text.scl{fill:var(--c0);font-weight:600} .schem text.sda{fill:var(--c1);font-weight:600}
+.schem text.pwr{fill:var(--ok);font-weight:600} .schem text.gnd{fill:var(--muted);font-weight:600}
+
+/* frame chips (static figure + simulator strip) */
+.frame{display:flex;flex-wrap:wrap;gap:3px;margin:12px 0;font-family:var(--font-mono);font-size:12px}
+.frame span{border:1px solid var(--line);border-radius:4px;padding:3px 6px;background:var(--surface);white-space:nowrap}
+.frame .cond{background:var(--surface2);font-weight:600}
+.frame .m{border-color:var(--c0);color:var(--c0);background:var(--c0-soft)}
+.frame .sl{border-color:var(--tim);color:var(--tim);background:var(--tim-soft)}
+.frame .dm{border-color:var(--dma);color:var(--dma);background:var(--dma-soft)}
+.frame .ack{font-size:11px}
+.frame .bad{border-color:var(--bad);color:var(--bad);background:var(--warn-bg)}
+.frame .cur{outline:3px solid var(--fg);outline-offset:1px}
+.frame .fut{opacity:.35}
+
+/* flow */
+.flow{list-style:none;padding:0;margin:16px 0;display:grid;gap:0;max-width:none}
+.flow li{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:0;padding:0 0 14px;position:relative}
+.flow li:not(:last-child)::before{content:"";position:absolute;left:16px;top:34px;bottom:0;width:2px;background:var(--line)}
+.flow .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:14px;font-weight:600;background:var(--surface2);border:2px solid var(--line)}
+.flow li.hw .n{border-color:var(--dma);color:var(--dma)} .flow li.isr .n{border-color:var(--c1);color:var(--c1)} .flow li.cb .n{border-color:var(--c0);color:var(--c0)}
+.flow .tx{min-width:0} .flow .tx b{display:block}
+.flow .tx span{color:var(--muted);font-size:14.5px}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:11.5px;padding:0 6px;border-radius:4px;margin-left:6px;vertical-align:1px}
+.tag.hw{background:var(--dma-soft);color:var(--dma)} .tag.isr{background:var(--c1-soft);color:var(--c1)} .tag.cb{background:var(--c0-soft);color:var(--c0)}
+
+/* simulator */
+.sim{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:18px;margin:16px 0}
+.subhead{font-weight:700;margin:18px 0 6px;padding-top:14px;border-top:1px dashed var(--line)}
+.subhead:first-child{margin-top:0;padding-top:0;border-top:0}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 16px;margin:10px 0}
+.ctl label{display:block;font-size:14px;color:var(--muted)}
+.ctl label b{font-family:var(--font-mono);color:var(--fg);font-weight:600}
+.ctl select{font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl input[type=range]{width:100%;min-height:32px}
+.regs{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:10px 0}
+.stat{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.stat .k{font-size:12px;color:var(--muted);font-family:var(--font-mono)}
+.stat .v{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3;overflow-wrap:anywhere}
+.stat.cpu .v{color:var(--c0)} .stat.dma .v{color:var(--dma)} .stat.isr .v{color:var(--c1)} .stat.bad .v{color:var(--bad)}
+.bits{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin:10px 0}
+.reg{border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:var(--bg);min-width:0}
+.reg .k{font-family:var(--font-mono);font-size:12px;color:var(--muted);margin-bottom:4px}
+.reg .row{display:flex;flex-wrap:wrap;gap:3px}
+.bit{font-family:var(--font-mono);font-size:11.5px;border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--muted);background:var(--surface)}
+.bit.on{background:var(--fg);color:var(--bg);border-color:var(--fg);font-weight:600}
+.bit.chg{outline:2px solid var(--c1);outline-offset:1px}
+.bufgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin:8px 0}
+.bc{border:1px solid var(--line);border-radius:5px;padding:4px 2px;text-align:center;font-family:var(--font-mono);min-width:0;background:var(--bg)}
+.bc .r{font-size:9.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bc .x{font-size:14px;font-weight:600}
+.bc.fill{border-color:var(--dma);background:var(--dma-soft);color:var(--dma)}
+.bc.next{outline:3px solid var(--dma);outline-offset:0}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+button,select,input{font-family:inherit}
+button{font-size:15px;font-weight:700;padding:9px 14px;border-radius:6px;border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;min-height:44px}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+button.cpu{border-color:var(--c0);color:var(--c0)} button.cpu:hover{background:var(--c0-soft)}
+button.dma{border-color:var(--dma);color:var(--dma)} button.dma:hover{background:var(--dma-soft)}
+button.plain:hover{background:var(--surface2)}
+.wave{border:1px solid var(--line);border-radius:6px;background:var(--bg);margin:8px 0}
+.wave svg{display:block;width:100%;height:auto}
+.wave .gl{stroke:var(--line);stroke-width:1}
+.wave .scl{stroke:var(--fg);stroke-width:1.8;fill:none}
+.wave .sm{stroke:var(--c0);stroke-width:2.2;fill:none} .wave .ss{stroke:var(--tim);stroke-width:2.2;fill:none}
+.wave .lab{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.wave .bv{font-family:var(--font-mono);font-size:12px;fill:var(--fg);font-weight:600}
+.wave .cpu{fill:var(--c0)} .wave .dmab{fill:var(--dma)} .wave .isr{fill:var(--c1)} .wave .busy{fill:var(--c0);opacity:.85}
+.calc{font-family:var(--font-mono);font-size:13.5px;line-height:1.65;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-height:4.2em;white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0 0}
+.calc b{color:var(--fg)}
+.uart{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);color:var(--code-fg);border-radius:6px;padding:10px 12px;white-space:pre;overflow-x:auto;margin:8px 0 0;min-height:2.6em}
+
+/* code */
+pre{background:var(--code-bg);color:var(--code-fg);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:0;font-family:var(--font-mono);font-size:13.5px;line-height:1.7;tab-size:2}
+pre code{background:none;padding:0;font-size:inherit;color:inherit}
+.cm{color:var(--code-cmt)} .kw{color:var(--code-kw)} .hl{color:var(--code-hl)}
+.codepair{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;margin:14px 0;align-items:start}
+@media (max-width:760px){.codepair{grid-template-columns:minmax(0,1fr)}}
+.codepair ol{margin:0;padding-left:20px;font-size:15px} .codepair li{margin-bottom:8px}
+.file{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:18px 0 6px}
+
+/* quiz */
+details{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0;padding:0}
+summary{cursor:pointer;padding:12px 16px;font-weight:500;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--dma)} details[open] summary::before{content:"▾ "}
+summary:focus-visible{outline:3px solid var(--fg);outline-offset:-3px;border-radius:8px}
+details .ans{padding:0 16px 14px;color:var(--fg)} details .ans p{margin-bottom:8px}
+footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.nextprev{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+.nextprev a{border:1px solid var(--line);border-radius:8px;padding:8px 14px;text-decoration:none;color:var(--c0);background:var(--surface)}
+/* 01 전용 */
+.bytegrid{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));gap:3px;margin:6px 0}
+.by{border:1px solid var(--line);border-radius:4px;padding:3px 0;text-align:center;font-family:var(--font-mono);font-size:10.5px;background:var(--bg);min-width:0;overflow:hidden}
+.by.rd{border-color:var(--c0);background:var(--c0-soft);color:var(--c0);font-weight:600}
+.by.wr{border-color:var(--dma);background:var(--dma-soft);color:var(--dma);font-weight:600}
+.by.cur{outline:2px solid var(--fg);outline-offset:0}
+.by.bad{border-color:var(--bad);color:var(--bad)}
+.bar{height:22px;border-radius:3px;min-width:2px}
+.barrow{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;margin:6px 0;font-size:14px}
+.barrow .trk{display:flex;height:22px;background:var(--bg);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.barrow .trk span{display:block;height:100%}
+.seg-cpu{background:var(--c0)} .seg-dma{background:var(--dma)} .seg-isr{background:var(--c1)} .seg-free{background:var(--dma-soft)}
+@media (max-width:560px){.barrow{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">STM32 Nucleo-F103RB · DMA · 교안</div>
+  <h1>DMA 메모리 복사: CPU 없이 1 KB를 옮기는 채널 하나</h1>
+  <p class="lead">DMA(Direct Memory Access)는 CPU 대신 버스 마스터가 되어 데이터를 옮기는 하드웨어이다. 이 교안은 가장 단순한 형태인 <b>메모리 → 메모리 복사</b>로 DMA 채널의 구성 요소를 익힌다. 256워드(1 KB) 배열을 CPU 반복문과 DMA로 각각 복사하고, 복사하는 동안 CPU가 다른 일을 할 수 있는지를 <code>free_loops</code>로 확인한다. 이 예제의 핵심은 DMA가 CPU 반복문보다 빠르다는 것이 아니라, <b>전송 중에 CPU가 자유롭다</b>는 것이다.</p>
+  <nav class="toc" aria-label="목차">
+    <a href="#why">1. DMA가 필요한 이유</a><a href="#chan">2. 채널의 구성 요소</a><a href="#sim">3. 직접 만져 보기</a><a href="#regs">4. 레지스터 분석</a><a href="#hal">5. HAL이 대신 해 주는 일</a><a href="#isr">6. ISR과 콜백</a><a href="#code">7. 코드 읽기</a><a href="#lab">8. 실험</a><a href="#trouble">9. 트러블슈팅</a><a href="#quiz">10. 확인 문제</a>
+  </nav>
+</header>
+
+<section id="why">
+  <h2>1. DMA가 필요한 이유</h2>
+  <p>CPU가 메모리를 복사하면 명령어 하나하나가 일을 한다. 워드 하나를 옮기려면 읽기(<code>LDR</code>), 쓰기(<code>STR</code>), 인덱스 증가, 비교, 분기가 필요하다. 그동안 CPU는 다른 일을 할 수 없다. DMA는 &ldquo;어디에서 어디로, 몇 개를, 어떤 폭으로&rdquo;만 알려 주면 CPU 없이 버스를 직접 구동해 옮기고, 끝나면 인터럽트로 알려 준다.</p>
+  <div class="tablewrap"><table>
+    <tr><th>항목</th><th>CPU 반복문</th><th>DMA (이 예제)</th></tr>
+    <tr><td>옮기는 주체</td><td class="k0">Cortex-M3 코어 (명령어 실행)</td><td class="kd">DMA1 채널1 (버스 마스터)</td></tr>
+    <tr><td>전송 중 CPU</td><td>반복문에 붙잡힘</td><td>자유 (<code>free_loops</code>가 올라감)</td></tr>
+    <tr><td>준비 비용</td><td>없음</td><td>채널 설정 + 인터럽트 처리 (고정 오버헤드)</td></tr>
+    <tr><td>끝을 아는 방법</td><td>반복문이 끝남</td><td class="k1">TC 인터럽트 → 콜백 → 플래그</td></tr>
+    <tr><td>유리한 경우</td><td>아주 작은 복사</td><td>큰 복사, CPU가 다른 일을 해야 할 때</td></tr>
+  </table></div>
+
+  <div class="diag">
+    <svg class="dg" viewBox="0 0 760 230" role="img" aria-label="Cortex-M3 코어와 DMA1이 버스 매트릭스를 거쳐 SRAM의 src 배열을 읽고 dst 배열에 쓰는 구조. 완료되면 DMA가 NVIC로 인터럽트를 보낸다">
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+      <rect class="bx cpu" x="10" y="20" width="150" height="58" rx="6"/><text class="t" x="24" y="44">Cortex-M3</text><text class="s" x="24" y="62">LDR/STR 반복문</text>
+      <rect class="bx dma" x="10" y="130" width="150" height="58" rx="6"/><text class="t" x="24" y="154">DMA1 채널1</text><text class="s" x="24" y="172">CPAR / CMAR / CNDTR</text>
+      <rect class="bx" x="300" y="70" width="140" height="70" rx="6"/><text class="t" x="314" y="96">버스 매트릭스</text><text class="s" x="314" y="114">CPU·DMA 요청 중재</text>
+      <path class="w" d="M160,49 H230 V95 H298" marker-end="url(#ar)"/>
+      <path class="wd" d="M160,159 H230 V115 H298" marker-end="url(#ar)"/>
+      <rect class="bx" x="580" y="20" width="170" height="58" rx="6"/><text class="t" x="594" y="44">SRAM: src[256]</text><text class="s" x="594" y="62">읽기 (CPAR)</text>
+      <rect class="bx" x="580" y="130" width="170" height="58" rx="6"/><text class="t" x="594" y="154">SRAM: dst[256]</text><text class="s" x="594" y="172">쓰기 (CMAR)</text>
+      <path class="w" d="M440,95 H500 V49 H578" marker-end="url(#ar)"/>
+      <path class="w" d="M440,115 H500 V159 H578" marker-end="url(#ar)"/>
+      <path class="wi" d="M85,188 V214 H300" marker-end="url(#ar)"/><text class="s" x="96" y="208">TC → NVIC → DMA1_Channel1_IRQHandler</text>
+      <text class="s" x="10" y="12">파랑 = CPU, 청록 = DMA, 주황 = ISR 문맥</text>
+    </svg>
+  </div>
+  <div class="box">
+    <div class="label">이 저장소에서의 위치</div>
+    <p>DMA는 이 저장소에서 이미 몇 번 나왔다. <code>02_USART/04_USART_DMA_IdleLine_c</code>는 UART 수신 바이트를, <code>03_ADC/04_ADC_DMA_TimTrigger</code>는 ADC 결과를, <code>04_I2C_Communication/05_I2C_MPU6050_DMA_c</code>는 I2C 수신 바이트를 DMA로 옮겼다. 그 예제들은 주변장치가 &lsquo;요청&rsquo;을 보내 DMA를 움직인다. 이 예제는 <b>요청 없이</b> 소프트웨어가 채널을 켜면 바로 시작하는 메모리 → 메모리 모드이므로, 주변장치 없이 DMA 채널 자체만 관찰하기 좋다.</p>
+  </div>
+</section>
+
+<section id="chan">
+  <h2>2. 채널의 구성 요소</h2>
+  <p>STM32F103RB의 DMA1에는 채널이 7개 있다(RM0008 13장). 한 채널은 아래 네 가지를 정하면 일할 수 있다.</p>
+  <div class="tablewrap"><table>
+    <tr><th>구성 요소</th><th>레지스터</th><th>이 예제의 값</th></tr>
+    <tr><td>어디에서</td><td class="m">DMA1_CPAR1</td><td><code>src</code> 배열의 시작 주소</td></tr>
+    <tr><td>어디로</td><td class="m">DMA1_CMAR1</td><td><code>dst_dma</code> 배열의 시작 주소</td></tr>
+    <tr><td>몇 번</td><td class="m">DMA1_CNDTR1</td><td>256 (전송 횟수이며 <b>바이트 수가 아님</b>)</td></tr>
+    <tr><td>어떻게</td><td class="m">DMA1_CCR1</td><td><code>MEM2MEM=1</code>, <code>PINC=MINC=1</code>, <code>PSIZE=MSIZE=32비트</code>, <code>PL=High</code>, <code>CIRC=0</code></td></tr>
+  </table></div>
+  <ul>
+    <li><b>데이터 폭</b>(<code>PSIZE</code>/<code>MSIZE</code>): 한 번의 전송에서 옮기는 크기이다. 32비트면 한 번에 4바이트이다. 같은 1 KB를 8비트로 옮기면 <code>CNDTR</code>은 1024가 된다.</li>
+    <li><b>주소 증가</b>(<code>PINC</code>/<code>MINC</code>): 전송마다 주소를 데이터 폭만큼 늘릴지 정한다. 배열 복사는 양쪽 다 켠다. 끄면 같은 주소만 계속 읽거나 쓴다.</li>
+    <li><b>우선순위</b>(<code>PL</code>): 여러 채널이 동시에 요청할 때의 순서이다. 같은 우선순위면 채널 번호가 낮은 쪽이 먼저이다. 이 예제는 채널이 하나라 영향이 없다.</li>
+  </ul>
+  <div class="box warn">
+    <div class="label">메모리 → 메모리에서 &lsquo;주변장치 주소&rsquo;의 뜻</div>
+    <p>이름이 헷갈린다. 메모리 → 메모리 모드에서도 레지스터 이름은 그대로라서 <b><code>CPAR</code>가 소스, <code>CMAR</code>가 목적지</b>가 된다. 이 프로젝트가 쓰는 HAL(<code>DMA_SetConfig</code>)도 방향이 <code>MEMORY_TO_PERIPH</code>가 아니면 <code>CPAR = SrcAddress</code>, <code>CMAR = DstAddress</code>로 쓴다. 그리고 <code>DMA_MEMORY_TO_MEMORY</code>는 <code>CCR.MEM2MEM</code> 비트만 켜는 값이므로 <code>CCR.DIR</code>은 0 그대로이다. 그래서 <code>PINC</code>는 소스 주소(<code>CPAR</code>) 증가이고 <code>MINC</code>는 목적지 주소(<code>CMAR</code>) 증가이다.</p>
+  </div>
+  <div class="box">
+    <div class="label">메모리 → 메모리 모드의 규칙 (RM0008 13.3)</div>
+    <ul style="margin:0">
+      <li><code>MEM2MEM=1</code>이면 주변장치 요청을 기다리지 않고, <code>EN</code>을 쓰는 순간 전송이 시작되어 <code>CNDTR</code>이 0이 되면 멈춘다.</li>
+      <li><b>원형(<code>CIRC</code>) 모드와 같이 쓸 수 없다.</b> 02 예제처럼 계속 반복하려면 주변장치(타이머 등) 요청 방식이어야 한다.</li>
+      <li>어느 채널로도 할 수 있다. 주변장치 요청이 필요 없으므로 채널 1이어도 된다.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="sim">
+  <h2>3. 직접 만져 보기</h2>
+  <p>아래 시뮬레이터는 32바이트를 옮기는 DMA 채널 하나를 한 번 전송씩 실행한다. <code>CPAR</code>, <code>CMAR</code>, <code>CNDTR</code>이 전송마다 어떻게 바뀌는지, 설정을 바꾸면 결과가 어떻게 틀어지는지 본다.</p>
+  <ol>
+    <li>기본값(32비트, <b>PINC 켬, MINC 켬</b>)에서 <b>한 전송</b>을 여러 번 눌러 파랑(읽은 곳)과 청록(쓴 곳)이 4바이트씩 앞으로 가는 것과 <code>CNDTR</code>이 8에서 0으로 줄어드는 것을 본다. 0이 되면 <code>TCIF1</code>이 서고 <code>EN</code>이 내려간다.</li>
+    <li>데이터 폭을 <b>8비트</b>로 바꾼다. 같은 32바이트인데 <code>CNDTR</code>이 32가 된다. <code>CNDTR</code>은 바이트 수가 아니라 전송 횟수이다.</li>
+    <li><b>PINC를 끄고</b> 끝까지 실행한다. 소스에서 같은 첫 워드만 계속 읽어 목적지 전체가 <code>src[0]</code>의 반복으로 채워지고 검증이 <b>FAIL</b>이 된다.</li>
+    <li><b>MINC를 끄고</b> 끝까지 실행한다. 목적지 첫 워드만 계속 덮어써져 마지막 값만 남는다.</li>
+  </ol>
+
+  <div class="sim" id="simbox">
+    <div class="subhead">설정 (CCR을 바꾸는 부분)</div>
+    <div class="ctl">
+      <div><label for="selSz">데이터 폭 (<code>PSIZE = MSIZE</code>)</label>
+        <select id="selSz"><option value="4" selected>32비트 (이 예제)</option><option value="2">16비트</option><option value="1">8비트</option></select></div>
+      <div><label for="selP">소스 주소 증가 (<code>PINC</code>)</label>
+        <select id="selP"><option value="1" selected>켬 (1)</option><option value="0">끔 (0)</option></select></div>
+      <div><label for="selM">목적지 주소 증가 (<code>MINC</code>)</label>
+        <select id="selM"><option value="1" selected>켬 (1)</option><option value="0">끔 (0)</option></select></div>
+    </div>
+
+    <div class="subhead">src (32바이트, 파랑 = 방금 읽은 곳, 굵은 테두리 = 다음 읽을 곳)</div>
+    <div class="bytegrid" id="gSrc"></div>
+    <div class="subhead">dst (청록 = 방금 쓴 곳, 빨강 = src와 다름)</div>
+    <div class="bytegrid" id="gDst"></div>
+
+    <div class="regs">
+      <div class="stat dma"><div class="k">DMA1_CNDTR1</div><div class="v" id="vCnd">8</div></div>
+      <div class="stat"><div class="k">CPAR (오프셋)</div><div class="v" id="vPar">+0</div></div>
+      <div class="stat"><div class="k">CMAR (오프셋)</div><div class="v" id="vMar">+0</div></div>
+      <div class="stat"><div class="k">CCR1.EN / ISR.TCIF1</div><div class="v" id="vFlag">0 / 0</div></div>
+      <div class="stat"><div class="k">검증 (memcmp)</div><div class="v" id="vOk">–</div></div>
+    </div>
+    <div class="btns">
+      <button class="dma" id="bStep" type="button">한 전송</button>
+      <button class="dma" id="bRun" type="button">끝까지</button>
+      <button class="plain" id="bReset" type="button">초기화</button>
+    </div>
+    <div class="calc" id="calc" aria-live="polite"></div>
+
+    <div class="subhead">CPU 복사와 DMA 복사 비교 (가정값으로 계산하는 모델)</div>
+    <div class="ctl">
+      <div><label for="rN">복사할 워드 수 N = <b id="lN"></b></label><input id="rN" type="range" min="4" max="1024" step="4" value="256"></div>
+      <div><label for="rC">CPU 복사: 워드당 사이클 = <b id="lC"></b></label><input id="rC" type="range" min="4" max="14" step="1" value="8"></div>
+      <div><label for="rD">DMA 복사: 워드당 사이클 = <b id="lD"></b></label><input id="rD" type="range" min="2" max="6" step="1" value="3"></div>
+      <div><label for="rO">DMA 고정 오버헤드(설정 + 인터럽트) = <b id="lO"></b></label><input id="rO" type="range" min="50" max="400" step="10" value="150"></div>
+    </div>
+    <div id="bars"></div>
+    <div class="calc" id="calc2" aria-live="polite"></div>
+  </div>
+  <p style="font-size:14.5px;color:var(--muted)">시뮬레이터 모델: 위쪽 전송 시뮬레이션은 RM0008의 <code>PINC/MINC/PSIZE/CNDTR</code> 동작을 그대로 따른다. 폭이 소스와 목적지에서 같다고 가정한다(<code>PSIZE ≠ MSIZE</code>일 때의 정렬 동작은 다루지 않는다). 아래쪽 막대는 <b>실측이 아니라 슬라이더로 정한 가정값</b>으로 계산한 것이다. 워드당 사이클 수와 오버헤드는 실제 보드에서 DWT 카운터로 잰 값으로 바꿔 넣어 확인한다(8절 실험 A). 모델은 DMA와 CPU가 같은 버스를 두고 경합하는 효과를 &lsquo;DMA 워드당 사이클&rsquo;에 한꺼번에 담았다.</p>
+</section>
+
+<section id="regs">
+  <h2>4. 레지스터 분석</h2>
+  <h3>DMA1 채널1 (기준 주소 DMA1 = 0x4002 0000, RM0008 13.4)</h3>
+  <div class="tablewrap"><table>
+    <tr><th>레지스터</th><th>비트</th><th>이 예제에서의 값·역할</th></tr>
+    <tr><td class="m">DMA1_ISR (0x00)</td><td class="m">GIF1(0), TCIF1(1), HTIF1(2), TEIF1(3)</td><td>채널1 상태 플래그. 전송이 끝나면 <code>TCIF1 = 1</code>. HAL이 <code>DMA1_IFCR</code>(0x04)에 1을 써서 지운다</td></tr>
+    <tr><td class="m">DMA1_CCR1 (0x08)</td><td class="m">EN(0), TCIE(1), HTIE(2), TEIE(3), DIR(4), CIRC(5), PINC(6), MINC(7), PSIZE(9:8), MSIZE(11:10), PL(13:12), MEM2MEM(14)</td><td>아래 표 참조</td></tr>
+    <tr><td class="m">DMA1_CNDTR1 (0x0C)</td><td class="m">NDT[15:0]</td><td>남은 전송 횟수. 256에서 시작해 한 번 전송할 때마다 1씩 감소한다. 최대 65535</td></tr>
+    <tr><td class="m">DMA1_CPAR1 (0x10)</td><td class="m">PA[31:0]</td><td>소스 주소(<code>src</code>)</td></tr>
+    <tr><td class="m">DMA1_CMAR1 (0x14)</td><td class="m">MA[31:0]</td><td>목적지 주소(<code>dst_dma</code>)</td></tr>
+  </table></div>
+  <p><code>CCR1</code> 값은 HAL이 단계별로 조립한다. 비트에서 직접 계산해 두면 디버거로 레지스터를 읽을 때 맞는지 검산할 수 있다.</p>
+  <div class="tablewrap"><table>
+    <tr><th>시점</th><th>켜진 비트</th><th>CCR1</th></tr>
+    <tr><td><code>HAL_DMA_Init()</code> 직후</td><td>MEM2MEM(0x4000) + PL=High(0x2000) + MSIZE=32(0x0800) + PSIZE=32(0x0200) + MINC(0x80) + PINC(0x40)</td><td class="m">0x6AC0</td></tr>
+    <tr><td><code>HAL_DMA_Start_IT()</code> 직후</td><td>위에 TEIE(0x08) + TCIE(0x02) + EN(0x01). 반 완료 콜백이 없으므로 <code>HTIE</code>는 꺼 둔다</td><td class="m">0x6ACB</td></tr>
+    <tr><td>전송이 끝난 뒤</td><td>하드웨어가 <code>EN</code>을 내리고 HAL이 TCIE/TEIE를 끈다</td><td class="m">0x6AC0</td></tr>
+  </table></div>
+  <div class="box ok">
+    <div class="label">NVIC</div>
+    <p><code>HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 1, 0)</code>과 <code>HAL_NVIC_EnableIRQ</code>가 <code>NVIC-&gt;ISER[0]</code>의 해당 비트(인터럽트 번호 11)를 켠다. 위 코드는 <code>MX_DMA_Init()</code> 안에 있다.</p>
+  </div>
+  <div class="box">
+    <div class="label">DMA 클럭</div>
+    <p>DMA1은 AHB 장치라 <code>RCC_AHBENR.DMA1EN</code>(bit 0)을 켜야 레지스터를 쓸 수 있다. <code>__HAL_RCC_DMA1_CLK_ENABLE()</code>이 이 일을 한다. 클럭을 켜기 전에 <code>HAL_DMA_Init()</code>을 부르면 설정이 반영되지 않는다.</p>
+  </div>
+</section>
+
+<section id="hal">
+  <h2>5. HAL이 대신 해 주는 일</h2>
+  <p>아래는 이 프로젝트가 빌드하는 STM32CubeF1 HAL(PlatformIO <code>framework-stm32cubef1</code>)의 <code>stm32f1xx_hal_dma.c</code>를 읽고 정리한 것이다.</p>
+  <div class="tablewrap"><table>
+    <tr><th>HAL 함수</th><th>하는 일 (레지스터)</th></tr>
+    <tr><td class="m">MX_DMA_Init</td><td>CubeMX가 만든 함수. <code>RCC_AHBENR.DMA1EN</code> 켜기 → <code>hdma_memtomem_dma1_channel1</code> 필드 채우기 → <code>HAL_DMA_Init</code> → NVIC 설정</td></tr>
+    <tr><td class="m">HAL_DMA_Init</td><td>핸들 값으로 <code>CCR1</code>을 한 번에 조립해 쓴다(위 표의 0x6AC0). 채널 번호로 <code>DmaBaseAddress</code>와 <code>ChannelIndex</code>를 정한다</td></tr>
+    <tr><td class="m">HAL_DMA_RegisterCallback</td><td>핸들의 <code>XferCpltCallback</code> 함수 포인터에 <code>dma_done_cb</code>를 넣는다. 레지스터는 건드리지 않는다. 채널이 READY 상태가 아니면(전송 중이면) <code>HAL_ERROR</code>를 반환하고 등록하지 않는다</td></tr>
+    <tr><td class="m">HAL_DMA_Start_IT</td><td>상태가 READY인지 확인 → <code>CCR1.EN = 0</code> → <code>DMA_SetConfig</code>: <code>IFCR</code>로 플래그 지움, <code>CNDTR1 = 256</code>, <code>CPAR1 = src</code>, <code>CMAR1 = dst_dma</code> → TCIE/TEIE 켬(HT 콜백이 NULL이면 HTIE는 끔) → <code>CCR1.EN = 1</code>. 이 순간 전송이 시작된다</td></tr>
+    <tr><td class="m">HAL_DMA_IRQHandler</td><td><code>DMA1_ISR</code>의 플래그와 <code>CCR1</code>의 인터럽트 허용 비트를 함께 확인. TC이면 <b>일반 모드에서 TCIE/TEIE를 끄고 상태를 READY로</b> 바꾼 뒤 <code>IFCR</code>로 플래그를 지우고 <code>XferCpltCallback()</code>을 부른다</td></tr>
+  </table></div>
+  <div class="box">
+    <div class="label">고정 이름 콜백이 아니라 등록형 콜백인 이유</div>
+    <p>UART의 <code>HAL_UART_RxCpltCallback()</code>처럼 weak 함수를 덮어쓰는 방식은 주변장치 드라이버가 정의해 둔 이름이다. 순수 DMA 핸들(<code>DMA_HandleTypeDef</code>)에는 그런 weak 함수가 없다. 주변장치 드라이버(UART, ADC 등)는 자기 콜백을 핸들의 함수 포인터에 내부에서 채워 넣어 쓴다. 우리가 DMA를 직접 쓰면 <code>HAL_DMA_RegisterCallback()</code>으로 포인터를 직접 채워야 한다.</p>
+  </div>
+</section>
+
+<section id="isr">
+  <h2>6. ISR과 콜백</h2>
+  <p>정상 흐름에서 CPU가 깨어나는 인터럽트는 DMA1 채널1의 TC 하나뿐이다. 진짜 ISR과 등록한 콜백을 구분해 둔다.</p>
+  <ol class="flow">
+    <li class="hw"><div class="n">1</div><div class="tx"><b>DMA가 마지막 워드를 쓴다<span class="tag hw">HW</span></b><span><code>CNDTR1 = 0</code>이 되어 <code>DMA1_ISR.TCIF1</code>이 선다. <code>CCR1.EN</code>은 하드웨어가 내린다. <code>CCR1.TCIE = 1</code>이므로 인터럽트 요청이 NVIC로 간다.</span></div></li>
+    <li class="isr"><div class="n">2</div><div class="tx"><b><code>DMA1_Channel1_IRQHandler()</code> — 진짜 ISR<span class="tag isr">ISR</span></b><span><code>stm32f1xx_it.c</code>. 벡터 테이블에서 바로 불리며 <code>HAL_DMA_IRQHandler(&amp;hdma_memtomem_dma1_channel1)</code>만 호출한다. NVIC 우선순위 1.</span></div></li>
+    <li class="isr"><div class="n">3</div><div class="tx"><b><code>HAL_DMA_IRQHandler()</code><span class="tag isr">ISR 문맥</span></b><span><code>TCIF1</code>과 <code>TCIE</code>를 확인하고, 일반 모드이므로 TCIE/TEIE를 끄고 상태를 READY로 바꾼 뒤 플래그를 지운다. 그다음 등록된 함수 포인터를 부른다.</span></div></li>
+    <li class="cb"><div class="n">4</div><div class="tx"><b><code>dma_done_cb()</code> — 등록한 콜백<span class="tag cb">main.c</span></b><span>사용자가 만든 함수이다. ISR이 아니지만 <b>ISR 문맥에서 실행</b>된다. <code>dma_done = 1</code>만 한다. 판정과 출력은 main이 한다.</span></div></li>
+  </ol>
+  <div class="tablewrap"><table>
+    <tr><th>ISR (stm32f1xx_it.c)</th><th>NVIC 우선순위</th><th>이 예제에서</th><th>이어지는 콜백</th></tr>
+    <tr><td class="m">DMA1_Channel1_IRQHandler</td><td class="n">1</td><td><b>사용</b> (TC: 완료, TE: 전송 오류)</td><td class="m">dma_done_cb (TC)</td></tr>
+    <tr><td class="m">SysTick_Handler</td><td class="n">0</td><td><code>HAL_GetTick()</code>용 1 ms 틱 (<code>HAL_Delay</code> 디바운스)</td><td>–</td></tr>
+  </table></div>
+  <div class="box warn">
+    <div class="label">콜백에서 왜 플래그만 세우는가</div>
+    <p><code>dma_done</code>은 ISR 문맥(콜백)이 쓰고 main이 읽으므로 <b><code>volatile</code></b>이어야 한다. 빼면 컴파일러가 <code>while (!dma_done)</code>을 무한 루프로 최적화해 버릴 수 있다. 콜백이 UART 출력처럼 긴 일을 하면 다른 인터럽트의 지연이 커지므로, 콜백은 짧게 끝내고 나머지는 main에서 한다.</p>
+  </div>
+</section>
+
+<section id="code">
+  <h2>7. 코드 읽기</h2>
+  <p>계층은 <b>HAL + DMA</b>이다. 사용자 코드는 모두 <code>/* USER CODE BEGIN ... */</code> 영역 안에 있다. 오른쪽은 각 줄이 다루는 레지스터·비트이다.</p>
+
+  <div class="file">Core/Src/main.c — USER CODE BEGIN PD / PV</div>
+  <div class="codepair">
+<pre><code><span class="kw">#define</span> N_WORDS 256
+
+<span class="kw">static</span> uint32_t src[N_WORDS];
+<span class="kw">static</span> uint32_t dst_cpu[N_WORDS];
+<span class="kw">static</span> uint32_t dst_dma[N_WORDS];
+<span class="kw">static volatile</span> uint8_t dma_done;</code></pre>
+    <ol>
+      <li>256워드 × 4바이트 = 1 KB</li>
+      <li>DMA의 소스·목적지는 함수가 끝나도 유효해야 하므로 지역 변수가 아니라 <b>전역(static)</b>이다</li>
+      <li><code>CNDTR1 = 256</code>, 전송 폭은 워드(32비트)</li>
+      <li>콜백(ISR 문맥)과 main이 공유하는 플래그라 <code>volatile</code></li>
+    </ol>
+  </div>
+
+  <div class="file">Core/Src/main.c — USER CODE BEGIN 0 (콜백과 측정)</div>
+  <div class="codepair">
+<pre><code><span class="kw">static void</span> dma_done_cb(DMA_HandleTypeDef *hdma)
+{ (<span class="kw">void</span>)hdma; dma_done = <span class="hl">1</span>; }
+
+<span class="cm">/* (1) CPU 복사 */</span>
+<span class="kw">volatile</span> uint32_t *d = dst_cpu;
+t0 = DWT-&gt;CYCCNT;
+<span class="kw">for</span> (i = 0; i &lt; N_WORDS; i++) d[i] = src[i];
+cpu_cycles = DWT-&gt;CYCCNT - t0;
+
+<span class="cm">/* (2) DMA 복사 */</span>
+dma_done = 0;
+t0 = DWT-&gt;CYCCNT;
+<span class="kw">HAL_DMA_Start_IT</span>(&amp;hdma_memtomem_dma1_channel1,
+    (uint32_t)src, (uint32_t)dst_dma, N_WORDS);
+<span class="kw">while</span> (!dma_done) free_loops++;
+dma_cycles = DWT-&gt;CYCCNT - t0;</code></pre>
+    <ol>
+      <li>이 함수는 ISR 문맥에서 불리는 등록형 콜백이다. 플래그만 세운다</li>
+      <li><code>volatile</code> 포인터로 쓰면 컴파일러가 반복문을 <code>memcpy</code>로 바꾸거나 지우지 못한다</li>
+      <li><code>DWT-&gt;CYCCNT</code>: 코어 사이클 카운터. 64 MHz에서 1 사이클은 15.6 ns</li>
+      <li>이 줄이 <code>CCR1.EN = 1</code>을 쓰며 전송을 시작한다. 반환까지 걸리는 시간은 짧다</li>
+      <li><code>free_loops</code>는 DMA가 일하는 동안 CPU가 반복문을 돈 횟수이다. CPU가 풀려난 증거이다</li>
+      <li>이 루프가 SRAM을 읽고 쓰는 동안은 DMA와 버스를 두고 경합한다. 측정된 DMA 시간이 길어질 수 있는 이유이다</li>
+    </ol>
+  </div>
+
+  <div class="file">Core/Src/main.c — USER CODE BEGIN 2</div>
+  <div class="codepair">
+<pre><code>CoreDebug-&gt;DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+DWT-&gt;CYCCNT = 0;
+DWT-&gt;CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
+<span class="kw">HAL_DMA_RegisterCallback</span>(&amp;hdma_memtomem_dma1_channel1,
+    HAL_DMA_XFER_CPLT_CB_ID, dma_done_cb);
+
+<span class="kw">for</span> (i = 0; i &lt; N_WORDS; i++)
+    src[i] = <span class="hl">0xA5000000u | i</span>;
+run_test();</code></pre>
+    <ol>
+      <li>DWT 사용 허가: <code>DEMCR.TRCENA</code>(bit 24) = 1</li>
+      <li>카운터 시작: <code>DWT_CTRL.CYCCNTENA</code>(bit 0) = 1</li>
+      <li>TC 콜백 등록. 함수 포인터만 바꾸고 레지스터는 건드리지 않는다</li>
+      <li>소스 값 = 상위 바이트 0xA5 + 인덱스. 복사가 어긋나면 값만 봐도 어느 칸인지 알 수 있다</li>
+    </ol>
+  </div>
+
+  <div class="file">Core/Src/main.c — 검증과 출력</div>
+  <div class="codepair">
+<pre><code><span class="kw">int</span> ok = (memcmp(src, dst_dma, <span class="kw">sizeof</span> src) == 0);
+snprintf(msg, <span class="kw">sizeof</span> msg,
+  <span class="hl">"CPU=%lu cyc  DMA=%lu cyc  (CPU free loops=%lu)  verify=%s\r\n"</span>,
+  cpu_cycles, dma_cycles, free_loops, ok ? <span class="hl">"OK"</span> : <span class="hl">"FAIL"</span>);</code></pre>
+    <ol>
+      <li>Cortex-M3에는 데이터 캐시가 없으므로 TC 직후 <code>memcmp</code>로 바로 비교해도 된다. 캐시가 있는 코어(Cortex-M7 등)에서는 캐시를 비우고 무효화하는 작업이 추가로 필요하다</li>
+      <li>출력은 115200 8N1로 ST-Link 가상 COM 포트에 나간다</li>
+    </ol>
+  </div>
+</section>
+
+<section id="lab">
+  <h2>8. 실험</h2>
+  <p><b>준비</b>: Nucleo-F103RB를 USB로 연결하고 터미널을 115200 8N1로 연다. 별도 배선은 없다. 부팅 시 한 번 측정하고, B1(PC13)을 누를 때마다 다시 측정한다. 아래 출력의 <code>...</code>은 보드에서 읽을 값이다. 값은 여기에 적지 않았으니 직접 재서 채운다.</p>
+
+  <h3>실험 A. 기본 출력과 free_loops</h3>
+  <pre><code>CPU=... cyc  DMA=... cyc  (CPU free loops=...)  verify=OK</code></pre>
+  <p><code>verify=OK</code>가 먼저 확인할 것이다. <code>free_loops</code>가 0이 아니면 DMA가 도는 동안 CPU가 반복문을 돈 것이다. 출력값으로 워드당 사이클을 어림해 시뮬레이터 슬라이더(3절)에 넣어 본다. <code>CPU 사이클 ÷ 256</code> = CPU 복사의 워드당 사이클, <code>DMA 사이클 ÷ 256</code> = (오버헤드를 포함한) DMA의 워드당 사이클이다.</p>
+
+  <h3>실험 B. 크기를 바꿔 손익분기점 찾기</h3>
+  <p><code>N_WORDS</code>를 16, 64, 256, 1024로 바꿔(배열 선언도 같이 커진다) 각각 측정한다. DMA에는 크기와 상관없는 고정 비용(채널 설정, 인터럽트 진입과 복귀)이 있으므로, 작은 N에서는 CPU 복사가 더 짧을 수 있다. 어느 N에서 뒤집히는지 표로 만들고 3절 모델의 손익분기 N과 비교한다.</p>
+
+  <h3>실험 C. 주소 증가를 끈다</h3>
+  <p>CubeMX에서 DMA1 채널1의 <b>Peripheral Increment Address</b>를 끄고(<code>PINC = 0</code>) 재생성한다. <code>verify=FAIL</code>이 나와야 한다. <code>dst_dma</code>를 시리얼로 출력하게 고치면 전체가 <code>src[0]</code> 값 하나로 채워진 것을 볼 수 있다. 이어서 Memory Increment를 끄면(<code>MINC = 0</code>) 목적지의 첫 워드만 마지막 소스 값으로 덮어써지고 나머지는 0으로 남는다. 3절 시뮬레이터가 보여 준 결과와 같은지 확인한다.</p>
+
+  <h3>실험 D. 데이터 폭을 8비트로</h3>
+  <p><code>Data Width</code>를 Byte로 바꾸고 <code>HAL_DMA_Start_IT()</code>의 마지막 인자를 <code>N_WORDS * 4</code>로 바꾼다. 그대로 두면 256바이트(= 64워드)만 옮겨 <code>verify=FAIL</code>이 난다. <code>CNDTR</code>은 바이트 수가 아니라 전송 횟수임을 확인하는 실험이다. 전송 횟수가 4배가 되므로 DMA 시간도 달라지는지 본다.</p>
+
+  <h3>실험 E. 전송 중 다른 일을 시킨다</h3>
+  <p>DMA 대기 루프를 <code>while (!dma_done) { HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin); }</code>로 바꾼다. LD2(PA5, D13)를 AD2 오실로스코프로 보면 DMA가 도는 동안 핀이 토글되는 것이 보인다. CPU 복사 구간(<code>for</code> 루프)에서는 같은 핀을 건드릴 수 없다. 이 차이가 DMA의 목적이다.</p>
+</section>
+
+<section id="trouble">
+  <h2>9. 트러블슈팅</h2>
+  <div class="tablewrap"><table>
+    <tr><th>증상</th><th>원인</th><th>조치</th></tr>
+    <tr><td><code>verify=FAIL</code></td><td>PINC/MINC가 꺼짐, 전송 폭과 개수가 맞지 않음(실험 C, D), 완료 전에 비교함</td><td><code>DMA1_CCR1</code>을 디버거로 읽어 0x6ACB와 비교. <code>CNDTR</code>이 전송 횟수임을 확인</td></tr>
+    <tr><td>프로그램이 <code>while (!dma_done)</code>에서 멈춤</td><td>콜백 등록을 안 함, NVIC에서 <code>DMA1_Channel1_IRQn</code>이 꺼짐, 컴파일러가 <code>dma_done</code>을 레지스터에 캐시(<code>volatile</code> 누락)</td><td>등록 줄과 <code>MX_DMA_Init</code> 순서 확인. <code>dma_done</code> 선언 확인</td></tr>
+    <tr><td><code>Error_Handler()</code>로 빠짐</td><td><code>HAL_DMA_Start_IT()</code>가 <code>HAL_BUSY</code> 반환: 이전 전송이 아직 끝나지 않았거나, 핸들이 READY가 아님</td><td>콜백이 불린 뒤(상태 READY) 다음 전송을 시작하는지 확인</td></tr>
+    <tr><td>시간 값이 말이 안 됨</td><td>DWT 카운터가 꺼져 있음(0만 출력), 32비트 오버플로(약 67초)</td><td><code>DEMCR.TRCENA</code>와 <code>CYCCNTENA</code> 설정 확인. 측정은 짧게</td></tr>
+    <tr><td>HardFault</td><td>소스·목적지가 존재하지 않는 주소 또는 지역 변수(스택)에 놓임. 전송 폭에 맞지 않게 정렬되지 않은 주소</td><td>전역 배열 사용. 32비트 전송이면 4바이트 정렬 확인</td></tr>
+    <tr><td>DMA 시간이 CPU 시간보다 길다</td><td>N이 작아 고정 오버헤드가 큼. 대기 루프가 같은 SRAM 버스를 써서 DMA가 느려짐</td><td>실험 B로 N을 키워 본다. 이 예제의 목적은 속도가 아니라 CPU 해방임을 기억한다</td></tr>
+  </table></div>
+</section>
+
+<section id="quiz">
+  <h2>10. 확인 문제</h2>
+  <p>먼저 스스로 답을 정해 본 뒤 펼쳐 확인한다.</p>
+  <details><summary><b>문제 1.</b> 1 KB를 32비트 폭으로 옮길 때 <code>CNDTR</code>은 얼마인가? 8비트 폭이면?</summary>
+    <div class="ans"><p>32비트면 1024 ÷ 4 = <b>256</b>, 8비트면 <b>1024</b>이다. <code>CNDTR</code>은 바이트 수가 아니라 전송 횟수이다.</p></div></details>
+  <details><summary><b>문제 2.</b> 메모리 → 메모리 모드에서 소스와 목적지 주소는 어느 레지스터에 쓰는가?</summary>
+    <div class="ans"><p>소스는 <code>CPAR</code>, 목적지는 <code>CMAR</code>이다. 레지스터 이름은 주변장치/메모리이지만 이 모드에서는 &lsquo;읽는 쪽&rsquo;과 &lsquo;쓰는 쪽&rsquo;으로 쓰인다. HAL은 <code>DMA_MEMORY_TO_MEMORY</code>일 때 <code>CCR.DIR</code>을 0으로 두고 <code>CPAR = Src, CMAR = Dst</code>로 쓴다.</p></div></details>
+  <details><summary><b>문제 3.</b> 메모리 → 메모리 모드를 원형 모드와 함께 쓸 수 없는 이유를 설명하라.</summary>
+    <div class="ans"><p>이 모드는 주변장치의 요청 없이 <code>EN</code>을 쓰는 순간 시작해 <code>CNDTR</code>이 0이 될 때까지 최고 속도로 돈다. 원형 모드로 두면 0이 되자마자 다시 채워져 멈추지 않고 버스를 계속 점유한다. RM0008도 두 모드를 동시에 쓰지 말라고 한다. 주기적으로 반복하려면 타이머 같은 요청원이 필요하다(02 예제).</p></div></details>
+  <details><summary><b>문제 4.</b> <code>PINC = 0</code>, <code>MINC = 1</code>로 256워드를 복사하면 <code>dst_dma</code>에 무엇이 들어가는가?</summary>
+    <div class="ans"><p>소스 주소가 늘지 않으므로 <code>src[0]</code>(= 0xA5000000)만 256번 읽는다. <code>dst_dma</code> 전체가 0xA5000000으로 채워진다. <code>memcmp</code>가 어긋나므로 <code>verify=FAIL</code>이다.</p></div></details>
+  <details><summary><b>문제 5.</b> <code>dma_done</code>에서 <code>volatile</code>을 빼면 어떤 일이 생길 수 있는가?</summary>
+    <div class="ans"><p>컴파일러는 <code>while (!dma_done)</code> 루프 안에서 값이 바뀌지 않는다고 보고 한 번만 읽어 무한 루프로 만들 수 있다. 값은 ISR 문맥(콜백)에서 바뀌므로 컴파일러가 알 수 없다. <code>volatile</code>이 매번 메모리에서 읽게 한다.</p></div></details>
+  <details><summary><b>문제 6.</b> 이 예제에서 <code>HAL_DMA_Start_IT()</code> 직후 <code>DMA1_CCR1</code>의 값은? (비트 계산으로 구하라)</summary>
+    <div class="ans"><p>0x4000(MEM2MEM) + 0x2000(PL=High) + 0x0800(MSIZE=32) + 0x0200(PSIZE=32) + 0x0080(MINC) + 0x0040(PINC) + 0x0008(TEIE) + 0x0002(TCIE) + 0x0001(EN) = <b>0x6ACB</b>이다. <code>HTIE</code>(0x04)는 반 완료 콜백을 등록하지 않았으므로 꺼져 있다.</p></div></details>
+  <details><summary><b>문제 7.</b> DMA 복사가 CPU 복사보다 느리게 나올 수 있는 이유를 두 가지 들라.</summary>
+    <div class="ans"><p>(1) 고정 오버헤드: 채널 설정과 인터럽트 진입·복귀가 N과 무관하게 든다. 작은 N에서는 이것이 복사 자체보다 크다. (2) 버스 경합: 소스와 목적지가 모두 SRAM이라 DMA가 읽고 쓰는 동안 CPU(대기 루프)도 SRAM을 쓰면 버스 매트릭스가 둘을 번갈아 중재한다. 그래서 이 예제의 평가 기준은 시간이 아니라 <code>free_loops</code>이다.</p></div></details>
+  <details><summary><b>문제 8.</b> 콜백 <code>dma_done_cb</code>는 ISR인가? 어느 문맥에서 실행되는가?</summary>
+    <div class="ans"><p>진짜 ISR은 <code>stm32f1xx_it.c</code>의 <code>DMA1_Channel1_IRQHandler</code>이다. <code>dma_done_cb</code>는 <code>HAL_DMA_IRQHandler</code>가 함수 포인터로 부르는 사용자 함수이며, ISR 안에서 호출되므로 <b>ISR 문맥</b>에서 실행된다. 그래서 짧게 끝내야 하고 공유 변수는 <code>volatile</code>이어야 한다.</p></div></details>
+</section>
+
+<section>
+  <h2>정리</h2>
+  <div class="tablewrap"><table>
+    <tr><th>예제</th><th>계층</th><th>핵심</th></tr>
+    <tr><td class="m"><b>01_DMA_MemToMem (이 교안)</b></td><td>HAL + DMA</td><td>메모리 → 메모리 복사, 채널 구성 요소, CPU 해방 확인</td></tr>
+    <tr><td class="m"><a href="../02_DMA_Circular_GPIO/02_DMA_Circular_GPIO%20%EA%B5%90%EC%95%88.html">02_DMA_Circular_GPIO</a></td><td>HAL + TIM + DMA</td><td>원형 DMA와 핑퐁 버퍼, 타이머 요청으로 GPIO 출력</td></tr>
+    <tr><td class="m"><a href="../../02_USART/04_USART_DMA_IdleLine_c/04_USART_DMA_IdleLine%20%EA%B5%90%EC%95%88.html">02_USART/04_USART_DMA_IdleLine_c</a></td><td>HAL + UART + DMA</td><td>주변장치 → 메모리 원형 수신</td></tr>
+    <tr><td class="m"><a href="../../03_ADC/04_ADC_DMA_TimTrigger/ADC%20%ED%83%80%EC%9D%B4%EB%A8%B8%20%ED%8A%B8%EB%A6%AC%EA%B1%B0%20DMA%20%EA%B5%90%EC%95%88.html">03_ADC/04_ADC_DMA_TimTrigger</a></td><td>HAL + ADC + DMA</td><td>타이머 트리거 ADC → 메모리, HT/TC</td></tr>
+  </table></div>
+  <h3>역할 분담</h3>
+  <div class="tablewrap"><table>
+    <tr><th>역할</th><th>담당</th><th>핵심 설정</th></tr>
+    <tr><td>채널 구성, 시작</td><td class="k0">main (HAL)</td><td><code>CPAR/CMAR/CNDTR</code>, <code>CCR1.EN</code></td></tr>
+    <tr><td>256워드 옮기기</td><td class="kd">DMA1 채널1</td><td><code>MEM2MEM=1</code>, <code>PINC=MINC=1</code>, 32비트</td></tr>
+    <tr><td>완료 알림</td><td class="k1">TC ISR → 콜백</td><td><code>ISR.TCIF1</code>, <code>dma_done = 1</code></td></tr>
+    <tr><td>검증·출력</td><td class="k0">main 루프</td><td><code>memcmp</code>, <code>HAL_UART_Transmit</code></td></tr>
+  </table></div>
+  <p><b>다음 단계.</b> 02 예제는 한 번 옮기고 끝나는 이 모드와 달리 타이머가 박자를 맞춰 <b>끝없이 반복</b>하는 원형 DMA와, 한쪽을 내보내는 동안 다른 쪽을 채우는 핑퐁 버퍼를 다룬다.</p>
+  <div class="nextprev"><span></span><a href="../02_DMA_Circular_GPIO/02_DMA_Circular_GPIO%20%EA%B5%90%EC%95%88.html">02_DMA_Circular_GPIO →</a></div>
+  <footer>근거 파일: 이 폴더(<code>Examples/07_DMA/01_DMA_MemToMem</code>)의 <code>Core/Src/main.c</code>, <code>Core/Src/stm32f1xx_it.c</code>, <code>DMA_MemToMem.ioc</code>, 그리고 HAL 드라이버 <code>stm32f1xx_hal_dma.c</code>/<code>.h</code>(<code>HAL_DMA_Init</code>, <code>HAL_DMA_Start_IT</code>, <code>DMA_SetConfig</code>, <code>HAL_DMA_IRQHandler</code>; STM32CubeF1). 계층: HAL + DMA. 레지스터·비트 이름은 RM0008 13장(DMA) 기준이다. 8절 출력의 <code>...</code>은 보드에서 읽을 값이며 이 교안에는 실측값이 없다. </footer>
+</section>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var TOTAL=32,S;
+  function hx(v){return (v<16?'0':'')+v.toString(16).toUpperCase()}
+  function num(id){return Number($(id).value)}
+  function srcByte(i){return 0xA0+i}                 /* 0xA0..0xBF */
+
+  function reset(){
+    var sz=num('selSz');
+    S={sz:sz,pinc:num('selP'),minc:num('selM'),cnd:TOTAL/sz,par:0,mar:0,en:0,tc:0,dst:new Array(TOTAL).fill(null),rd:[],wr:[],n:0,last:null};
+    render();
+  }
+  function stepOnce(){
+    if(S.cnd===0)return;
+    S.en=1;
+    var p=S.par,m=S.mar,sz=S.sz,i;
+    S.rd=[];S.wr=[];
+    for(i=0;i<sz;i++){
+      S.dst[m+i]=srcByte(p+i);
+      S.rd.push(p+i);S.wr.push(m+i);
+    }
+    S.last={p:p,m:m,n:S.n};
+    if(S.pinc)S.par+=sz;
+    if(S.minc)S.mar+=sz;
+    S.cnd--;S.n++;
+    if(S.cnd===0){S.en=0;S.tc=1;}
+    render();
+  }
+  function runAll(){while(S.cnd>0)stepOnce();}
+  function render(){
+    var i,h='',nextRd=[],ok=true;
+    for(i=0;i<S.sz;i++)nextRd.push(S.par+i);
+    for(i=0;i<TOTAL;i++){
+      var c='by';
+      if(S.rd.indexOf(i)>=0)c+=' rd';
+      else if(S.cnd>0&&nextRd.indexOf(i)>=0)c+=' cur';
+      h+='<div class="'+c+'">'+hx(srcByte(i))+'</div>';
+    }
+    $('gSrc').innerHTML=h;h='';
+    for(i=0;i<TOTAL;i++){
+      var v=S.dst[i],c2='by';
+      if(S.wr.indexOf(i)>=0)c2+=' wr';
+      if(S.tc&&v!==srcByte(i))c2+=' bad';
+      h+='<div class="'+c2+'">'+(v===null?'--':hx(v))+'</div>';
+    }
+    $('gDst').innerHTML=h;
+    for(i=0;i<TOTAL;i++)if(S.dst[i]!==srcByte(i))ok=false;
+    $('vCnd').textContent=S.cnd;
+    $('vPar').textContent='+'+S.par;
+    $('vMar').textContent='+'+S.mar;
+    $('vFlag').textContent=S.en+' / '+S.tc;
+    $('vOk').textContent=S.tc?(ok?'OK':'FAIL'):'–';
+    $('vOk').style.color=S.tc?(ok?'var(--ok)':'var(--bad)'):'';
+    var t;
+    if(S.n===0){
+      t='<b>준비</b>: CCR1.EN을 쓰면 시작한다. 지금은 CNDTR1 = '+S.cnd+' (= '+TOTAL+'바이트 ÷ '+S.sz+'바이트). 한 전송을 눌러 본다.';
+    }else if(S.tc){
+      t='<b>전송 완료</b>: '+S.n+'번 전송 후 CNDTR1 = 0 → CCR1.EN = 0(하드웨어), ISR.TCIF1 = 1 → DMA1_Channel1_IRQHandler → dma_done_cb. 검증 '+(ok?'OK: dst가 src와 같다.':'FAIL: dst가 src와 다르다. '+(S.pinc?'':'PINC = 0이라 소스 주소가 늘지 않았다. ')+(S.minc?'':'MINC = 0이라 목적지 주소가 늘지 않았다.'));
+    }else{
+      t='<b>'+S.n+'번째 전송</b>: CPAR 오프셋 +'+S.last.p+'에서 '+S.sz+'바이트를 읽어 CMAR 오프셋 +'+S.last.m+'에 쓴다. 이후 '+(S.pinc?'CPAR += '+S.sz:'CPAR 그대로(PINC = 0)')+', '+(S.minc?'CMAR += '+S.sz:'CMAR 그대로(MINC = 0)')+', CNDTR1 = '+S.cnd+'.';
+    }
+    $('calc').innerHTML=t;
+  }
+
+  function fmt(c){return c>=1000?(c/1000).toFixed(2)+'k':String(c)}
+  function bars(){
+    var N=num('rN'),C=num('rC'),D=num('rD'),O=num('rO');
+    $('lN').textContent=N+' 워드 ('+(N*4)+' B)';$('lC').textContent=C;$('lD').textContent=D;$('lO').textContent=O+' 사이클';
+    var cpu=N*C,dmaCopy=N*D,dmaTotal=dmaCopy+O,mx=Math.max(cpu,dmaTotal);
+    function pct(v){return (v/mx*100).toFixed(1)+'%'}
+    var h='';
+    h+='<div class="barrow"><div>CPU 복사 '+fmt(cpu)+' 사이클</div><div class="trk"><span class="seg-cpu" style="width:'+pct(cpu)+'"></span></div></div>';
+    h+='<div class="barrow"><div>DMA 복사 '+fmt(dmaTotal)+' 사이클</div><div class="trk"><span class="seg-isr" style="width:'+pct(O)+'"></span><span class="seg-dma" style="width:'+pct(dmaCopy)+'"></span></div></div>';
+    h+='<div style="font-size:13px;color:var(--muted)">DMA 막대: 주황 = CPU가 일하는 고정 오버헤드(설정 + 인터럽트), 청록 = DMA가 혼자 도는 구간(이 동안 CPU는 자유)</div>';
+    $('bars').innerHTML=h;
+    var be=(C>D)?Math.ceil(O/(C-D)):null,t='';
+    t+='<b>CPU가 붙잡히는 시간</b>: CPU 복사 '+fmt(cpu)+' 사이클 vs DMA '+fmt(O)+' 사이클 (오버헤드만)\n';
+    t+='<b>DMA 중 CPU가 자유로운 시간</b>: '+fmt(dmaCopy)+' 사이클 (DMA 전체의 '+Math.round(dmaCopy/dmaTotal*100)+'%)\n';
+    t+='<b>총 소요 시간</b>: '+(dmaTotal<cpu?'DMA가 '+(cpu-dmaTotal)+' 사이클 짧다':(dmaTotal>cpu?'DMA가 '+(dmaTotal-cpu)+' 사이클 길다':'같다'))+'\n';
+    t+=be===null?'<b>총 시간 손익분기</b>: DMA 워드당 사이클이 CPU 이상이라 총 시간으로는 DMA가 앞서지 않는다. 이득은 CPU 해방뿐이다.':'<b>총 시간 손익분기</b>: N ≥ '+be+' 워드부터 DMA가 총 시간도 짧다(오버헤드 ÷ 워드당 사이클 차이). 가정값이므로 실험 B로 직접 확인한다.';
+    $('calc2').innerHTML=t;
+  }
+
+  ['selSz','selP','selM'].forEach(function(id){$(id).addEventListener('change',reset)});
+  ['rN','rC','rD','rO'].forEach(function(id){$(id).addEventListener('input',bars)});
+  $('bStep').addEventListener('click',stepOnce);
+  $('bRun').addEventListener('click',runAll);
+  $('bReset').addEventListener('click',reset);
+  reset();bars();
+})();
+</script>
+</body>
+</html>

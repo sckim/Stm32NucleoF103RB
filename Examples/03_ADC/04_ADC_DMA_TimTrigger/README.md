@@ -46,4 +46,4 @@ PA0(A0), PA1(A1)에 가변저항 또는 0~3.3V 신호 (미연결 시 플로팅 �
 
 ## 관련 예제
 
-`01_ADC_Single`(폴링 ADC), 타이머 기초 `06_Timers_RTC/01_TIM_TimeBase`, DMA 기초 `07_DMA/01_DMA_MemToMem_c`.
+`01_ADC_Single`(폴링 ADC), 타이머 기초 `06_Timers_RTC/01_TIM_TimeBase`, DMA 기초 `07_DMA/01_DMA_MemToMem`.

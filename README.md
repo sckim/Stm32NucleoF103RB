@@ -72,8 +72,8 @@
 | 11 | [`06_Timers_RTC/11_TIM_Servo_c`](Examples/06_Timers_RTC/11_TIM_Servo_c) | HAL, TIM | (검토 전) RC 서보: 50Hz PWM, 1~2ms = 0~180° |
 | 12 | [`06_Timers_RTC/12_TIM_MotorDriver_TB6612_c`](Examples/06_Timers_RTC/12_TIM_MotorDriver_TB6612_c) | HAL, TIM | (검토 전) H-브리지 모터: 20kHz PWM, 쇼트 브레이크/코스트, 비상 정지 |
 | 13 | [`06_Timers_RTC/13_RTC_Calendar_c`](Examples/06_Timers_RTC/13_RTC_Calendar_c) | HAL+레지스터, RTC | (검토 전) F1 RTC(32비트 카운터)를 Unix 시간으로 쓰는 달력 시계, 1초 인터럽트 |
-| 01 | [`07_DMA/01_DMA_MemToMem_c`](Examples/07_DMA/01_DMA_MemToMem_c) | HAL, DMA | (검토 전) 메모리->메모리 DMA 복사, CPU 복사와 DWT 사이클 비교 |
-| 02 | [`07_DMA/02_DMA_Circular_GPIO_c`](Examples/07_DMA/02_DMA_Circular_GPIO_c) | HAL, DMA, TIM | (검토 전) 원형 DMA + 핑퐁 버퍼로 GPIOC 패턴 자동 출력 |
+| 01 | [`07_DMA/01_DMA_MemToMem`](Examples/07_DMA/01_DMA_MemToMem) | HAL, DMA | 메모리->메모리 DMA 복사, CPU 복사와 DWT 사이클 비교 |
+| 02 | [`07_DMA/02_DMA_Circular_GPIO`](Examples/07_DMA/02_DMA_Circular_GPIO) | HAL, DMA, TIM | 원형 DMA + 핑퐁 버퍼로 GPIOC 패턴 자동 출력 |
 | 01 | [`08_Clock_System/01_CoreRegisters_Instructions_Reg_c`](Examples/08_Clock_System/01_CoreRegisters_Instructions_Reg_c) | 레지스터+ASM | (검토 전) 레지스터 파일, 조건 플래그, IT 조건부실행, 스택 PUSH/POP, 하드웨어 나눗셈 |
 | 02 | [`08_Clock_System/02_MemoryMap_Reg_c`](Examples/08_Clock_System/02_MemoryMap_Reg_c) | 레지스터 | (검토 전) 4GB 주소 공간, 버스 계층, memory-mapped I/O, 리틀 엔디안 |
 | 03 | [`08_Clock_System/03_ExceptionModel_VectorTable_Reg_c`](Examples/08_Clock_System/03_ExceptionModel_VectorTable_Reg_c) | 레지스터+ASM | (검토 전) 벡터 테이블, 예외 자동 스택 저장, EXC_RETURN, SVC |

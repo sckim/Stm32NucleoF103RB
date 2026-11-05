@@ -1,0 +1,859 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>04_I2C_MPU6050 교안</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: 한 열 교안(최대 860px) — 문제 → I2C 프레임 → MPU6050 레지스터 → 시뮬레이터 → I2C1 레지스터 → HAL 흐름 → 코드 → 실험 → 문제 순서.
+   색을 전 구간에서 고정한다: 마스터(STM32)가 구동하는 SDA = 파랑, 슬레이브(MPU6050)가 구동하는 SDA = 주황,
+   가속도 바이트 = 파랑, 자이로 바이트 = 주황, 온도 바이트 = 보라, START/STOP = 청록. (다른 교안과 같은 기본 토큰) */
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --surface2:#E7ECF0; --fg:#14222C; --muted:#52636F; --line:#CBD5DC;
+  --c0:#1D4ED8; --c0-soft:#DCE6FB; --c1:#C2410C; --c1-soft:#FDE6DA; --c2:#0F766E; --c2-soft:#D5F0EC; --c3:#7E22CE; --c3-soft:#EEDFFB;
+  --code-bg:#0F1B24; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#9A3412; --warn-bg:#FFF1E6; --ok:#166534; --ok-bg:#E4F5EA;
+  --font-body:"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.75;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:860px;margin:0 auto}
+header{padding-block:40px 8px}
+.kicker{font-family:var(--font-mono);font-size:13px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.25;margin:8px 0 12px;text-wrap:balance;font-weight:700}
+.lead{color:var(--muted);margin:0;max-width:62ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0;padding:0;list-style:none}
+nav.toc a{display:block;padding:6px 12px;border:1px solid var(--line);border-radius:6px;color:var(--fg);text-decoration:none;font-size:14px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--c0);outline:2px solid var(--c0);outline-offset:1px}
+section{margin-top:56px}
+h2{font-size:24px;line-height:1.35;margin:0 0 12px;text-wrap:balance;font-weight:700}
+h3{font-size:18px;margin:28px 0 8px;font-weight:700}
+p{margin:0 0 14px;max-width:68ch}
+ul,ol{margin:0 0 14px;padding-left:22px;max-width:68ch}
+li{margin-bottom:4px}
+code{font-family:var(--font-mono);font-size:.9em;background:var(--surface2);padding:1px 6px;border-radius:4px}
+.k0{color:var(--c0);font-weight:700} .k1{color:var(--c1);font-weight:700} .k2{color:var(--c2);font-weight:700} .k3{color:var(--c3);font-weight:700}
+.box{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:16px 18px;margin:16px 0}
+.box.warn{background:var(--warn-bg);border-color:var(--warn)} .box.ok{background:var(--ok-bg);border-color:var(--ok)}
+.box > :last-child{margin-bottom:0}
+.label{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.tablewrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:15px;background:var(--surface)}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--surface2);font-weight:700;white-space:nowrap}
+td.m,th.m{font-family:var(--font-mono);font-size:13.5px}
+td.n{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+
+/* flow */
+.flow{list-style:none;padding:0;margin:16px 0;display:grid;gap:0;max-width:none}
+.flow li{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:0;padding:0 0 14px;position:relative}
+.flow li:not(:last-child)::before{content:"";position:absolute;left:16px;top:34px;bottom:0;width:2px;background:var(--line)}
+.flow .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:14px;font-weight:600;background:var(--surface2);border:2px solid var(--line)}
+.flow li.hw .n{border-color:var(--c3);color:var(--c3)} .flow li.sw .n{border-color:var(--c0);color:var(--c0)}
+.flow .tx{min-width:0} .flow .tx b{display:block}
+.flow .tx span{color:var(--muted);font-size:14.5px}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:11.5px;padding:0 6px;border-radius:4px;margin-left:6px;vertical-align:1px}
+.tag.hw{background:var(--c3-soft);color:var(--c3)} .tag.sw{background:var(--c0-soft);color:var(--c0)}
+
+/* byte tracks */
+.trk{display:flex;gap:3px;margin:8px 0 6px;flex-wrap:wrap}
+.trk span{font-family:var(--font-mono);font-size:11.5px;font-weight:600;padding:2px 6px;border-radius:4px;border:1px solid var(--line)}
+.trk .g{color:var(--muted);border-style:dashed;background:none}
+.trk .r0{background:var(--c0-soft);color:var(--c0);border-color:var(--c0)} .trk .r1{background:var(--c1-soft);color:var(--c1);border-color:var(--c1)}
+.trk .r2{background:var(--c2-soft);color:var(--c2);border-color:var(--c2)} .trk .r3{background:var(--c3-soft);color:var(--c3);border-color:var(--c3)}
+.cards2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:16px 0}
+.mode{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:14px 16px;min-width:0}
+.mode b{display:block;margin-bottom:2px}
+.mode .reg{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);display:block;margin-bottom:8px}
+.mode p{font-size:14.5px;margin:0}
+
+/* simulator */
+.sim{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:18px;margin:16px 0}
+.subhead{font-weight:700;margin:18px 0 6px;padding-top:14px;border-top:1px dashed var(--line)}
+.subhead:first-child{margin-top:0;padding-top:0;border-top:0}
+.regs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.stat{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.stat .k{font-size:12px;color:var(--muted);font-family:var(--font-mono)}
+.stat .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3;overflow-wrap:anywhere}
+.stat .v.sm{font-size:15px}
+.stat.bad{border:2px solid var(--warn);background:var(--warn-bg)} .stat.good{border:2px solid var(--ok);background:var(--ok-bg)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+button,select,input{font-family:inherit}
+button{font-size:15px;font-weight:700;padding:9px 14px;border-radius:6px;border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;min-height:44px}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+button.hw{border-color:var(--c3);color:var(--c3)} button.hw:hover{background:var(--c3-soft)}
+button.sw{border-color:var(--c0);color:var(--c0)} button.sw:hover{background:var(--c0-soft)}
+button.plain:hover{background:var(--surface2)}
+button[aria-pressed="true"]{background:var(--c0-soft)}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 16px;margin:10px 0}
+.ctl label{display:block;font-size:14px;color:var(--muted)}
+.ctl label b{font-family:var(--font-mono);color:var(--fg);font-weight:600}
+.ctl select{font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl input[type=range]{width:100%;min-height:32px}
+.calc{font-family:var(--font-mono);font-size:13.5px;line-height:1.65;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-height:5.4em;white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0 0}
+.uart{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);color:var(--code-fg);border-radius:6px;padding:10px 12px;white-space:pre;overflow-x:auto;margin:8px 0 0;min-height:2.6em}
+/* 시퀀스 칩: 누르면 그 바이트의 SCL/SDA 파형을 그린다 */
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0}
+.chip{font-family:var(--font-mono);font-size:12.5px;font-weight:600;padding:4px 8px;min-height:36px;border-radius:5px;border:1.5px solid var(--line);background:var(--bg);color:var(--fg)}
+.chip.m{border-color:var(--c0);color:var(--c0);background:var(--c0-soft)}
+.chip.s{border-color:var(--c1);color:var(--c1);background:var(--c1-soft)}
+.chip.c{border-color:var(--c2);color:var(--c2);background:var(--c2-soft)}
+.chip.nk{border-style:dashed;border-color:var(--warn);color:var(--warn);background:var(--warn-bg)}
+.chip.sel{box-shadow:0 0 0 3px var(--fg)}
+.chip small{display:block;font-size:10.5px;font-weight:400;opacity:.85}
+.bgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin:10px 0}
+@media (max-width:560px){.bgrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.bc{border:1.5px solid var(--line);border-radius:5px;padding:4px 6px;background:var(--bg);font-family:var(--font-mono);min-width:0;text-align:center}
+.bc .a{font-size:10.5px;color:var(--muted);display:block}
+.bc .h{font-size:15px;font-weight:600}
+.bc .nm{font-size:10px;color:var(--muted);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bc.ga{border-color:var(--c0);background:var(--c0-soft)} .bc.gt{border-color:var(--c3);background:var(--c3-soft)} .bc.gg{border-color:var(--c1);background:var(--c1-soft)}
+
+/* code */
+pre{background:var(--code-bg);color:var(--code-fg);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:0;font-family:var(--font-mono);font-size:13.5px;line-height:1.7;tab-size:2}
+pre code{background:none;padding:0;font-size:inherit;color:inherit}
+.cm{color:var(--code-cmt)} .kw{color:var(--code-kw)} .hl{color:var(--code-hl)}
+.codepair{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;margin:14px 0;align-items:start}
+@media (max-width:760px){.codepair{grid-template-columns:minmax(0,1fr)}}
+.codepair ol{margin:0;padding-left:20px;font-size:15px} .codepair li{margin-bottom:8px}
+.file{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:18px 0 6px}
+
+/* waveform */
+.wave{margin:12px 0}
+.wave svg{display:block;width:100%;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px}
+.wave .ax{stroke:var(--muted);stroke-width:1.2;fill:none}
+.wave .gd{stroke:var(--line);stroke-width:1;stroke-dasharray:4 4;fill:none}
+.wave .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .wave .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.wave .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .wave .sk{stroke:var(--fg);stroke-width:2;fill:none}
+.wave .hi{fill:var(--c2-soft)}
+.wave text{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.wave text.tt{font-family:var(--font-body);font-size:12.5px;fill:var(--fg)}
+.wave text.b0{fill:var(--c0);font-weight:600} .wave text.b1{fill:var(--c1);font-weight:600}
+.capt{font-size:14px;color:var(--muted);margin:6px 2px 14px}
+.bits{display:flex;margin:14px 0;font-family:var(--font-mono);font-size:13px;text-align:center}
+.bits div{flex:1;border:2px solid var(--c0);padding:8px 4px;background:var(--c0-soft);min-width:0}
+.bits div.lo{border-color:var(--c2);background:var(--c2-soft)}
+.bits small{display:block;color:var(--muted);font-size:11.5px;overflow-wrap:anywhere}
+.eq{font-family:var(--font-mono);font-size:14.5px;background:var(--surface2);border-left:4px solid var(--c0);padding:10px 14px;margin:14px 0;overflow-x:auto;white-space:pre-wrap}
+.nextprev{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+.nextprev a{border:1px solid var(--line);border-radius:8px;padding:8px 14px;text-decoration:none;color:var(--c0);background:var(--surface)}
+
+/* quiz */
+details{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0;padding:0}
+summary{cursor:pointer;padding:12px 16px;font-weight:500;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--c0)} details[open] summary::before{content:"▾ "}
+summary:focus-visible{outline:3px solid var(--fg);outline-offset:-3px;border-radius:8px}
+details .ans{padding:0 16px 14px;color:var(--fg)} details .ans p{margin-bottom:8px}
+footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.schem{margin:16px 0;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.schem svg{display:block;width:100%;height:auto}
+.schem text{font-family:var(--font-mono);font-size:12px;fill:var(--fg)}
+.schem .t-b{font-size:14px;font-weight:700} .schem .t-m{fill:var(--muted)} .schem .t-n{font-size:11px;fill:var(--muted)}
+.schem .body{fill:var(--surface2);stroke:var(--fg);stroke-width:1.5}
+.schem .pad{fill:var(--surface2);stroke:var(--fg);stroke-width:1.2}
+.schem .res{fill:var(--surface);stroke:var(--fg);stroke-width:1.5}
+.schem .mod{fill:none;stroke:var(--line);stroke-width:1.5;stroke-dasharray:6 4}
+.schem .w{fill:none;stroke:var(--fg);stroke-width:1.6}
+.schem .w.scl{stroke:var(--c0);stroke-width:2} .schem .w.sda{stroke:var(--c1);stroke-width:2}
+.schem .w.vcc{stroke:var(--c2);stroke-width:2} .schem .w.gnd{stroke:var(--muted);stroke-width:2}
+.schem .dot{fill:var(--fg)} .schem .dot.scl{fill:var(--c0)} .schem .dot.sda{fill:var(--c1)} .schem .dot.vcc{fill:var(--c2)}
+.schem .l-scl{fill:var(--c0);font-weight:700} .schem .l-sda{fill:var(--c1);font-weight:700}
+.schem .l-vcc{fill:var(--c2);font-weight:700} .schem .l-gnd{fill:var(--muted);font-weight:700}
+.schem figcaption{font-size:14px;color:var(--muted);margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">STM32 Nucleo-F103RB · I2C · 교안</div>
+  <h1>MPU6050 레지스터 읽기: 주소 한 번, 레지스터 여러 개</h1>
+  <p class="lead">I2C 센서 대부분은 "레지스터 번호를 쓰고, 다시 START를 걸어 그 번호부터 읽는" 같은 방식으로 다룬다. 이 교안은 6축 관성 센서 MPU6050(GY-521 모듈)을 예로 그 시퀀스를 비트 단위까지 내려가 본다. <code>04_I2C_MPU6050_c</code> 예제는 <code>WHO_AM_I</code>로 장치를 확인하고, <code>PWR_MGMT_1</code>에 0을 써서 깨운 뒤, 0x3B부터 14바이트를 한 번에 읽어 가속도·온도·자이로를 정수 연산만으로 변환한다.</p>
+  <nav class="toc" aria-label="목차">
+    <a href="#s1">1. 문제</a><a href="#wiring">회로 연결도</a><a href="#s2">2. I2C 프레임</a><a href="#s3">3. MPU6050 레지스터</a><a href="#s4">4. 직접 만져 보기</a><a href="#s5">5. 레지스터 분석</a><a href="#s6">6. HAL이 해 주는 일</a><a href="#s7">7. 코드 읽기</a><a href="#s8">8. 실험</a><a href="#s9">9. 트러블슈팅</a><a href="#s10">10. 확인 문제</a>
+  </nav>
+</header>
+
+<section id="s1">
+<h2>1. 문제: 장치 안의 레지스터를 어떻게 고르는가</h2>
+<p><a href="../01_I2C_Scan/01_I2C_Scan%20교안.html">01_I2C_Scan</a>은 주소만 보내고 ACK가 오는지 보았다. 그것으로 "0x68에 누군가 있다"는 것까지는 안다. 그러나 MPU6050 안에는 레지스터가 100개 넘게 있다. I2C 주소는 장치를 고를 뿐, 장치 안의 어느 레지스터를 읽을지는 정하지 못한다.</p>
+<p>해법은 두 단계 트랜잭션이다. 먼저 <b>쓰기</b>로 레지스터 번호를 장치에 알려 준다. 그다음 STOP 없이 <b>반복 START</b>를 걸고 <b>읽기</b>로 방향을 바꾼다. 장치는 방금 받은 번호의 레지스터부터 데이터를 내보낸다. HAL에서는 이 전체가 <code>HAL_I2C_Mem_Read()</code> 한 번이다.</p>
+<ul>
+  <li>I2C 프레임(START, 주소+R/W, ACK/NACK, 반복 START, STOP)을 비트 단위로 읽는다.</li>
+  <li>HAL 주소 인자가 왜 <code>0x68 &lt;&lt; 1 = 0xD0</code>인지 설명한다.</li>
+  <li>MPU6050의 부팅 절차(<code>WHO_AM_I</code> 확인 → 슬립 해제)와 14바이트 연속 읽기를 이해한다.</li>
+  <li>빅 엔디언 두 바이트를 <code>int16_t</code>로 조립하고, 부동소수점 없이 mg·0.1°/s·0.01°C로 바꾼다.</li>
+  <li>STM32F1 I2C 마스터 수신의 플래그(SB, ADDR, TXE, BTF, RXNE)와 마지막 바이트 NACK 처리를 HAL 코드에서 확인한다.</li>
+</ul>
+<p>이 예제는 폴링(블로킹) 방식이다. 같은 읽기를 DMA로 바꾸어 CPU를 놓아주는 것이 다음 예제 <a href="../05_I2C_MPU6050_DMA_c/05_I2C_MPU6050_DMA%20교안.html">05_I2C_MPU6050_DMA_c</a>이다.</p>
+</section>
+
+<section id="wiring">
+<h2>회로 연결도</h2>
+<p>이 예제는 GY-521 모듈의 핀 8개 중 VCC·GND·SCL·SDA 네 개와 AD0만 쓴다. STM32 쪽은 I2C1의 기본 핀 PB6(SCL)·PB7(SDA)이며, 두 핀은 <code>GPIO_MODE_AF_OD</code>, <code>GPIO_NOPULL</code>로 설정되어 있어 High 레벨은 모듈의 풀업 저항이 만든다.</p>
+<figure class="schem">
+  <svg viewBox="0 0 880 460" role="img" aria-label="NUCLEO-F103RB와 GY-521(MPU6050) 모듈의 I2C 연결 회로도: PB6=SCL, PB7=SDA, 3V3=VCC, GND=GND, AD0=GND">
+  <rect class="body" x="20" y="40" width="210" height="230" rx="6"/>
+  <text x="125" y="70" text-anchor="middle" class="t-b">NUCLEO-F103RB</text>
+  <text x="125" y="90" text-anchor="middle" class="t-m">STM32F103RB</text>
+  <text x="222" y="134" text-anchor="end">3V3 (CN6)</text>
+  <path class="w vcc" d="M230,130 H470"/>
+  <text x="350" y="124" text-anchor="middle" class="l-vcc">3.3V</text>
+  <text x="222" y="170" text-anchor="end">GND (CN6)</text>
+  <path class="w gnd" d="M230,166 H470"/>
+  <text x="350" y="160" text-anchor="middle" class="l-gnd">GND</text>
+  <text x="222" y="206" text-anchor="end">PB6 · D10 (CN5)</text>
+  <text x="30" y="206" class="t-m">I2C1_SCL</text>
+  <path class="w scl" d="M230,202 H470"/>
+  <text x="350" y="196" text-anchor="middle" class="l-scl">SCL</text>
+  <text x="222" y="242" text-anchor="end">PB7 · CN7-21</text>
+  <text x="30" y="242" class="t-m">I2C1_SDA</text>
+  <path class="w sda" d="M230,238 H470"/>
+  <text x="350" y="232" text-anchor="middle" class="l-sda">SDA</text>
+  <text x="125" y="258" text-anchor="middle" class="t-n">I2C1 · AF 오픈 드레인</text>
+  <rect class="mod" x="476" y="30" width="389" height="420" rx="8"/>
+  <text x="490" y="52" class="t-b">GY-521 모듈</text>
+  <rect class="pad" x="470" y="124" width="12" height="12"/>
+  <text x="488" y="125">VCC</text>
+  <rect class="pad" x="470" y="160" width="12" height="12"/>
+  <text x="488" y="161">GND</text>
+  <rect class="pad" x="470" y="196" width="12" height="12"/>
+  <text x="488" y="197">SCL</text>
+  <rect class="pad" x="470" y="232" width="12" height="12"/>
+  <text x="488" y="233">SDA</text>
+  <rect class="pad" x="470" y="268" width="12" height="12"/>
+  <text x="488" y="269">XDA</text>
+  <rect class="pad" x="470" y="304" width="12" height="12"/>
+  <text x="488" y="305">XCL</text>
+  <rect class="pad" x="470" y="340" width="12" height="12"/>
+  <text x="488" y="341">AD0</text>
+  <rect class="pad" x="470" y="376" width="12" height="12"/>
+  <text x="488" y="377">INT</text>
+  <path class="w vcc" d="M482,130 H530"/>
+  <rect class="body" x="530" y="118" width="50" height="24" rx="2"/>
+  <text x="555" y="134" text-anchor="middle" class="t-n">LDO</text>
+  <path class="w vcc" d="M580,130 H600 V90 H815 V160 M750,90 V160"/>
+  <text x="606" y="80" class="l-vcc">3.3V (모듈 내부)</text>
+  <path class="w gnd" d="M482,166 H525 V174"/>
+  <path class="w gnd" d="M516,174 H534 M519,178 H531 M522,182 H528"/>
+  <path class="w scl" d="M482,202 H710"/>
+  <path class="w sda" d="M482,238 H710"/>
+  <path class="w" d="M482,274 H710"/>
+  <path class="w" d="M482,310 H710"/>
+  <path class="w" d="M482,346 H710"/>
+  <path class="w" d="M482,382 H710"/>
+  <path class="w" d="M625,90 V110 M625,150 V202"/>
+  <rect class="res" x="620" y="110" width="10" height="40"/>
+  <path class="w" d="M665,90 V110 M665,150 V196 A6,6 0 0 1 665,208 V238"/>
+  <rect class="res" x="660" y="110" width="10" height="40"/>
+  <text x="616" y="148" text-anchor="end" class="t-n">4.7k</text>
+  <text x="674" y="134" class="t-n">4.7k</text>
+  <rect class="body" x="710" y="160" width="140" height="250" rx="3"/>
+  <text x="754" y="152" class="t-n">13</text><text x="819" y="152" class="t-n">8</text>
+  <text x="750" y="178" text-anchor="middle">VDD</text><text x="815" y="178" text-anchor="middle">VLOGIC</text>
+  <text x="700" y="198" text-anchor="middle" class="t-n">23</text>
+  <text x="716" y="206">SCL</text>
+  <text x="700" y="234" text-anchor="middle" class="t-n">24</text>
+  <text x="716" y="242">SDA</text>
+  <text x="700" y="270" text-anchor="middle" class="t-n">6</text>
+  <text x="716" y="278">AUX_DA</text>
+  <text x="700" y="306" text-anchor="middle" class="t-n">7</text>
+  <text x="716" y="314">AUX_CL</text>
+  <text x="700" y="342" text-anchor="middle" class="t-n">9</text>
+  <text x="716" y="350">AD0</text>
+  <text x="700" y="378" text-anchor="middle" class="t-n">12</text>
+  <text x="716" y="386">INT</text>
+  <path class="w gnd" d="M780,410 V426"/>
+  <path class="w gnd" d="M771,426 H789 M774,430 H786 M777,434 H783"/>
+  <text x="780" y="402" text-anchor="middle">GND</text><text x="785" y="421" class="t-n">18</text>
+  <text x="800" y="275" text-anchor="middle" class="t-b">MPU6050</text>
+  <text x="800" y="293" text-anchor="middle" class="t-m">QFN-24</text>
+  <text x="800" y="311" text-anchor="middle" class="t-n">(관련 핀만)</text>
+  <path class="w" d="M470,274 H452 M444,270 L452,278 M444,278 L452,270"/>
+  <text x="438" y="278" text-anchor="end" class="t-m">NC</text>
+  <path class="w" d="M470,310 H452 M444,306 L452,314 M444,314 L452,306"/>
+  <text x="438" y="314" text-anchor="end" class="t-m">NC</text>
+  <path class="w" d="M470,382 H452 M444,378 L452,386 M444,386 L452,378"/>
+  <text x="438" y="386" text-anchor="end" class="t-m">NC</text>
+  <path class="w gnd" d="M470,346 H410 V360"/>
+  <path class="w gnd" d="M401,360 H419 M404,364 H416 M407,368 H413"/>
+  <circle class="dot vcc" cx="625" cy="90" r="3.2"/>
+  <circle class="dot vcc" cx="665" cy="90" r="3.2"/>
+  <circle class="dot vcc" cx="750" cy="90" r="3.2"/>
+  <circle class="dot scl" cx="625" cy="202" r="3.2"/>
+  <circle class="dot sda" cx="665" cy="238" r="3.2"/>
+  </svg>
+  <figcaption>MPU6050의 AD0(9번 핀)을 GND에 묶으면 7비트 주소가 0x68, 3.3V에 묶으면 0x69가 된다. GY-521 모듈에는 3.3V LDO와 SCL·SDA 4.7 kΩ 풀업이 이미 있으므로 외부 풀업 없이 네 선(VCC 3.3~5V, GND, SCL, SDA)만 연결하면 되고, 풀업이 모듈 내부 3.3V에 걸려 있어 버스 High 레벨은 3.3V이다. 칩 핀 번호는 QFN-24 기준이며 CLKIN·FSYNC·REGOUT·CPOUT 등 이 예제와 무관한 핀은 생략했다. XDA·XCL(보조 I2C)과 INT는 연결하지 않으며(NC), 풀업 값·AD0 기본 처리 등 모듈 세부 회로는 제조사마다 다를 수 있다.</figcaption>
+</figure>
+</section>
+
+<section id="s2">
+<h2>2. I2C 프레임: 두 선으로 주고받는 규칙</h2>
+<p>I2C는 SCL(클럭)과 SDA(데이터) 두 선을 쓴다. 두 선 모두 <b>오픈 드레인</b>이다. 어느 장치든 선을 Low로 끌어내릴 수는 있지만 High로 밀어 올리지는 못한다. High는 풀업 저항(보통 4.7 kΩ)이 만든다. 그래서 두 장치가 동시에 구동해도 단락이 나지 않고, 슬레이브가 ACK를 위해 SDA를 끌어내릴 수 있다. STM32 쪽 핀(PB6, PB7)이 <code>GPIO_MODE_AF_OD</code>인 이유이다.</p>
+<div class="tablewrap"><table>
+<tr><th>조건</th><th>SCL</th><th>SDA</th><th>의미</th></tr>
+<tr><td>START (S)</td><td>High</td><td>High → Low</td><td>트랜잭션 시작. 이후 버스는 BUSY</td></tr>
+<tr><td>데이터 비트</td><td>Low일 때 바뀌고 High일 때 읽힘</td><td>0 또는 1</td><td>MSB 먼저 8비트</td></tr>
+<tr><td>ACK / NACK</td><td>9번째 클럭</td><td>Low = ACK, High = NACK</td><td>받는 쪽이 구동한다</td></tr>
+<tr><td>반복 START (Sr)</td><td>High</td><td>High → Low</td><td>STOP 없이 새 트랜잭션. 버스를 놓지 않는다</td></tr>
+<tr><td>STOP (P)</td><td>High</td><td>Low → High</td><td>트랜잭션 끝. 버스 해제</td></tr>
+</table></div>
+<p>START 뒤 첫 바이트는 언제나 주소 바이트이다. 상위 7비트가 슬레이브 주소, 최하위 비트가 방향(R/W, 0 = 쓰기, 1 = 읽기)이다.</p>
+<div class="bits">
+  <div>A6<small>1</small></div><div>A5<small>1</small></div><div>A4<small>0</small></div><div>A3<small>1</small></div><div>A2<small>0</small></div><div>A1<small>0</small></div><div>A0<small>0 (AD0)</small></div><div class="lo">R/W<small>0 / 1</small></div>
+</div>
+<div class="eq">7비트 주소 0x68 = 110 1000b
+주소 바이트 = (0x68 &lt;&lt; 1) | R/W  →  쓰기 0xD0,  읽기 0xD1
+HAL DevAddress 인자 = 0xD0 (HAL이 R/W 비트를 직접 넣는다)</div>
+<p>HAL은 <code>DevAddress</code>의 최하위 비트를 지우거나(<code>I2C_7BIT_ADD_WRITE</code>) 세워서(<code>I2C_7BIT_ADD_READ</code>) DR에 쓴다. 따라서 이미 1비트 민 값을 넘겨야 한다. <code>0x68</code>을 그대로 넘기면 버스에는 <code>0x68</code> = 7비트 주소 <b>0x34</b>가 나가고 아무도 ACK하지 않는다. 이 그룹에서 가장 흔한 실수이다.</p>
+
+<h3>레지스터 읽기와 쓰기 시퀀스</h3>
+<p>색은 누가 SDA를 구동하는지를 뜻한다. <span class="k0">파랑 = STM32(마스터)</span>, <span class="k1">주황 = MPU6050(슬레이브)</span>, <span class="k2">청록 = START/STOP 조건</span>.</p>
+<div class="cards2">
+  <div class="mode"><b>레지스터 읽기 (WHO_AM_I, 1바이트)</b><span class="reg">HAL_I2C_Mem_Read(…, 0x75, …, 1, …)</span>
+    <div class="trk"><span class="r2">S</span><span class="r0">D0</span><span class="r1">A</span><span class="r0">75</span><span class="r1">A</span><span class="r2">Sr</span><span class="r0">D1</span><span class="r1">A</span><span class="r1">68</span><span class="r0">N</span><span class="r2">P</span></div>
+    <p>쓰기 단계에서 레지스터 번호 0x75를 보내고, 반복 START 뒤 읽기로 1바이트를 받는다. 마지막(유일한) 바이트에 마스터가 NACK을 보내 "그만"을 알린다.</p></div>
+  <div class="mode"><b>레지스터 쓰기 (PWR_MGMT_1 = 0x00)</b><span class="reg">HAL_I2C_Mem_Write(…, 0x6B, …, &amp;wake, 1, …)</span>
+    <div class="trk"><span class="r2">S</span><span class="r0">D0</span><span class="r1">A</span><span class="r0">6B</span><span class="r1">A</span><span class="r0">00</span><span class="r1">A</span><span class="r2">P</span></div>
+    <p>방향 전환이 없다. 레지스터 번호 뒤에 바로 값을 보낸다. 모든 바이트에 슬레이브가 ACK한다.</p></div>
+</div>
+<div class="mode"><b>연속 읽기 (0x3B부터 14바이트)</b><span class="reg">HAL_I2C_Mem_Read(…, 0x3B, …, b, 14, …)</span>
+  <div class="trk"><span class="r2">S</span><span class="r0">D0</span><span class="r1">A</span><span class="r0">3B</span><span class="r1">A</span><span class="r2">Sr</span><span class="r0">D1</span><span class="r1">A</span><span class="r1">b0</span><span class="r0">A</span><span class="r1">b1</span><span class="r0">A</span><span class="g">… b2 ~ b12 (각각 마스터 ACK) …</span><span class="r1">b13</span><span class="r0">N</span><span class="r2">P</span></div>
+  <p>MPU6050은 읽을 때마다 내부 레지스터 포인터를 1씩 올린다. 그래서 번호를 한 번만 보내도 0x3B~0x48의 14개 레지스터가 차례로 나온다. 마스터는 13번째 바이트까지 ACK, 마지막 바이트에 NACK을 보낸다.</p>
+</div>
+<p>100 kHz에서 한 바이트(8비트 + ACK)는 9클럭 = 90 µs이다. 14바이트 연속 읽기는 주소 2바이트 + 레지스터 번호 1바이트 + 데이터 14바이트 = 17바이트 = 153클럭이므로 버스 위에서만 약 1.53 ms(START/Sr/STOP과 소프트웨어 지연 제외)가 걸린다. 같은 7개 값을 2바이트씩 7번 따로 읽으면 주소·번호 3바이트가 매번 붙어 7 × 5바이트 = 35바이트가 된다.</p>
+</section>
+
+<section id="s3">
+<h2>3. MPU6050 레지스터 맵 (이 예제에 쓰이는 것)</h2>
+<div class="tablewrap"><table>
+<tr><th>주소</th><th>이름</th><th>리셋값</th><th>이 예제에서</th></tr>
+<tr><td class="m">0x19</td><td><code>SMPLRT_DIV</code></td><td class="m">0x00</td><td>건드리지 않음 (샘플률 분주)</td></tr>
+<tr><td class="m">0x1A</td><td><code>CONFIG</code></td><td class="m">0x00</td><td>건드리지 않음 (<code>DLPF_CFG</code> = 0: 디지털 저역 통과 필터 사실상 끔)</td></tr>
+<tr><td class="m">0x1B</td><td><code>GYRO_CONFIG</code></td><td class="m">0x00</td><td><code>FS_SEL</code>[4:3] = 0 → ±250 °/s</td></tr>
+<tr><td class="m">0x1C</td><td><code>ACCEL_CONFIG</code></td><td class="m">0x00</td><td><code>AFS_SEL</code>[4:3] = 0 → ±2 g</td></tr>
+<tr><td class="m">0x3B~0x40</td><td><code>ACCEL_XOUT_H</code> … <code>ACCEL_ZOUT_L</code></td><td class="m">0x00</td><td>b[0]~b[5]</td></tr>
+<tr><td class="m">0x41~0x42</td><td><code>TEMP_OUT_H</code>, <code>TEMP_OUT_L</code></td><td class="m">0x00</td><td>b[6]~b[7]</td></tr>
+<tr><td class="m">0x43~0x48</td><td><code>GYRO_XOUT_H</code> … <code>GYRO_ZOUT_L</code></td><td class="m">0x00</td><td>b[8]~b[13]</td></tr>
+<tr><td class="m">0x6B</td><td><code>PWR_MGMT_1</code></td><td class="m">0x40</td><td>0x00을 써서 깨운다</td></tr>
+<tr><td class="m">0x75</td><td><code>WHO_AM_I</code></td><td class="m">0x68</td><td>읽어서 장치 확인</td></tr>
+</table></div>
+<h3>PWR_MGMT_1 (0x6B)</h3>
+<div class="bits">
+  <div>bit7<small>DEVICE_RESET</small></div><div class="lo">bit6<small>SLEEP</small></div><div>bit5<small>CYCLE</small></div><div>bit4<small>–</small></div><div>bit3<small>TEMP_DIS</small></div><div style="flex:3">bit2:0<small>CLKSEL</small></div>
+</div>
+<p>리셋값 0x40은 <code>SLEEP</code> = 1이다. 전원이 들어온 직후 MPU6050은 잠들어 있고, 이 상태에서는 센서 출력 레지스터가 갱신되지 않는다. 0x00을 쓰면 <code>SLEEP</code> = 0, <code>CYCLE</code> = 0, 온도 센서 켬(<code>TEMP_DIS</code> = 0), <code>CLKSEL</code> = 0(내부 8 MHz 발진기)이 된다. 레지스터 맵 문서는 안정성을 위해 자이로 PLL(<code>CLKSEL</code> = 1)을 클럭원으로 쓰기를 권한다. 이 예제는 가장 단순한 0을 쓴다.</p>
+<h3>WHO_AM_I (0x75)</h3>
+<p>장치 주소의 상위 6비트(<code>110100b</code>)를 담고 있어 값이 0x68이다. AD0 핀 상태는 반영되지 않는다. AD0 = VCC로 바꿔 주소가 0x69가 되어도 <code>WHO_AM_I</code>는 0x68이다. 호환 칩이나 다른 장치는 다른 값을 돌려줄 수 있다.</p>
+<h3>측정 범위와 감도</h3>
+<div class="tablewrap"><table>
+<tr><th><code>AFS_SEL</code></th><th>가속도 범위</th><th>감도</th><th><code>FS_SEL</code></th><th>자이로 범위</th><th>감도</th></tr>
+<tr><td>0</td><td>±2 g</td><td class="n">16384 LSB/g</td><td>0</td><td>±250 °/s</td><td class="n">131 LSB/(°/s)</td></tr>
+<tr><td>1</td><td>±4 g</td><td class="n">8192 LSB/g</td><td>1</td><td>±500 °/s</td><td class="n">65.5 LSB/(°/s)</td></tr>
+<tr><td>2</td><td>±8 g</td><td class="n">4096 LSB/g</td><td>2</td><td>±1000 °/s</td><td class="n">32.8 LSB/(°/s)</td></tr>
+<tr><td>3</td><td>±16 g</td><td class="n">2048 LSB/g</td><td>3</td><td>±2000 °/s</td><td class="n">16.4 LSB/(°/s)</td></tr>
+</table></div>
+<p>출력은 모두 2의 보수 16비트이고 <b>상위 바이트가 먼저</b>(낮은 주소)에 있다. 온도는 데이터시트의 식 <code>T[°C] = TEMP_OUT / 340 + 36.53</code>을 쓴다.</p>
+<div class="eq">가속도  mg     = raw × 1000 / 16384         (±2 g 가정)
+자이로  0.1°/s = raw × 10 / 131             (±250 °/s 가정)
+온도    0.01°C = raw × 100 / 340 + 3653     (36.53 °C × 100 = 3653)</div>
+<p>세 식 모두 곱하기를 먼저 하고 나누기를 나중에 해서 소수 자릿수를 잃지 않는다. raw의 범위가 ±32768이므로 <code>raw × 1000</code>은 최대 약 3.3 × 10<sup>7</sup>이고 32비트 <code>long</code>에 들어간다. C의 정수 나눗셈은 0 쪽으로 버린다.</p>
+</section>
+
+<section id="s4">
+<h2>4. 직접 만져 보기</h2>
+<p>위쪽은 버스, 아래쪽은 센서이다. 트랜잭션을 실행하면 시퀀스 칩이 만들어지고, 칩을 누르면 그 바이트의 SCL/SDA 파형과 그 순간 STM32 I2C1에서 일어나는 일이 나온다.</p>
+<ol>
+  <li>기본값(HAL 인자 0xD0, AD0 = GND)으로 <b>WHO_AM_I 읽기</b>를 실행한다. 마지막 칩 <code>68 N</code>을 눌러 SDA를 구동하는 쪽이 바뀌는 것을 본다.</li>
+  <li>전원을 켠 직후 상태 그대로 <b>14바이트 읽기</b>를 실행한다. 모든 값이 0이고 온도만 36.53 °C로 찍힌다. 잠들어 있기 때문이다.</li>
+  <li><b>PWR_MGMT_1 = 0 쓰기</b>를 실행한 뒤 다시 14바이트를 읽는다. 기울기 슬라이더를 움직이며 <b>200 ms 루프</b>를 켠다.</li>
+  <li>HAL 인자를 <b>0x68 (시프트 안 함)</b>으로 바꾸어 실행한다. 주소 바이트에서 NACK이 나고 HAL이 <code>HAL_ERROR</code>를 돌려준다.</li>
+  <li>센서 쪽 <b>AFS_SEL</b>을 1로 바꾼다. 코드는 ±2 g를 가정하므로 출력이 실제의 절반으로 찍힌다.</li>
+</ol>
+<div class="sim" id="simbox">
+  <div class="subhead">버스: 트랜잭션</div>
+  <div class="ctl">
+    <div><label for="selArg">HAL DevAddress 인자</label><select id="selArg"><option value="208" selected>0xD0 (0x68 &lt;&lt; 1)</option><option value="104">0x68 (시프트 안 함)</option><option value="210">0xD2 (0x69 &lt;&lt; 1)</option></select></div>
+    <div><label for="selAd0">MPU6050 AD0 핀</label><select id="selAd0"><option value="0" selected>GND → 7비트 주소 0x68</option><option value="1">VCC → 7비트 주소 0x69</option></select></div>
+    <div><label for="selClk">I2C 클럭 (<code>ClockSpeed</code>)</label><select id="selClk"><option value="100000" selected>100 kHz (표준 모드, 예제 값)</option><option value="400000">400 kHz (고속 모드)</option></select></div>
+  </div>
+  <div class="btns">
+    <button class="sw" type="button" id="bWho">WHO_AM_I 읽기 (0x75, 1바이트)</button>
+    <button class="sw" type="button" id="bWake">PWR_MGMT_1 = 0 쓰기</button>
+    <button class="sw" type="button" id="bBurst">0x3B부터 14바이트 읽기</button>
+    <button class="plain" type="button" id="bLoop" aria-pressed="false">200 ms 루프 시작</button>
+    <button class="hw" type="button" id="bPor">MPU6050 전원 재투입</button>
+  </div>
+  <div class="chips" id="chips" aria-label="바이트 시퀀스"></div>
+  <div class="wave"><svg id="wv" viewBox="0 0 640 190" role="img" aria-label="선택한 바이트의 SCL, SDA 파형"></svg></div>
+  <div class="calc" id="ev" aria-live="polite"></div>
+  <div class="regs">
+    <div class="stat" id="stRet"><div class="k">HAL 반환값</div><div class="v sm" id="vRet">–</div></div>
+    <div class="stat"><div class="k">버스 바이트 / SCL 클럭</div><div class="v sm" id="vBytes">–</div></div>
+    <div class="stat"><div class="k">버스 시간 (대략)</div><div class="v sm" id="vTime">–</div></div>
+    <div class="stat" id="stSleep"><div class="k">PWR_MGMT_1 (0x6B)</div><div class="v sm" id="vPwr">–</div></div>
+  </div>
+
+  <div class="subhead">센서: MPU6050 내부 상태</div>
+  <div class="ctl">
+    <div><label for="pitch">X축 방향 기울기 = <b id="l_pitch"></b>°</label><input id="pitch" type="range" min="-90" max="90" step="1" value="0"></div>
+    <div><label for="roll">Y축 방향 기울기 = <b id="l_roll"></b>°</label><input id="roll" type="range" min="-180" max="180" step="1" value="0"></div>
+    <div><label for="shake">Z축 추가 가속(흔들기) = <b id="l_shake"></b> g</label><input id="shake" type="range" min="-3" max="3" step="0.1" value="0"></div>
+    <div><label for="rate">Z축 회전 속도 = <b id="l_rate"></b> °/s</label><input id="rate" type="range" min="-400" max="400" step="5" value="0"></div>
+    <div><label for="temp">칩 온도 = <b id="l_temp"></b> °C</label><input id="temp" type="range" min="-20" max="60" step="0.5" value="28"></div>
+    <div><label for="afs">ACCEL_CONFIG.AFS_SEL (0x1C)</label><select id="afs"><option value="0" selected>0: ±2 g (코드 가정)</option><option value="1">1: ±4 g</option><option value="2">2: ±8 g</option><option value="3">3: ±16 g</option></select></div>
+    <div><label for="fs">GYRO_CONFIG.FS_SEL (0x1B)</label><select id="fs"><option value="0" selected>0: ±250 °/s (코드 가정)</option><option value="1">1: ±500 °/s</option><option value="2">2: ±1000 °/s</option><option value="3">3: ±2000 °/s</option></select></div>
+  </div>
+  <div class="label">MCU가 마지막으로 읽은 버퍼 <code>b[14]</code> (0x3B~0x48)</div>
+  <div class="bgrid" id="bgrid"></div>
+  <div class="calc" id="conv"></div>
+  <div class="label" style="margin-top:12px">UART 출력 (115200)</div>
+  <div class="uart" id="uart" aria-live="polite"></div>
+</div>
+<p style="font-size:14.5px;color:var(--muted)">시뮬레이터 모델: 중력 벡터를 (sin θx, sin θy·cos θx, cos θy·cos θx) g로 두고, Z축에 추가 가속을 더한다. 축 부호는 모듈 장착 방향에 따라 다르므로 실제 보드와 다를 수 있다. 원시값은 감도 × 물리량을 반올림해 −32768~32767로 포화시킨다. 잡음과 영점 오프셋은 넣지 않았다. 슬립 상태에서는 출력 레지스터가 갱신되지 않으며 전원 재투입 직후에는 리셋값 0이다. 버스 시간은 (바이트 × 9 + START/Sr/STOP 수) ÷ 클럭으로 어림했다. 실제로는 HAL의 플래그 대기 때문에 바이트 사이에 틈이 생긴다.</p>
+</section>
+
+<section id="s5">
+<h2>5. 레지스터 분석: I2C1</h2>
+<p>PCLK1은 64 MHz ÷ 2 = 32 MHz이다(HSI/2 × PLL16 = 64 MHz, APB1 ÷2). I2C 타이밍은 모두 이 값을 기준으로 계산된다. 아래 기대값은 HAL 코드(<code>HAL_I2C_Init</code>)와 RM0008 26장의 식에서 유도한 것이다. 디버거의 SFR 뷰로 실제 값을 확인한다.</p>
+<div class="tablewrap"><table>
+<tr><th>HAL 필드 / 동작</th><th>레지스터·비트</th><th>기대값</th><th>의미</th></tr>
+<tr><td>(초기화 첫 단계)</td><td><code>CR1.SWRST</code></td><td>1 → 0</td><td>I2C 주변장치 소프트웨어 리셋. 이전 상태(BUSY 등)를 지운다</td></tr>
+<tr><td>PCLK1 주파수</td><td><code>CR2.FREQ[5:0]</code></td><td class="m">32 (0x20)</td><td>PCLK1을 MHz 단위로 알려 준다. 내부 타이밍의 기준</td></tr>
+<tr><td><code>ClockSpeed</code> = 100000</td><td><code>CCR.F/S</code>(bit15) = 0, <code>CCR.CCR[11:0]</code></td><td class="m">0x00A0 (160)</td><td>표준 모드. T<sub>high</sub> = T<sub>low</sub> = CCR × T<sub>PCLK1</sub> = 160 × 31.25 ns = 5 µs → 100 kHz</td></tr>
+<tr><td><code>DutyCycle</code> = 2</td><td><code>CCR.DUTY</code>(bit14)</td><td>무시</td><td>고속 모드(F/S = 1)에서만 의미가 있다</td></tr>
+<tr><td>(상승 시간)</td><td><code>TRISE[5:0]</code></td><td class="m">33 (0x21)</td><td>표준 모드 최대 상승 시간 1000 ns ÷ 31.25 ns + 1</td></tr>
+<tr><td><code>GeneralCallMode</code>, <code>NoStretchMode</code></td><td><code>CR1.ENGC</code>(bit6), <code>CR1.NOSTRETCH</code>(bit7)</td><td>0, 0</td><td>일반 호출 끔, 클럭 스트레칭 허용</td></tr>
+<tr><td><code>OwnAddress1</code> = 0, 7비트</td><td><code>OAR1</code></td><td class="m">0x4000</td><td>bit14는 RM0008상 소프트웨어가 항상 1로 둔다. <code>ADDMODE</code>(bit15) = 0. 마스터만 쓰므로 자기 주소는 의미 없음</td></tr>
+<tr><td><code>DualAddressMode</code></td><td><code>OAR2.ENDUAL</code></td><td>0</td><td>두 번째 자기 주소 끔</td></tr>
+<tr><td>(초기화 끝)</td><td><code>CR1.PE</code>(bit0)</td><td>1</td><td>주변장치 활성</td></tr>
+<tr><td>인터럽트·DMA</td><td><code>CR2.ITEVTEN/ITERREN/ITBUFEN/DMAEN</code></td><td>0</td><td>폴링이라 모두 끔. 04 예제에서 DMAEN을 쓴다</td></tr>
+</table></div>
+<h3>전송 중에 쓰이는 비트</h3>
+<div class="tablewrap"><table>
+<tr><th>레지스터</th><th>비트</th><th>역할</th><th>지우는 법</th></tr>
+<tr><td><code>CR1</code></td><td><code>START</code>(8), <code>STOP</code>(9)</td><td>START/반복 START, STOP 생성 요청</td><td>하드웨어가 생성 후 지움</td></tr>
+<tr><td><code>CR1</code></td><td><code>ACK</code>(10), <code>POS</code>(11)</td><td>수신 바이트에 ACK를 보낼지. POS는 2바이트 수신용</td><td>소프트웨어</td></tr>
+<tr><td><code>SR1</code></td><td><code>SB</code>(0) — EV5</td><td>START 생성 완료</td><td>SR1 읽기 → DR 쓰기(주소)</td></tr>
+<tr><td><code>SR1</code></td><td><code>ADDR</code>(1) — EV6</td><td>주소 전송 후 ACK 받음</td><td>SR1 읽기 → SR2 읽기</td></tr>
+<tr><td><code>SR1</code></td><td><code>TXE</code>(7) — EV8</td><td>DR이 비어 다음 바이트를 넣을 수 있음</td><td>DR 쓰기</td></tr>
+<tr><td><code>SR1</code></td><td><code>BTF</code>(2)</td><td>바이트 전송 완료. 송신: DR과 시프트 레지스터가 모두 빔. 수신: DR과 시프트 레지스터가 모두 참(SCL을 Low로 붙잡음)</td><td>SR1 읽기 → DR 읽기/쓰기</td></tr>
+<tr><td><code>SR1</code></td><td><code>RXNE</code>(6) — EV7</td><td>수신 바이트가 DR에 있음</td><td>DR 읽기</td></tr>
+<tr><td><code>SR1</code></td><td><code>AF</code>(10)</td><td>Acknowledge Failure: 슬레이브 NACK</td><td>0을 쓴다</td></tr>
+<tr><td><code>SR1</code></td><td><code>BERR</code>(8), <code>ARLO</code>(9)</td><td>버스 오류(잘못된 START/STOP), 중재 상실</td><td>0을 쓴다</td></tr>
+<tr><td><code>SR2</code></td><td><code>MSL</code>(0), <code>BUSY</code>(1), <code>TRA</code>(2)</td><td>마스터 모드, 버스 사용 중, 송신(1)/수신(0)</td><td>STOP 후 하드웨어가 지움</td></tr>
+</table></div>
+<p>F1의 I2C는 DR과 시프트 레지스터의 2단 구조이다. 수신 중 소프트웨어가 DR을 늦게 읽으면 다음 바이트가 시프트 레지스터에 쌓이고, 그 뒤로는 <code>BTF</code> = 1인 채 SCL을 Low로 붙잡아 버스를 멈춘다(클럭 스트레칭). 그래서 데이터를 잃지는 않는다. 대신 마지막 바이트에 NACK을 보내려면 <b>그 바이트가 들어오기 전에</b> <code>ACK</code> = 0을 미리 써 두어야 한다. 이 순서를 지키는 것이 6절의 HAL 코드이다.</p>
+</section>
+
+<section id="s6">
+<h2>6. HAL이 대신 해 주는 일</h2>
+<p><code>HAL_I2C_Mem_Read(&amp;hi2c1, 0xD0, 0x3B, I2C_MEMADD_SIZE_8BIT, b, 14, 100)</code> 한 줄이 하는 일을 <code>stm32f1xx_hal_i2c.c</code>에서 따라가면 다음과 같다. <span class="tag sw">SW</span>는 HAL이 레지스터를 쓰거나 읽는 단계, <span class="tag hw">HW</span>는 I2C1 하드웨어가 버스에서 하는 일이다.</p>
+<ol class="flow">
+  <li class="sw"><span class="n">1</span><div class="tx"><b>버스가 비었는지 확인 <span class="tag sw">SW</span></b><span><code>SR2.BUSY</code>가 0이 될 때까지 최대 25 ms(<code>I2C_TIMEOUT_BUSY_FLAG</code>) 기다린다. 넘으면 <code>HAL_BUSY</code>를 돌려준다. 이어서 <code>CR1.POS</code> = 0.</span></div></li>
+  <li class="hw"><span class="n">2</span><div class="tx"><b>START, 주소 0xD0 <span class="tag hw">HW</span></b><span><code>CR1.ACK</code> = 1, <code>CR1.START</code> = 1 → <code>SB</code> 대기 → <code>DR</code> = 0xD0 → <code>ADDR</code> 대기. 슬레이브가 NACK하면 <code>SR1.AF</code> = 1이 되고 HAL은 STOP을 내고 <code>HAL_ERROR</code>(ErrorCode = <code>HAL_I2C_ERROR_AF</code>)를 돌려준다.</span></div></li>
+  <li class="sw"><span class="n">3</span><div class="tx"><b>ADDR 지우기, 레지스터 번호 전송 <span class="tag sw">SW</span></b><span>SR1 → SR2 읽기로 <code>ADDR</code>을 지운다. <code>TXE</code> 대기 → <code>DR</code> = 0x3B → 다시 <code>TXE</code> 대기.</span></div></li>
+  <li class="hw"><span class="n">4</span><div class="tx"><b>반복 START, 주소 0xD1 <span class="tag hw">HW</span></b><span><code>CR1.START</code> = 1 → <code>SB</code> 대기 → <code>DR</code> = 0xD1 → <code>ADDR</code> 대기. STOP을 거치지 않으므로 그 사이 다른 마스터가 버스를 가져갈 수 없다.</span></div></li>
+  <li class="sw"><span class="n">5</span><div class="tx"><b>받을 바이트 수에 따라 다른 준비 <span class="tag sw">SW</span></b><span>N = 14(> 2)이면 <code>ACK</code> = 1로 두고 <code>ADDR</code>을 지운다. N = 1(<code>WHO_AM_I</code>)이면 <code>ACK</code> = 0을 먼저 쓰고, 인터럽트를 잠시 막은 채 <code>ADDR</code>을 지우고 곧바로 <code>STOP</code> = 1을 쓴다. N = 2이면 <code>POS</code> = 1을 쓴다.</span></div></li>
+  <li class="hw"><span class="n">6</span><div class="tx"><b>앞쪽 11바이트 수신 <span class="tag hw">HW</span></b><span>슬레이브가 바이트를 내보내고 I2C1이 ACK한다. HAL은 <code>RXNE</code>마다 <code>DR</code>을 읽는다.</span></div></li>
+  <li class="sw"><span class="n">7</span><div class="tx"><b>남은 3바이트: NACK 예약과 STOP <span class="tag sw">SW</span></b><span><code>BTF</code> 대기(b11은 DR, b12는 시프트 레지스터) → <code>ACK</code> = 0 → b11 읽기 → <code>BTF</code> 대기 → <code>STOP</code> = 1 → b12, b13 읽기. 마지막 b13에 NACK이 나가고 STOP이 이어진다. 이 구간은 <code>__disable_irq()</code>로 짧게 보호한다.</span></div></li>
+  <li class="sw"><span class="n">8</span><div class="tx"><b>반환 <span class="tag sw">SW</span></b><span><code>State</code>를 READY로 되돌리고 <code>HAL_OK</code>. 각 대기는 호출 시점부터 <code>Timeout</code>(100 ms) 안에 끝나야 하며, 넘으면 <code>HAL_ERROR</code>(ErrorCode에 TIMEOUT)이다.</span></div></li>
+</ol>
+<div class="box"><div class="label">왜 N = 1, 2, 3 이하를 따로 다루는가</div><p>RM0008의 마스터 수신 절차는 "마지막 바이트에 NACK, 그 직후 STOP"을 요구한다. 2단 버퍼 때문에 하드웨어는 소프트웨어가 보는 것보다 한두 바이트 앞서 받는다. 그래서 끝에서 세 번째 바이트를 기준으로 <code>ACK</code>와 <code>STOP</code>을 미리 설정한다. 1바이트 읽기는 앞서 받을 여유가 없으므로 <code>ADDR</code>을 지우는 순간 이미 NACK과 STOP이 예약되어 있어야 한다. 이 순서를 직접 레지스터로 짜면 실수하기 쉽다. HAL을 쓰는 큰 이유 중 하나이다.</p></div>
+<ul>
+  <li><code>HAL_I2C_Mem_Write</code>는 2~3단계 뒤 반복 START 없이 <code>TXE</code>마다 데이터를 넣고, 마지막에 <code>BTF</code>를 확인한 뒤 STOP을 낸다.</li>
+  <li><code>HAL_I2C_MspInit()</code>(<code>stm32f1xx_hal_msp.c</code>)은 PB6/PB7을 <code>GPIO_MODE_AF_OD</code>, <code>GPIO_SPEED_FREQ_HIGH</code>로 두고 <code>RCC_APB1ENR.I2C1EN</code>을 켠다. 내부 풀업은 쓰지 않는다. 풀업은 모듈이나 외부 저항이 맡는다.</li>
+  <li>대기 시간 계산은 <code>HAL_GetTick()</code>에 기대므로, SysTick 인터럽트가 살아 있어야 타임아웃이 동작한다.</li>
+</ul>
+</section>
+
+<section id="s7">
+<h2>7. 코드 읽기</h2>
+<pre><code>MPU6050(GY-521)   VCC ── 3.3V      GND ── GND
+                  SCL ── PB6 (D10) SDA ── PB7
+                  AD0 ── GND  → 7비트 주소 0x68</code></pre>
+<div class="file">main.c — 정의와 출력 함수 (USER CODE PD, 0)</div>
+<div class="codepair">
+<pre><code><span class="kw">#define</span> MPU_ADDR      (0x68 &lt;&lt; 1)   <span class="cm">/* HAL 은 7비트 주소를 왼쪽으로 1비트 민 값을 요구 */</span>
+<span class="kw">#define</span> REG_WHO_AM_I  0x75
+<span class="kw">#define</span> REG_PWR_MGMT1 0x6B
+<span class="kw">#define</span> REG_ACCEL_OUT 0x3B
+
+<span class="kw">static void</span> print(<span class="kw">const char</span> *s)
+{ <span class="kw">HAL_UART_Transmit</span>(&amp;huart2, (uint8_t *)s, (uint16_t)strlen(s), 200); }</code></pre>
+<ol><li><code>MPU_ADDR</code>는 0xD0이다. 시프트를 매크로 안에 넣어 실수를 막는다.</li><li>레지스터 번호 세 개만 쓴다. 0x3B 하나로 14바이트를 모두 읽는다.</li><li><code>print</code>는 블로킹 UART 송신이다. 한 줄(약 80자)은 115200 bps에서 약 7 ms 걸린다.</li></ol>
+</div>
+<div class="file">main.c — 장치 확인과 슬립 해제 (USER CODE 2)</div>
+<div class="codepair">
+<pre><code><span class="kw">if</span> (<span class="kw">HAL_I2C_Mem_Read</span>(&amp;hi2c1, MPU_ADDR, REG_WHO_AM_I,
+        I2C_MEMADD_SIZE_8BIT, &amp;who, 1, 100) != HAL_OK)
+{
+    print(<span class="hl">"\r\nMPU6050 not responding (check wiring / pull-ups / AD0)\r\n"</span>);
+    Error_Handler();
+}
+snprintf(msg, <span class="kw">sizeof</span> msg, <span class="hl">"\r\nWHO_AM_I = 0x%02X (expect 0x68)\r\n"</span>, who);
+print(msg);
+<span class="kw">if</span> (who != 0x68)
+{
+    print(<span class="hl">"WARNING: unexpected WHO_AM_I, continuing anyway\r\n"</span>);
+}
+
+uint8_t wake = 0x00;               <span class="cm">/* SLEEP=0, 내부 8MHz 클럭 */</span>
+<span class="kw">if</span> (<span class="kw">HAL_I2C_Mem_Write</span>(&amp;hi2c1, MPU_ADDR, REG_PWR_MGMT1,
+        I2C_MEMADD_SIZE_8BIT, &amp;wake, 1, 100) != HAL_OK) Error_Handler();</code></pre>
+<ol><li>응답이 없으면(주소 NACK, 타임아웃) 메시지를 찍고 <code>Error_Handler()</code>에서 멈춘다.</li><li>ACK는 했지만 ID가 다르면 경고만 찍고 진행한다. 이 검사는 이번 검토에서 추가했다.</li><li><code>PWR_MGMT_1</code> = 0x00으로 깨운다. 쓰기 실패도 치명적 오류로 본다.</li></ol>
+</div>
+<div class="file">main.c — 200 ms 루프 (USER CODE 3)</div>
+<div class="codepair">
+<pre><code>uint8_t b[14];
+<span class="kw">if</span> (<span class="kw">HAL_I2C_Mem_Read</span>(&amp;hi2c1, MPU_ADDR, REG_ACCEL_OUT,
+        I2C_MEMADD_SIZE_8BIT, b, 14, 100) == HAL_OK)
+{
+    <span class="cm">/* 상위 바이트 먼저(big-endian) -&gt; int16_t 로 조립 */</span>
+    int16_t ax = (int16_t)((b[0] &lt;&lt; 8) | b[1]);
+    <span class="cm">/* ay, az, tp(b[6..7]), gx, gy, gz 도 같은 방식 */</span>
+
+    int32_t t100 = (int32_t)tp * 100 / 340 + 3653;   <span class="cm">/* 0.01 °C */</span>
+    <span class="kw">const char</span> *tsgn = (t100 &lt; 0) ? <span class="hl">"-"</span> : <span class="hl">""</span>;
+    int32_t     tabs = (t100 &lt; 0) ? -t100 : t100;
+    snprintf(msg, <span class="kw">sizeof</span> msg,
+      <span class="hl">"acc[mg] %6ld %6ld %6ld | gyro[0.1dps] %6ld %6ld %6ld | temp %s%ld.%02ld C\r\n"</span>,
+      (<span class="kw">long</span>)ax * 1000 / 16384, ...,
+      (<span class="kw">long</span>)gx * 10 / 131, ...,
+      tsgn, (<span class="kw">long</span>)(tabs / 100), (<span class="kw">long</span>)(tabs % 100));
+    print(msg);
+}
+<span class="kw">else</span>
+{
+    print(<span class="hl">"read error\r\n"</span>);
+    <span class="kw">HAL_I2C_DeInit</span>(&amp;hi2c1);   <span class="cm">/* 버스 오류 복구: 재초기화 */</span>
+    MX_I2C1_Init();
+}
+<span class="kw">HAL_Delay</span>(200);</code></pre>
+<ol><li><code>(b[0] &lt;&lt; 8) | b[1]</code>은 <code>int</code>로 계산되어 0~65535가 된다. <code>(int16_t)</code> 변환이 0x8000 이상을 음수로 바꾼다(GCC의 2의 보수 변환).</li><li>변환 전에 <code>(long)</code>으로 넓혀서 곱셈 넘침을 막는다.</li><li>0 °C 미만이면 몫과 나머지가 둘 다 음수가 되어 <code>-1.-50</code>처럼 찍히므로 부호를 따로 뗀다(이번 검토에서 고침).</li><li>읽기에 실패하면 I2C1을 해제·재초기화한다. <code>HAL_I2C_Init</code> 안의 <code>SWRST</code>가 주변장치 상태를 지운다.</li></ol>
+</div>
+<div class="box"><div class="label">ISR과 HAL 콜백</div>
+<p>이 예제에는 I2C ISR도, HAL I2C 콜백도 없다. <code>HAL_I2C_Mem_Read</code>가 플래그를 직접 폴링하며 끝날 때까지 돌아오지 않는다. 동작 중인 ISR은 <code>SysTick_Handler()</code>(<code>stm32f1xx_it.c</code>) 하나이며, <code>HAL_IncTick()</code>으로 1 ms 틱을 올린다. 이 틱이 <code>HAL_Delay(200)</code>과 I2C 타임아웃(100 ms, BUSY 25 ms)의 시계이다.</p>
+<p>비동기로 바꾸면 역할이 나뉜다. <b>ISR</b> <code>I2C1_EV_IRQHandler()</code> / <code>I2C1_ER_IRQHandler()</code>는 <code>HAL_I2C_EV_IRQHandler()</code> / <code>HAL_I2C_ER_IRQHandler()</code>를 불러 플래그 단위 상태 기계를 돌린다. 모든 바이트가 끝나면 HAL이 <b>콜백</b> <code>HAL_I2C_MemRxCpltCallback()</code>을, 오류면 <code>HAL_I2C_ErrorCallback()</code>을 부른다. 콜백은 사용자가 정의하는 약한(weak) 함수이고, ISR 문맥에서 실행되므로 짧게 써야 한다. 04 예제가 이 구조(DMA 포함)이다.</p></div>
+<div class="box ok"><div class="label">이번 검토에서 고친 것 (USER CODE 영역 안)</div>
+<ul>
+  <li><code>WHO_AM_I</code> 값을 출력만 하고 비교하지 않았다. 헤더 주석("0x68 인지 확인")과 맞도록 0x68이 아니면 경고를 찍게 했다. 멈추지는 않는다.</li>
+  <li>온도가 0 °C 미만일 때 <code>-1.-50 C</code>, <code>0.-50 C</code>처럼 잘못 찍히던 형식을 부호 분리로 고쳤다.</li>
+  <li><code>MX_I2C1_Init</code>의 USER CODE 주석을 실제 레지스터 값(CR2.FREQ = 32, CCR = 160, TRISE = 33, OAR1 = 0x4000, SWRST)으로 구체화했다.</li>
+</ul></div>
+</section>
+
+<section id="s8">
+<h2>8. 실험</h2>
+<h3>실험 A. 기본 출력과 축 확인</h3>
+<p>보드와 모듈을 책상에 평평하게 놓고 터미널(115200)을 연다. <b>기대 결과:</b> 첫 줄에 <code>WHO_AM_I = 0x68</code>. 이어 200 ms마다 한 줄. 중력 방향 축(평평하면 보통 Z)이 약 +1000 mg 근처, 나머지 두 축은 0 근처이다. 모듈을 90° 세울 때마다 1000 mg 근처 값이 다른 축으로 옮겨 간다. 자이로는 정지 상태에서도 0이 아닌 작은 값(영점 오프셋)이 보인다.</p>
+<h3>실험 B. 주소 실수 재현</h3>
+<p><code>MPU_ADDR</code>을 <code>0x68</code>로 바꾸어(시프트 제거) 빌드한다. <b>기대 결과:</b> <code>MPU6050 not responding</code>이 찍히고 멈춘다. 로직 분석기나 AD2로 보면 START 뒤 주소 바이트 <code>0x68</code>(7비트 0x34, 쓰기)과 9번째 클럭의 NACK(SDA High)이 보인다. 이어서 AD0를 VCC에 연결하고 <code>MPU_ADDR</code>을 <code>(0x69 &lt;&lt; 1)</code>로 바꾸면 다시 동작한다. <code>WHO_AM_I</code>는 그대로 0x68이다.</p>
+<h3>실험 C. 슬립 해제를 빼 본다</h3>
+<p><code>HAL_I2C_Mem_Write(… REG_PWR_MGMT1 …)</code> 줄을 주석 처리하고, <b>모듈 전원을 완전히 껐다 켠다</b>(Nucleo 리셋 버튼만으로는 MPU6050이 이전 실행에서 깨어난 상태로 남는다). <b>기대 결과:</b> 가속도·자이로가 모두 0이고 온도는 raw = 0이므로 <code>36.53 C</code>로 고정된다. 전원을 끄지 않고 리셋만 하면 이전 실행 상태가 남아 값이 정상으로 보일 수 있다. 이 차이 자체가 "장치 상태는 MCU 리셋과 별개"라는 교훈이다.</p>
+<h3>실험 D. 측정 범위 바꾸기</h3>
+<p>슬립 해제 직후 <code>ACCEL_CONFIG</code>(0x1C)에 0x08(<code>AFS_SEL</code> = 1, ±4 g)을 쓰는 <code>HAL_I2C_Mem_Write</code>를 USER CODE 2에 추가한다. <b>기대 결과:</b> 평평할 때 Z가 약 500 mg로 찍힌다. 감도가 8192 LSB/g로 바뀌었는데 코드는 16384로 나누기 때문이다. 나눗수를 8192로 바꾸면 다시 약 1000 mg가 된다. 시뮬레이터의 <code>AFS_SEL</code>과 흔들기 슬라이더로 ±2 g 포화도 확인한다.</p>
+<h3>실험 E. 400 kHz와 버스 시간 측정</h3>
+<p>CubeMX에서 I2C1 속도를 Fast Mode 400 kHz로 바꾸어 재생성한다(<code>MX_I2C1_Init</code>은 CubeMX 영역이므로 직접 고치지 않는다). 로직 분석기로 14바이트 읽기 한 번의 길이를 잰다. <b>기대 결과:</b> HAL 계산으로 <code>CCR</code> = 0x801B(F/S = 1, CCR = 27), <code>TRISE</code> = 10이 되고, 실제 SCL은 400 kHz보다 약간 낮다(32 MHz ÷ (3 × 27) ≈ 395 kHz, 상승 시간 제외). 트랜잭션 길이는 100 kHz 때의 약 1/4에 가까워지지만, 바이트 사이 소프트웨어 틈 때문에 정확히 1/4은 아니다.</p>
+</section>
+
+<section id="s9">
+<h2>9. 트러블슈팅</h2>
+<div class="tablewrap"><table>
+<tr><th>증상</th><th>원인</th><th>점검/조치</th></tr>
+<tr><td><code>MPU6050 not responding</code></td><td>주소 NACK: 배선, AD0 상태, 시프트 누락, 풀업 없음</td><td><a href="../01_I2C_Scan/01_I2C_Scan%20교안.html">01_I2C_Scan</a>으로 0x68/0x69 확인. <code>MPU_ADDR = (0x68 &lt;&lt; 1)</code> 확인. SCL/SDA를 바꿔 꽂지 않았는지 확인</td></tr>
+<tr><td>값이 모두 0, 온도 36.53 °C 고정</td><td>슬립 상태(<code>PWR_MGMT_1.SLEEP</code> = 1)</td><td>0x6B에 0x00 쓰기가 성공했는지 반환값 확인. 0x6B를 다시 읽어 0x00인지 본다</td></tr>
+<tr><td><code>WHO_AM_I</code>가 0x68이 아니다</td><td>호환 칩, 다른 장치가 같은 주소에 있음</td><td>칩 표기 확인. 레지스터 맵이 다를 수 있으므로 해당 데이터시트 확인</td></tr>
+<tr><td><code>read error</code>가 반복된다</td><td>슬레이브가 SDA를 Low로 붙잡은 채 멈춤(전송 중 MCU 리셋 등), 접촉 불량</td><td>I2C1 재초기화만으로는 슬레이브가 풀리지 않는다. 모듈 전원 재투입, 또는 PB6을 GPIO로 바꿔 SCL 펄스 9개를 낸 뒤 STOP을 만드는 복구 루틴 필요</td></tr>
+<tr><td>HAL이 <code>HAL_BUSY</code>를 돌려준다</td><td><code>SR2.BUSY</code>가 1로 고착. 선이 Low이거나, F1 I2C 아날로그 필터 관련 정오표(ES096) 현상</td><td>SCL/SDA 전압 측정. 정오표의 우회 절차(핀을 GPIO로 토글 후 <code>SWRST</code>) 참고</td></tr>
+<tr><td>가속도가 실제의 절반/4분의 1</td><td><code>ACCEL_CONFIG.AFS_SEL</code>이 0이 아님</td><td>0x1C를 읽어 확인. 나눗수를 범위에 맞춘다</td></tr>
+<tr><td>값이 심하게 흔들린다</td><td><code>CONFIG.DLPF_CFG</code> = 0(필터 끔), 진동, 전원 잡음</td><td>0x1A에 DLPF 값을 써서 대역폭을 줄인다. 평균 필터 적용</td></tr>
+<tr><td>영하에서 온도 형식이 이상하다</td><td>(검토 전 코드) 몫/나머지가 모두 음수</td><td>이번 검토에서 부호 분리로 고쳤다</td></tr>
+</table></div>
+</section>
+
+<section id="s10">
+<h2>10. 확인 문제</h2>
+<details><summary><b>문제 1.</b> AD0를 VCC에 연결했다. HAL에 넘길 <code>DevAddress</code>와 버스에 실제로 나가는 쓰기·읽기 주소 바이트는?</summary>
+<div class="ans"><p>7비트 주소 0x69 → <code>DevAddress</code> = 0xD2. 쓰기 바이트 0xD2, 읽기 바이트 0xD3이다. <code>WHO_AM_I</code>는 여전히 0x68이다.</p></div></details>
+<details><summary><b>문제 2.</b> <code>b[0] = 0xC0, b[1] = 0x00</code>이다. 출력되는 가속도 X(mg)는?</summary>
+<div class="ans"><p>0xC000은 <code>int16_t</code>로 −16384이다. −16384 × 1000 / 16384 = −1000 mg. X축이 중력 반대 방향으로 1 g를 받고 있다.</p></div></details>
+<details><summary><b>문제 3.</b> 온도 raw가 −521이면 출력 문자열은?</summary>
+<div class="ans"><p>−521 × 100 = −52100, ÷ 340 = −153.2 → 0 쪽으로 버려 −153. 3653 − 153 = 3500 → <code>temp 35.00 C</code>.</p></div></details>
+<details><summary><b>문제 4.</b> 100 kHz에서 14바이트 연속 읽기의 SCL 클럭 수와 최소 버스 시간은? 7번의 2바이트 읽기와 비교하면?</summary>
+<div class="ans"><p>주소(쓰기) + 레지스터 번호 + 주소(읽기) + 데이터 14 = 17바이트 × 9 = 153클럭 ≈ 1.53 ms. 2바이트씩 7번이면 5바이트 × 7 = 35바이트 = 315클럭 ≈ 3.15 ms이다. 게다가 각 읽기 시점이 달라져 X, Y, Z가 서로 다른 순간의 값이 된다.</p></div></details>
+<details><summary><b>문제 5.</b> 마지막 바이트에 마스터가 ACK를 보내면 어떤 일이 생기는가? HAL은 이를 어떻게 막는가?</summary>
+<div class="ans"><p>슬레이브는 마스터가 더 읽으려는 것으로 보고 다음 바이트의 첫 비트를 SDA에 내놓는다. 그 비트가 0이면 슬레이브가 SDA를 Low로 잡고 있어 마스터가 STOP(SDA 상승)을 만들 수 없다. HAL은 끝에서 세 번째 바이트 시점에 <code>CR1.ACK</code> = 0을 써서 마지막 바이트에 NACK이 나가게 하고, 그 직전에 <code>CR1.STOP</code> = 1을 예약한다.</p></div></details>
+<details><summary><b>문제 6.</b> Nucleo의 리셋 버튼만 눌렀을 때와 USB를 뽑았다 꽂았을 때, 슬립 해제 코드를 지운 펌웨어의 출력이 다를 수 있는 이유는?</summary>
+<div class="ans"><p>리셋 버튼은 STM32만 리셋한다. MPU6050은 전원이 유지되어 이전 실행에서 쓴 <code>PWR_MGMT_1</code> = 0이 그대로 남는다. 전원을 재투입해야 리셋값 0x40(SLEEP = 1)으로 돌아간다.</p></div></details>
+</section>
+
+<section>
+  <h2>정리</h2>
+  <ul>
+    <li>I2C 주소는 장치를 고르고, 레지스터 번호는 첫 데이터 바이트로 보낸다. 읽기는 쓰기(번호) → 반복 START → 읽기의 두 단계이다.</li>
+    <li>HAL의 <code>DevAddress</code>는 <code>7비트 주소 &lt;&lt; 1</code>이다. R/W 비트는 HAL이 넣는다.</li>
+    <li>MPU6050은 전원 투입 직후 잠들어 있다(<code>PWR_MGMT_1</code> = 0x40). 0x00을 써야 측정한다.</li>
+    <li>0x3B부터 14바이트 연속 읽기는 같은 순간의 값을 짧은 버스 시간에 가져온다. 상위 바이트가 먼저이다.</li>
+    <li>F1 마스터 수신은 마지막 바이트 NACK과 STOP을 미리 예약해야 하며, HAL이 N = 1, 2, 3 이하를 나누어 처리한다.</li>
+  </ul>
+  <div class="tablewrap"><table>
+  <tr><th>예제</th><th>I2C 사용 방식</th><th>핵심</th></tr>
+  <tr><td class="m"><a href="../03_PCF8574_LCD/03_PCF8574_LCD%20교안.html">03_PCF8574_LCD</a></td><td>Master_Transmit</td><td>레지스터 없는 장치(포트 확장), LCD</td></tr>
+  <tr><td class="m"><a href="../01_I2C_Scan/01_I2C_Scan%20교안.html">01_I2C_Scan</a></td><td>IsDeviceReady</td><td>주소 ACK만 확인</td></tr>
+  <tr><td class="m"><b>04_I2C_MPU6050_c (이 교안)</b></td><td>Mem_Read / Mem_Write (폴링)</td><td>레지스터 읽기 시퀀스, 연속 읽기, 정수 변환</td></tr>
+  <tr><td class="m"><a href="../05_I2C_MPU6050_DMA_c/05_I2C_MPU6050_DMA%20교안.html">05_I2C_MPU6050_DMA_c</a></td><td>Mem_Read_DMA + 콜백</td><td>같은 읽기를 논블로킹으로, 오류 복구</td></tr>
+  </table></div>
+  <div class="nextprev"><a href="../03_PCF8574_LCD/03_PCF8574_LCD%20%EA%B5%90%EC%95%88.html">← 03_PCF8574_LCD</a>_MPU6050_DMA_c →</a></div>
+  <footer>근거 파일: 이 폴더(<code>Examples/04_I2C_Communication/04_I2C_MPU6050_c</code>)의 <code>Core/Src/main.c</code>, <code>Core/Src/stm32f1xx_hal_msp.c</code>, <code>Core/Src/stm32f1xx_it.c</code>, <code>I2C_MPU6050.ioc</code>, 그리고 HAL 드라이버 <code>stm32f1xx_hal_i2c.c</code>(<code>HAL_I2C_Init</code>, <code>HAL_I2C_Mem_Read</code>, <code>I2C_RequestMemoryRead</code>). 계층: HAL(폴링). I2C 레지스터·비트 이름은 RM0008 26장 기준이다. MPU6050 레지스터·감도·온도 식은 InvenSense MPU-6000/MPU-6050 Product Specification과 Register Map and Descriptions 기준이다. 클럭은 SYSCLK 64 MHz(HSI/2 × PLL16), APB1 ÷2(PCLK1 = 32 MHz) 구성을 기준으로 한다. 코드는 해당 폴더의 소스에서 발췌한 것이며 일부 줄이 생략되어 있다.</footer>
+</section>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var NS='http://www.w3.org/2000/svg';
+  function hx(v){return (v<16?'0':'')+v.toString(16).toUpperCase()}
+  function mk(t,a,txt){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e}
+
+  /* ---------- MPU6050 모델 ---------- */
+  var SA=[16384,8192,4096,2048], SG=[131,65.5,32.8,16.4];
+  var dev={pwr:0x40, latched:new Array(14).fill(0)};   // 전원 투입 직후: SLEEP=1, 출력 레지스터 0
+  var mcu={b:new Array(14).fill(0), valid:false};
+  function clamp16(v){v=Math.round(v);return v>32767?32767:(v<-32768?-32768:v)}
+  function sensorRaw(){
+    var p=+$('pitch').value*Math.PI/180, r=+$('roll').value*Math.PI/180, sh=+$('shake').value;
+    var afs=+$('afs').value, fs=+$('fs').value, T=+$('temp').value, w=+$('rate').value;
+    var g=[Math.sin(p), Math.sin(r)*Math.cos(p), Math.cos(r)*Math.cos(p)+sh];
+    var sat=false, out=[];
+    g.forEach(function(v){var x=v*SA[afs];if(Math.abs(x)>32767.5)sat=true;out.push(clamp16(x))});
+    var traw=clamp16((T-36.53)*340);
+    var gz=w*SG[fs]; if(Math.abs(gz)>32767.5)sat=true;
+    return {ax:out[0],ay:out[1],az:out[2],tp:traw,gx:0,gy:0,gz:clamp16(gz),sat:sat};
+  }
+  function toBytes(s){var a=[s.ax,s.ay,s.az,s.tp,s.gx,s.gy,s.gz],b=[];a.forEach(function(v){var u=v&0xFFFF;b.push(u>>8,u&0xFF)});return b}
+  function asleep(){return (dev.pwr&0x40)!==0}
+  function devRegs(){ if(!asleep()) dev.latched=toBytes(sensorRaw()); return dev.latched }
+  function devRead(reg){
+    if(reg===0x75)return 0x68; if(reg===0x6B)return dev.pwr;
+    if(reg>=0x3B&&reg<=0x48)return devRegs()[reg-0x3B];
+    return 0;
+  }
+
+  /* ---------- 트랜잭션 생성 ---------- */
+  // 항목: {k:'S'|'Sr'|'P'} 또는 {k:'B', v, drv:'m'|'s', ack:true/false, role, note}
+  var seq=[], selIdx=-1, lastRun=null;
+  function build(op){
+    var arg=+$('selArg').value, dev7=$('selAd0').value==='1'?0x69:0x68;
+    var wW=arg&0xFE, wR=arg|1, hit=(wW>>1)===dev7, items=[{k:'S'}], ret, n=0, reg, data=[];
+    if(op==='who'){reg=0x75;n=1}else if(op==='burst'){reg=0x3B;n=14}else{reg=0x6B;data=[0x00]}
+    items.push({k:'B',v:wW,drv:'m',ack:hit,role:'aw',dev7:dev7});
+    if(!hit){items.push({k:'P'});return {items:items,ret:'HAL_ERROR (ErrorCode = HAL_I2C_ERROR_AF)',ok:false,op:op}}
+    items.push({k:'B',v:reg,drv:'m',ack:true,role:'reg'});
+    if(op==='wake'){
+      items.push({k:'B',v:0x00,drv:'m',ack:true,role:'wd'});items.push({k:'P'});
+      dev.pwr=0x00; devRegs();
+      return {items:items,ret:'HAL_OK',ok:true,op:op};
+    }
+    items.push({k:'Sr'});items.push({k:'B',v:wR,drv:'m',ack:true,role:'ar'});
+    for(var i=0;i<n;i++){var v=devRead(reg+i);data.push(v);items.push({k:'B',v:v,drv:'s',ack:i<n-1,role:'rd',idx:i,n:n})}
+    items.push({k:'P'});
+    if(op==='burst'){mcu.b=data;mcu.valid=true}
+    if(op==='who'){mcu.who=data[0]}
+    return {items:items,ret:'HAL_OK',ok:true,op:op,data:data};
+  }
+
+  /* ---------- 칩과 파형 ---------- */
+  var REGNAME=['AX_H','AX_L','AY_H','AY_L','AZ_H','AZ_L','T_H','T_L','GX_H','GX_L','GY_H','GY_L','GZ_H','GZ_L'];
+  function chipLabel(it){
+    if(it.k!=='B')return it.k;
+    var t=hx(it.v);
+    if(it.role==='aw')t+=' W'; if(it.role==='ar')t+=' R';
+    return t+' '+(it.ack?'A':'N');
+  }
+  function chipSub(it){
+    if(it.k==='S')return 'START'; if(it.k==='Sr')return '반복 START'; if(it.k==='P')return 'STOP';
+    if(it.role==='aw'||it.role==='ar')return '주소 0x'+hx(it.v>>1);
+    if(it.role==='reg')return '레지스터 번호'; if(it.role==='wd')return '쓸 값';
+    if(it.n===14)return 'b['+it.idx+'] '+REGNAME[it.idx];
+    return 'WHO_AM_I';
+  }
+  function renderChips(){
+    var box=$('chips'); box.innerHTML='';
+    seq.forEach(function(it,i){
+      var b=document.createElement('button'); b.type='button';
+      var cls='chip '+(it.k!=='B'?'c':it.drv);
+      if(it.k==='B'&&!it.ack&&it.drv==='m'&&it.role==='aw')cls+=' nk';
+      if(i===selIdx)cls+=' sel';
+      b.className=cls; b.innerHTML=chipLabel(it)+'<small>'+chipSub(it)+'</small>';
+      b.setAttribute('aria-label',chipLabel(it)+' '+chipSub(it));
+      b.onclick=function(){selIdx=i;renderChips();drawWave();explain()};
+      box.appendChild(b);
+    });
+  }
+  function drawWave(){
+    var svg=$('wv'); while(svg.firstChild)svg.removeChild(svg.firstChild);
+    var it=seq[selIdx]; if(!it){svg.appendChild(mk('text',{x:20,y:95,'class':'tt'},'트랜잭션을 실행하고 칩을 누르면 파형이 나온다.'));return}
+    var x0=56, W=572, cH=30, cL=62, dH=112, dL=146;
+    svg.appendChild(mk('text',{x:8,y:(cH+cL)/2+4},'SCL'));
+    svg.appendChild(mk('text',{x:8,y:(dH+dL)/2+4},'SDA'));
+    if(it.k!=='B'){
+      // START / Sr / STOP: 4단계로 그린다
+      var w=W/4, xs=[x0,x0+w,x0+2*w,x0+3*w,x0+W], scl, sda;
+      if(it.k==='S'){scl=[cH,cH,cH,cL];sda=[dH,dH,dL,dL]}
+      else if(it.k==='Sr'){scl=[cL,cH,cH,cL];sda=[dH,dH,dL,dL]}
+      else{scl=[cL,cH,cH,cH];sda=[dL,dL,dH,dH]}
+      svg.appendChild(mk('rect',{x:xs[1],y:20,width:w*2,height:140,'class':'hi'}));
+      svg.appendChild(mk('polyline',{points:stepPts(xs,scl),'class':'sk'}));
+      svg.appendChild(mk('polyline',{points:stepPts(xs,sda),'class':'s2'}));
+      var msg=it.k==='P'?'SCL High 동안 SDA ↑ = STOP':'SCL High 동안 SDA ↓ = '+(it.k==='S'?'START':'반복 START');
+      svg.appendChild(mk('text',{x:x0+w+6,y:178,'class':'tt'},msg));
+      return;
+    }
+    var bw=W/9, bits=[];
+    for(var i=7;i>=0;i--)bits.push((it.v>>i)&1);
+    bits.push(it.ack?0:1);
+    var spts=[];
+    for(var k=0;k<9;k++){
+      var x=x0+k*bw; spts.push([x,cL],[x+bw*.3,cL],[x+bw*.3,cH],[x+bw*.7,cH],[x+bw*.7,cL],[x+bw,cL]);
+      svg.appendChild(mk('line',{x1:x+bw*.5,y1:20,x2:x+bw*.5,y2:160,'class':'gd'}));
+    }
+    svg.appendChild(mk('polyline',{points:spts.map(function(a){return a.join(',')}).join(' '),'class':'sk'}));
+    var prev=null;
+    for(var k=0;k<9;k++){
+      var x=x0+k*bw, y=bits[k]?dH:dL;
+      var drv=(k<8)?it.drv:(it.drv==='m'?'s':'m');
+      var cls=drv==='m'?'s0':'s1';
+      var pts=(prev==null?[[x,y]]:[[x,prev],[x,y]]).concat([[x+bw,y]]);
+      svg.appendChild(mk('polyline',{points:pts.map(function(a){return a.join(',')}).join(' '),'class':cls}));
+      prev=y;
+      var lab=k<8?String(bits[k]):(bits[8]?'N':'A');
+      svg.appendChild(mk('text',{x:x+bw*.5-4,y:dH-6,'class':drv==='m'?'b0':'b1'},lab));
+      var nm=k<8?('b'+(7-k)):'ACK';
+      if(k===7&&(it.role==='aw'||it.role==='ar'))nm='R/W';
+      svg.appendChild(mk('text',{x:x+bw*.5-10,y:178},nm));
+    }
+  }
+  function stepPts(xs,ys){var p=[];for(var i=0;i<ys.length;i++){p.push(xs[i]+','+ys[i]);p.push(xs[i+1]+','+ys[i])}return p.join(' ')}
+  function explain(){
+    var it=seq[selIdx], t='';
+    if(!it){$('ev').textContent='';return}
+    if(it.k==='S')t='CR1.START = 1 → I2C1이 START를 만든다. SR1.SB = 1 (EV5), SR2.MSL = 1, BUSY = 1.\nSB는 SR1을 읽고 DR에 주소를 쓰면 지워진다.';
+    else if(it.k==='Sr')t='TXE 확인 후 CR1.START = 1 → 반복 START. STOP이 없으므로 버스(BUSY)를 놓지 않는다.\n다시 SR1.SB = 1 (EV5).';
+    else if(it.k==='P')t='CR1.STOP = 1 → STOP 조건. 이후 SR2.BUSY = 0, MSL = 0.\n읽기라면 HAL이 마지막 바이트 수신 전에 STOP을 미리 예약해 둔다.';
+    else if(it.role==='aw'){
+      t='DR = 0x'+hx(it.v)+' (주소 0x'+hx(it.v>>1)+' + W). R/W 비트 = 0.\n';
+      t+=it.ack?'슬레이브(0x'+hx(it.dev7)+')가 9번째 클럭에 SDA를 Low로 끌어내린다 = ACK.\nSR1.ADDR = 1 (EV6), SR2.TRA = 1. HAL은 SR1 → SR2를 읽어 ADDR을 지운다.'
+              :'버스에 0x'+hx(it.v>>1)+' 주소를 가진 장치가 없다(실제 장치는 0x'+hx(it.dev7)+'). SDA가 풀업으로 High = NACK.\nSR1.AF = 1 → HAL이 STOP을 내고 HAL_ERROR, ErrorCode = HAL_I2C_ERROR_AF.';
+      if(!it.ack&&(+$('selArg').value)===0x68)t+='\n원인: 0x68을 시프트하지 않고 넘겼다. 버스에는 7비트 주소 0x34가 나갔다.';
+    }
+    else if(it.role==='reg')t='DR = 0x'+hx(it.v)+' (레지스터 번호). TXE = 1이 되면 다음 바이트를 넣을 수 있다.\nMPU6050은 이 값을 내부 레지스터 포인터에 저장하고 ACK한다.';
+    else if(it.role==='wd')t='DR = 0x00 (PWR_MGMT_1에 쓸 값). 슬레이브 ACK 후 BTF = 1 → HAL이 STOP을 낸다.\nMPU6050: SLEEP = 0, CLKSEL = 0(내부 8 MHz) → 측정 시작.';
+    else if(it.role==='ar')t='DR = 0x'+hx(it.v)+' (주소 + R). R/W 비트 = 1 → 이제 슬레이브가 SDA를 구동한다.\nSR1.ADDR = 1, SR2.TRA = 0(수신). '+(seq.filter(function(x){return x.role==='rd'}).length===1?'N = 1이므로 HAL은 ADDR을 지우기 전에 CR1.ACK = 0, 지운 직후 CR1.STOP = 1.':'N > 2이므로 CR1.ACK = 1인 채 ADDR을 지운다.');
+    else if(it.role==='rd'){
+      t='슬레이브가 0x'+hx(it.v)+'를 MSB부터 내보낸다(주황). 9번째 클럭은 마스터(파랑)가 '+(it.ack?'ACK (CR1.ACK = 1)':'NACK (CR1.ACK = 0)')+'.\n';
+      t+='수신 완료 → SR1.RXNE = 1 (EV7) → HAL이 DR을 읽는다.';
+      if(it.n===14){
+        if(it.idx===11)t+='\n남은 3바이트 처리 시작: BTF 대기 후 CR1.ACK = 0, 이 바이트(b[11]) 읽기.';
+        if(it.idx===12)t+='\nBTF 대기 후 CR1.STOP = 1, 이 바이트(b[12]) 읽기.';
+        if(it.idx===13)t+='\n마지막 바이트: NACK → 슬레이브가 SDA를 놓고, 예약된 STOP이 나간다.';
+        t+='\nMPU6050 레지스터 0x'+hx(0x3B+it.idx)+' '+REGNAME[it.idx]+' (자동 증가).';
+      }else t+='\nN = 1: ADDR을 지울 때 이미 NACK과 STOP이 예약되어 있었다.';
+    }
+    $('ev').textContent=t;
+  }
+
+  /* ---------- 결과 표시 ---------- */
+  function showRun(r){
+    var nB=r.items.filter(function(x){return x.k==='B'}).length, nC=r.items.filter(function(x){return x.k!=='B'}).length;
+    var f=+$('selClk').value, clk=nB*9+nC, us=clk/f*1e6;
+    $('vRet').textContent=r.ret; $('stRet').className='stat '+(r.ok?'good':'bad');
+    $('vBytes').textContent=nB+' B / '+clk+' 클럭';
+    $('vTime').textContent=(us>=1000?(us/1000).toFixed(2)+' ms':us.toFixed(0)+' µs')+' @ '+(f/1000)+' kHz';
+  }
+  function showPwr(){
+    $('vPwr').textContent='0x'+hx(dev.pwr)+(asleep()?' (SLEEP = 1)':' (깨어 있음)');
+    $('stSleep').className='stat '+(asleep()?'bad':'good');
+  }
+  function s16(h,l){var v=(h<<8)|l;return v>=0x8000?v-0x10000:v}
+  function pad(v,n){v=String(v);while(v.length<n)v=' '+v;return v}
+  function cdiv(a,b){return Math.trunc(a/b)}
+  function uartLine(b){
+    var ax=s16(b[0],b[1]),ay=s16(b[2],b[3]),az=s16(b[4],b[5]),tp=s16(b[6],b[7]),gx=s16(b[8],b[9]),gy=s16(b[10],b[11]),gz=s16(b[12],b[13]);
+    var t100=cdiv(tp*100,340)+3653, sg=t100<0?'-':'', ta=Math.abs(t100), fr=String(ta%100); if(fr.length<2)fr='0'+fr;
+    return 'acc[mg] '+pad(cdiv(ax*1000,16384),6)+' '+pad(cdiv(ay*1000,16384),6)+' '+pad(cdiv(az*1000,16384),6)+
+      ' | gyro[0.1dps] '+pad(cdiv(gx*10,131),6)+' '+pad(cdiv(gy*10,131),6)+' '+pad(cdiv(gz*10,131),6)+
+      ' | temp '+sg+Math.floor(ta/100)+'.'+fr+' C';
+  }
+  var uartLines=['(리셋 후 아직 출력 없음)'];
+  function pushUart(s){if(uartLines.length===1&&uartLines[0].charAt(0)==='(')uartLines=[];uartLines.push(s);while(uartLines.length>6)uartLines.shift();$('uart').textContent=uartLines.join('\n')}
+  function showBuf(){
+    var g=$('bgrid'); g.innerHTML='';
+    for(var i=0;i<14;i++){
+      var d=document.createElement('div'); d.className='bc '+(i<6?'ga':(i<8?'gt':'gg'));
+      d.innerHTML='<span class="a">b['+i+'] 0x'+hx(0x3B+i)+'</span><span class="h">'+hx(mcu.b[i])+'</span><span class="nm">'+REGNAME[i]+'</span>';
+      g.appendChild(d);
+    }
+    var b=mcu.b, afs=+$('afs').value, fs=+$('fs').value, s=sensorRaw();
+    var ax=s16(b[0],b[1]),ay=s16(b[2],b[3]),az=s16(b[4],b[5]),tp=s16(b[6],b[7]),gz=s16(b[12],b[13]);
+    var t='조립: ax = (int16_t)(0x'+hx(b[0])+hx(b[1])+') = '+ax+',  ay = '+ay+',  az = '+az+',  tp = '+tp+',  gz = '+gz+'\n';
+    t+='코드 변환(±2 g, ±250 °/s 가정): az = '+az+' × 1000 / 16384 = '+cdiv(az*1000,16384)+' mg,  gz = '+gz+' × 10 / 131 = '+cdiv(gz*10,131)+' (0.1 °/s)\n';
+    t+='온도: '+tp+' × 100 / 340 + 3653 = '+(cdiv(tp*100,340)+3653)+' (0.01 °C)';
+    if(!mcu.valid)t+='\n※ 아직 14바이트 읽기를 실행하지 않았다.';
+    else if(asleep())t+='\n※ MPU6050이 잠들어 있어 출력 레지스터가 갱신되지 않는다.';
+    if(afs!==0||fs!==0)t+='\n⚠ 장치 범위가 코드 가정과 다르다: 가속도 감도 '+SA[afs]+' LSB/g, 자이로 '+SG[fs]+' LSB/(°/s). 출력이 실제의 '+(SA[afs]/16384)+'배(가속도), '+(SG[fs]/131).toFixed(3)+'배(자이로)로 찍힌다.';
+    if(s.sat&&!asleep())t+='\n⚠ 센서 측 포화: 물리량이 범위를 넘어 원시값이 ±32767 근처에 고정된다.';
+    $('conv').textContent=t;
+  }
+  function run(op){
+    var r=build(op); seq=r.items;
+    selIdx=r.ok?seq.length-2:1;   // 성공: 마지막 데이터 바이트, 실패: NACK 받은 주소 바이트
+    lastRun=r;
+    renderChips(); drawWave(); explain(); showRun(r); showPwr(); showBuf();
+    if(op==='who'){
+      if(r.ok){pushUart('WHO_AM_I = 0x'+hx(mcu.who)+' (expect 0x68)')}
+      else pushUart('MPU6050 not responding (check wiring / pull-ups / AD0)  → Error_Handler()');
+    }
+    if(op==='burst'){ if(r.ok)pushUart(uartLine(mcu.b)); else pushUart('read error  → HAL_I2C_DeInit + MX_I2C1_Init'); }
+    if(op==='wake'&&!r.ok)pushUart('(Mem_Write 실패 → Error_Handler())');
+  }
+
+  /* ---------- 입력 연결 ---------- */
+  function labels(){['pitch','roll','shake','rate','temp'].forEach(function(i){$('l_'+i).textContent=$(i).value})}
+  ['pitch','roll','shake','rate','temp'].forEach(function(i){$(i).oninput=function(){labels();if(!asleep())devRegs()}});
+  $('afs').onchange=$('fs').onchange=function(){if(!asleep())devRegs();showBuf()};
+  $('bWho').onclick=function(){run('who')};
+  $('bWake').onclick=function(){run('wake')};
+  $('bBurst').onclick=function(){run('burst')};
+  var timer=null;
+  $('bLoop').onclick=function(){
+    if(timer){clearInterval(timer);timer=null;this.textContent='200 ms 루프 시작';this.setAttribute('aria-pressed','false');return}
+    run('burst'); timer=setInterval(function(){run('burst')},200);
+    this.textContent='루프 정지'; this.setAttribute('aria-pressed','true');
+  };
+  $('bPor').onclick=function(){
+    dev.pwr=0x40; dev.latched=new Array(14).fill(0); mcu.b=new Array(14).fill(0); mcu.valid=false;
+    seq=[]; selIdx=-1; lastRun=null; uartLines=['(리셋 후 아직 출력 없음)']; $('uart').textContent=uartLines[0];
+    renderChips(); drawWave(); explain(); showPwr(); showBuf();
+    $('vRet').textContent='–'; $('stRet').className='stat'; $('vBytes').textContent='–'; $('vTime').textContent='–';
+  };
+  $('selClk').onchange=function(){if(lastRun)showRun(lastRun)};
+  labels(); showPwr(); showBuf(); drawWave(); $('uart').textContent=uartLines[0];
+})();
+</script>
+</body></html>

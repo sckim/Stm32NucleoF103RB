@@ -1,0 +1,24 @@
+** Drc report for Experimental_Kit.kicad_pcb **
+** Created on 2026-10-28T17:15:30 **
+** Report includes: Errors, Warnings, Exclusions **
+
+** Found 1 DRC violations **
+[lib_footprint_issues]: The current configuration does not include the footprint library 'Adafruit nRF52 Bluefruit Feather rev G'
+    Local override; warning
+    @(101.6700 mm, 44.7000 mm): Footprint MS1
+
+** Found 0 unconnected pads **
+
+** Found 0 Footprint errors **
+
+** Ignored checks **
+    - Footprint has no courtyard defined
+    - Track endpoint not centered on via
+    - Tuning profile track geometries
+    - Footprint doesn't match symbol's footprint filters
+    - Silkscreen clearance
+    - Silkscreen clipped by solder mask
+    - Silkscreen clipped by board edge
+    - Footprint component type doesn't match footprint pads
+
+** End of Report **

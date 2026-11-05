@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>06_ADC_Vrefint_VDDA 교안</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: 한 열 교안(최대 860px) — 문제 → 비율 측정·오차 → 내부 채널·데이터시트 → 시뮬레이터 → 레지스터 대응 → 실행 경로 → 코드 → 실험 → 트러블슈팅 → 문제 → 정리.
+   채널 색 고정: A0(PA0)=파랑, A1=주황, A2=청록, Vrefint/내부=보라. 오차 그래프: 3.3 V 가정=주황, 보정=파랑. (ADC 그룹 교안과 같은 토큰) */
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --surface2:#E7ECF0; --fg:#14222C; --muted:#52636F; --line:#CBD5DC;
+  --c0:#1D4ED8; --c0-soft:#DCE6FB; --c1:#C2410C; --c1-soft:#FDE6DA; --c2:#0F766E; --c2-soft:#D5F0EC; --c3:#7E22CE; --c3-soft:#EEDFFB;
+  --code-bg:#0F1B24; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#9A3412; --warn-bg:#FFF1E6; --ok:#166534; --ok-bg:#E4F5EA;
+  --font-body:"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.75;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:860px;margin:0 auto}
+header{padding-block:40px 8px}
+.kicker{font-family:var(--font-mono);font-size:13px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.25;margin:8px 0 12px;text-wrap:balance;font-weight:700}
+.lead{color:var(--muted);margin:0;max-width:62ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0;padding:0;list-style:none}
+nav.toc a{display:block;padding:6px 12px;border:1px solid var(--line);border-radius:6px;color:var(--fg);text-decoration:none;font-size:14px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--c0);outline:2px solid var(--c0);outline-offset:1px}
+section{margin-top:56px}
+h2{font-size:24px;line-height:1.35;margin:0 0 12px;text-wrap:balance;font-weight:700}
+h3{font-size:18px;margin:28px 0 8px;font-weight:700}
+p{margin:0 0 14px;max-width:68ch}
+ul,ol{margin:0 0 14px;padding-left:22px;max-width:68ch}
+li{margin-bottom:4px}
+code{font-family:var(--font-mono);font-size:.9em;background:var(--surface2);padding:1px 6px;border-radius:4px}
+.k0{color:var(--c0);font-weight:700} .k1{color:var(--c1);font-weight:700} .k2{color:var(--c2);font-weight:700} .k3{color:var(--c3);font-weight:700}
+.box{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:16px 18px;margin:16px 0}
+.box.warn{background:var(--warn-bg);border-color:var(--warn)} .box.ok{background:var(--ok-bg);border-color:var(--ok)}
+.box > :last-child{margin-bottom:0}
+.label{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.tablewrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:15px;background:var(--surface)}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--surface2);font-weight:700;white-space:nowrap}
+td.m,th.m{font-family:var(--font-mono);font-size:13.5px}
+td.n{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+
+/* block diagram */
+.diag{max-width:720px;margin:18px auto}
+.diag svg{display:block;width:100%;height:auto}
+#blk .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+#blk .bx.hot{stroke:var(--warn);stroke-width:2.5;fill:var(--warn-bg)}
+#blk .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+#blk .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+#blk .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+#blk .w0{stroke:var(--c0)} #blk .w1{stroke:var(--c1)} #blk .w2{stroke:var(--c2)} #blk .w3{stroke:var(--c3)}
+#blk .d0{fill:var(--c0)} #blk .d1{fill:var(--c1)} #blk .d2{fill:var(--c2)} #blk .d3{fill:var(--c3)}
+#blk .ah{fill:var(--muted)}
+
+/* flow */
+.flow{list-style:none;padding:0;margin:16px 0;display:grid;gap:0;max-width:none}
+.flow li{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:0;padding:0 0 14px;position:relative}
+.flow li:not(:last-child)::before{content:"";position:absolute;left:16px;top:34px;bottom:0;width:2px;background:var(--line)}
+.flow .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:14px;font-weight:600;background:var(--surface2);border:2px solid var(--line)}
+.flow li.hw .n{border-color:var(--c3);color:var(--c3)} .flow li.sw .n{border-color:var(--c0);color:var(--c0)}
+.flow .tx{min-width:0} .flow .tx b{display:block}
+.flow .tx span{color:var(--muted);font-size:14.5px}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:11.5px;padding:0 6px;border-radius:4px;margin-left:6px;vertical-align:1px}
+.tag.hw{background:var(--c3-soft);color:var(--c3)} .tag.sw{background:var(--c0-soft);color:var(--c0)}
+
+/* mode cards */
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:16px 0}
+.mode{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:14px 16px;min-width:0}
+.mode.pick{border:2px solid var(--ok)}
+.mode b{display:block;margin-bottom:2px}
+.mode .reg{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);display:block;margin-bottom:8px}
+.trk{display:flex;gap:3px;margin:8px 0 6px;flex-wrap:wrap}
+.trk span{font-family:var(--font-mono);font-size:11.5px;font-weight:600;padding:2px 6px;border-radius:4px;border:1px solid var(--line)}
+.trk .g{color:var(--muted);border-style:dashed;background:none}
+.trk .r0{background:var(--c0-soft);color:var(--c0);border-color:var(--c0)} .trk .r1{background:var(--c1-soft);color:var(--c1);border-color:var(--c1)}
+.trk .r2{background:var(--c2-soft);color:var(--c2);border-color:var(--c2)} .trk .r3{background:var(--c3-soft);color:var(--c3);border-color:var(--c3)}
+.trk .x{text-decoration:line-through;opacity:.55}
+.mode p{font-size:14.5px;margin:0}
+
+/* simulator */
+.sim{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:18px;margin:16px 0}
+.subhead{font-weight:700;margin:18px 0 6px;padding-top:14px;border-top:1px dashed var(--line)}
+.subhead:first-child{margin-top:0;padding-top:0;border-top:0}
+.ranks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+@media (max-width:560px){.ranks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.rk{border:2px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);min-width:0;position:relative}
+.rk .h{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.rk .c{font-weight:700;font-size:15px;line-height:1.35}
+.rk .p{font-family:var(--font-mono);font-size:11.5px;color:var(--muted)}
+.rk .v{font-family:var(--font-mono);font-size:13px;font-variant-numeric:tabular-nums;margin-top:4px}
+.rk.nx{box-shadow:0 0 0 3px var(--fg) inset}
+.rk.nx::after{content:"다음 트리거";position:absolute;top:-11px;right:8px;font-size:11px;font-weight:700;background:var(--fg);color:var(--bg);padding:0 6px;border-radius:4px}
+.rk.r0 .c{color:var(--c0)} .rk.r1 .c{color:var(--c1)} .rk.r2 .c{color:var(--c2)} .rk.r3 .c{color:var(--c3)}
+.rk.on.r0{background:var(--c0-soft);border-color:var(--c0)} .rk.on.r1{background:var(--c1-soft);border-color:var(--c1)}
+.rk.on.r2{background:var(--c2-soft);border-color:var(--c2)} .rk.on.r3{background:var(--c3-soft);border-color:var(--c3)}
+.regs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.stat{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.stat .k{font-size:12px;color:var(--muted);font-family:var(--font-mono)}
+.stat .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3;overflow-wrap:anywhere}
+.lamp{display:inline-block;padding:0 10px;border-radius:999px;font-size:15px;border:1px solid var(--line)}
+.lamp.on{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+.outs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+@media (max-width:560px){.outs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.oc{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.oc .k{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.oc .v{font-family:var(--font-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.oc .f{font-size:12.5px}
+.oc.bad{border:2px solid var(--warn);background:var(--warn-bg)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+button,select,input{font-family:inherit}
+button{font-size:15px;font-weight:700;padding:9px 14px;border-radius:6px;border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;min-height:44px}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+button.hw{border-color:var(--c3);color:var(--c3)} button.hw:hover{background:var(--c3-soft)}
+button.sw{border-color:var(--c0);color:var(--c0)} button.sw:hover{background:var(--c0-soft)}
+button.plain:hover{background:var(--surface2)}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 16px;margin:10px 0}
+.ctl label{display:block;font-size:14px;color:var(--muted)}
+.ctl label b{font-family:var(--font-mono);color:var(--fg);font-weight:600}
+.ctl select{font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl input[type=range]{width:100%;min-height:32px}
+.calc{font-family:var(--font-mono);font-size:13.5px;line-height:1.65;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-height:5.4em;white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0 0}
+.uart{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);color:var(--code-fg);border-radius:6px;padding:10px 12px;white-space:pre;overflow-x:auto;margin:8px 0 0;min-height:2.6em}
+.log{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:8px 0 0;max-height:7.5em;overflow:auto;white-space:pre-wrap}
+
+/* code */
+pre{background:var(--code-bg);color:var(--code-fg);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:0;font-family:var(--font-mono);font-size:13.5px;line-height:1.7;tab-size:2}
+pre code{background:none;padding:0;font-size:inherit;color:inherit}
+.cm{color:var(--code-cmt)} .kw{color:var(--code-kw)} .hl{color:var(--code-hl)}
+.codepair{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;margin:14px 0;align-items:start}
+@media (max-width:760px){.codepair{grid-template-columns:minmax(0,1fr)}}
+.codepair ol{margin:0;padding-left:20px;font-size:15px} .codepair li{margin-bottom:8px}
+.file{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:18px 0 6px}
+
+/* quiz */
+details{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0;padding:0}
+summary{cursor:pointer;padding:12px 16px;font-weight:500;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--c0)} details[open] summary::before{content:"▾ "}
+summary:focus-visible{outline:3px solid var(--fg);outline-offset:-3px;border-radius:8px}
+details .ans{padding:0 16px 14px;color:var(--fg)} details .ans p{margin-bottom:8px}
+footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+
+/* 타이머 교안 추가 토큰 */
+.diag .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.diag .bx.hot{stroke:var(--warn);stroke-width:2.5;fill:var(--warn-bg)}
+.diag .bx.hw{stroke:var(--c3);fill:var(--c3-soft)} .diag .bx.sw{stroke:var(--c0);fill:var(--c0-soft)}
+.diag .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.diag .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.diag .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+.diag .ah{fill:var(--muted)}
+.diag .ax{stroke:var(--muted);stroke-width:1.3;fill:none}
+.diag .gd{stroke:var(--line);stroke-width:1.2;stroke-dasharray:5 4;fill:none}
+.diag .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .diag .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.diag .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .diag .s3{stroke:var(--c3);stroke-width:2.2;fill:none}
+.diag .d1{fill:var(--c1)} .diag .d0{fill:var(--c0)} .diag .d3{fill:var(--c3)}
+.diag .blk{fill:var(--c1-soft);stroke:var(--c1)}
+.diag text.m{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.diag text.t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.wave{margin:12px 0}
+.wave svg{display:block;width:100%;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px}
+.wave .ax{stroke:var(--muted);stroke-width:1.2;fill:none}
+.wave .gd{stroke:var(--line);stroke-width:1;stroke-dasharray:4 4;fill:none}
+.wave .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .wave .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.wave .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .wave .s3{stroke:var(--c3);stroke-width:2.2;fill:none}
+.wave .ev{stroke:var(--c3);stroke-width:1.6}
+.wave .bar{fill:var(--c1)} .wave .bar0{fill:var(--c0)}
+.wave text{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.wave text.tt{font-family:var(--font-body);font-size:12.5px;fill:var(--fg)}
+.bits{display:flex;margin:14px 0;font-family:var(--font-mono);font-size:13.5px;text-align:center}
+.bits div{flex:1;border:2px solid var(--c0);padding:10px 6px;background:var(--c0-soft);min-width:0}
+.bits div.lo{border-color:var(--c2);background:var(--c2-soft)}
+.bits small{display:block;color:var(--muted);font-size:12px}
+.eq{font-family:var(--font-mono);font-size:14.5px;background:var(--surface2);border-left:4px solid var(--c0);padding:10px 14px;margin:14px 0;overflow-x:auto;white-space:pre-wrap}
+.nextprev{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+.nextprev a{border:1px solid var(--line);border-radius:8px;padding:8px 14px;text-decoration:none;color:var(--c0);background:var(--surface)}
+td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
+.rowbad td{background:var(--warn-bg)}
+.cards2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:16px 0}
+.cards2 .mode{min-width:0}
+
+.wave .dot{fill:var(--c3)} .wave .blk{fill:var(--c1-soft);stroke:var(--c1)}
+.capt{font-size:14px;color:var(--muted);margin:6px 2px 14px}
+.stat .v.sm{font-size:15px}
+.sim .row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+
+
+/* ADC 워치독·Vrefint 교안 추가 (기존 토큰만 사용) */
+.wave .dot0{fill:var(--c0)}
+.wave .irq{stroke:var(--c1);stroke-width:2}
+.wave .arm{stroke:var(--c2);stroke-width:2.4}
+.wave .off{fill:var(--surface2);stroke:var(--line)}
+.wave .band{fill:var(--c3-soft)}
+.wave .shade{fill:var(--c1-soft)}
+.wave .pt{fill:var(--c0);stroke:var(--surface);stroke-width:1.5}
+.wave .pt1{fill:var(--c1);stroke:var(--surface);stroke-width:1.5}
+.stat.bad{border-color:var(--warn);background:var(--warn-bg)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">STM32 Nucleo-F103RB · ADC · 교안</div>
+  <h1>Vrefint로 VDDA를 역산하고 ADC 값을 보정한다</h1>
+  <p class="lead">ADC가 내놓는 12비트 코드는 전압이 아니라 VDDA에 대한 비율이다. <code>mV = code × 3300 / 4095</code>는 VDDA가 정확히 3.3 V일 때만 맞고, 전원이 흔들리면 모든 채널이 같은 비율로 틀어진다. 이 교안은 내부 기준전압 Vrefint(CH17)를 같은 ADC로 재서 실제 VDDA를 계산하고 외부 채널 값을 보정하는 <code>06_ADC_Vrefint_VDDA_c</code> 예제를 해석한다. <code>03_ADC_Multi</code> 교안 6절의 두 식에서 한 걸음 더 들어가, 데이터시트의 Vrefint 편차가 보정 결과에 남기는 오차, 보정이 오히려 손해인 조건, 1점 교정과 해상도 개선까지 다룬다.</p>
+  <nav class="toc" aria-label="목차">
+    <a href="#s1">1. 문제와 목표</a><a href="#s2">2. 비율 측정과 오차</a><a href="#s3">3. 내부 채널 구조</a><a href="#s4">4. 직접 만져 보기</a><a href="#s5">5. 레지스터 대응</a><a href="#s6">6. 실행 경로</a><a href="#s7">7. 코드 읽기</a><a href="#s8">8. 실험</a><a href="#s9">9. 트러블슈팅</a><a href="#s10">10. 확인 문제</a>
+  </nav>
+</header>
+
+<section id="s1">
+<h2>1. 문제: 기준이 흔들리면 모든 측정이 흔들린다</h2>
+<p>LQFP64 패키지의 F103은 VREF+가 내부에서 VDDA에 연결되어 있다(데이터시트 Table 47 주 3). 즉 ADC의 기준전압은 곧 아날로그 전원이다. USB 전원, 배터리, 부하 변동으로 VDDA가 바뀌면 같은 입력 전압에서도 코드가 달라진다. 학습 목표는 다음과 같다.</p>
+<ul>
+  <li>코드가 <code>Vin / VDDA × 4095</code>라는 비율임을 이용해 Vrefint 측정값으로 VDDA를 역산한다.</li>
+  <li>데이터시트 Table 12의 Vrefint min/typ/max(1.16/1.20/1.24 V)로부터 보정 후 남는 오차 범위(+3.4%~−3.2%)를 계산한다.</li>
+  <li>보정 없음(3.3 V 가정)과 보정 있음의 오차를 비교해 보정이 이득인 VDDA 범위를 판단한다.</li>
+  <li>내부 채널 사용 조건(<code>CR2.TSVREFE</code>, 샘플 시간 <code>TS_vrefint</code>)과 정수 연산의 해상도 한계를 설명한다.</li>
+</ul>
+<div class="box"><div class="label">이 예제의 동작</div>
+<p>1초마다 <code>adc_read_avg()</code>로 Vrefint(CH17)를 16회 변환해 평균을 내고, 이어서 PA0(CH0)도 16회 평균한다. <code>VDDA = 1200 × 4095 / raw_vref</code>를 계산하고, A0를 &lsquo;3.3 V 가정 mV&rsquo;와 &lsquo;실측 VDDA 기준 mV&rsquo;로 함께 USART2(115200 8N1)에 출력한다. 인터럽트와 DMA는 쓰지 않는다(폴링).</p></div>
+<div class="box warn"><p>이 예제는 검토 전(컴파일만 확인) 상태이다.</p></div>
+</section>
+
+<section id="s2">
+<h2>2. 핵심 개념: 비율 측정과 남는 오차</h2>
+<p>같은 ADC로 두 전압을 재면 둘 다 같은 VDDA로 나뉜다.</p>
+<div class="eq">raw_vref = Vrefint × 4095 / VDDA        raw_a0 = Vin × 4095 / VDDA
+VDDA     = Vrefint × 4095 / raw_vref   (예제: VREFINT_MV = 1200 고정)
+Vin      = raw_a0 × VDDA / 4095  =  Vrefint × raw_a0 / raw_vref</div>
+<p>마지막 식이 핵심이다. 보정된 Vin에는 VDDA가 사라지고 <b>Vrefint와 두 코드의 비율</b>만 남는다. 따라서 보정 결과의 정확도는 VDDA가 아니라 Vrefint를 얼마나 정확히 아느냐가 정한다. 예제는 Vrefint를 전형값 1200 mV로 두므로, 이 칩의 실제 Vrefint가 다르면 그 비율만큼 모든 결과가 틀어진다.</p>
+<div class="tablewrap"><table>
+  <tr><th>방식</th><th>계산값 / 실제값</th><th>VDDA = 3.0 V</th><th>3.3 V</th><th>3.6 V</th></tr>
+  <tr><td>3.3 V 가정 (<code>a0_naive</code>)</td><td class="m">3.3 V / VDDA</td><td class="n">+10.0%</td><td class="n">0%</td><td class="n">−8.3%</td></tr>
+  <tr><td>Vrefint 보정, 실제 Vrefint = 1.16 V</td><td class="m">1.20 / 1.16</td><td class="n">+3.4%</td><td class="n">+3.4%</td><td class="n">+3.4%</td></tr>
+  <tr><td>Vrefint 보정, 실제 Vrefint = 1.20 V</td><td class="m">1.20 / 1.20</td><td class="n">0%</td><td class="n">0%</td><td class="n">0%</td></tr>
+  <tr><td>Vrefint 보정, 실제 Vrefint = 1.24 V</td><td class="m">1.20 / 1.24</td><td class="n">−3.2%</td><td class="n">−3.2%</td><td class="n">−3.2%</td></tr>
+</table></div>
+<div class="wave"><svg viewBox="0 0 640 270" role="img" aria-label="실제 VDDA 3.0~3.6 V에서 3.3 V 가정 환산의 오차 곡선과, Vrefint 보정 후 남는 오차 범위(+3.4%~-3.2%) 띠">
+<rect class="band" x="70" y="91.3" width="540" height="55.6"/>
+<line class="gd" x1="70" y1="36.7" x2="610" y2="36.7"/><text x="28" y="40.7">+10%</text>
+<line class="gd" x1="70" y1="78.3" x2="610" y2="78.3"/><text x="28" y="82.3">+5%</text>
+<line class="gd" x1="70" y1="120.0" x2="610" y2="120.0"/><text x="28" y="124.0">0%</text>
+<line class="gd" x1="70" y1="161.7" x2="610" y2="161.7"/><text x="24" y="165.7">-5%</text>
+<line class="gd" x1="70" y1="203.3" x2="610" y2="203.3"/><text x="24" y="207.3">-10%</text>
+<line class="ax" x1="70" y1="20" x2="70" y2="222"/><line class="ax" x1="70" y1="222" x2="610" y2="222"/>
+<text x="58.0" y="240">3.0</text>
+<text x="148.0" y="240">3.1</text>
+<text x="238.0" y="240">3.2</text>
+<text x="328.0" y="240">3.3</text>
+<text x="418.0" y="240">3.4</text>
+<text x="508.0" y="240">3.5</text>
+<text x="598.0" y="240">3.6</text>
+<text x="300" y="262">실제 VDDA [V]</text>
+<polyline class="s1" points="70.0,36.7 79.0,39.7 88.0,42.7 97.0,45.7 106.0,48.7 115.0,51.7 124.0,54.6 133.0,57.6 142.0,60.5 151.0,63.4 160.0,66.2 169.0,69.1 178.0,71.9 187.0,74.7 196.0,77.5 205.0,80.3 214.0,83.1 223.0,85.8 232.0,88.6 241.0,91.3 250.0,94.0 259.0,96.6 268.0,99.3 277.0,101.9 286.0,104.6 295.0,107.2 304.0,109.8 313.0,112.4 322.0,114.9 331.0,117.5 340.0,120.0 349.0,122.5 358.0,125.0 367.0,127.5 376.0,130.0 385.0,132.4 394.0,134.9 403.0,137.3 412.0,139.7 421.0,142.1 430.0,144.5 439.0,146.9 448.0,149.2 457.0,151.6 466.0,153.9 475.0,156.2 484.0,158.5 493.0,160.8 502.0,163.1 511.0,165.4 520.0,167.6 529.0,169.9 538.0,172.1 547.0,174.3 556.0,176.5 565.0,178.7 574.0,180.9 583.0,183.0 592.0,185.2 601.0,187.3 610.0,189.4"/>
+<text x="97.0" y="31.7" class="tt">3.3 V 가정 (보정 없음)</text>
+<text x="88.0" y="111.7" class="tt">Vrefint 보정 후 범위</text>
+<text x="88.0" y="137.3">Vrefint 1.16~1.24 V</text>
+<line class="s3" x1="70" y1="91.3" x2="610" y2="91.3"/><line class="s3" x1="70" y1="146.9" x2="610" y2="146.9"/>
+<text x="560" y="86.3">+3.4%</text><text x="560" y="161.9">−3.2%</text>
+</svg>
+
+<p class="capt">그림 1. 3.3 V 가정 환산의 오차(주황)는 VDDA에 따라 +10%~−8.3%로 변하지만, Vrefint 보정 후 오차는 VDDA와 무관하게 Vrefint 개체 편차가 정하는 띠(보라, +3.4%~−3.2%) 안에 머문다. VDDA가 3.3 V 근처(약 3.19~3.41 V)이면 최악의 경우 보정하지 않는 편이 더 정확할 수 있다.</p></div>
+<div class="box warn"><div class="label">F1에는 공장 교정값이 없다</div>
+<p>F0·F3·F4·L4 등 후속 STM32는 생산 시 측정한 Vrefint 코드(<code>VREFINT_CAL</code>)를 시스템 메모리에 저장해 두지만, F103 데이터시트 DS5319와 RM0008에는 그런 값이 없다(이 저장소의 <code>Docs/</code> 문서에서 확인). 그래서 예제는 전형값 1200 mV를 상수로 쓰고, 개체 편차는 그대로 오차로 남는다. 줄이려면 사용자가 직접 1점 교정을 해야 한다(실험 B).</p></div>
+</section>
+
+<section id="s3">
+<h2>3. 하드웨어 구조: 내부 채널과 데이터시트 수치</h2>
+<div class="tablewrap"><table>
+  <tr><th>채널</th><th>연결</th><th>사용 조건</th><th>이 예제</th></tr>
+  <tr><td><span class="k0">CH0</span></td><td class="m">PA0 (A0)</td><td>아날로그 모드 핀</td><td>239.5 사이클, 16회 평균</td></tr>
+  <tr><td>CH16</td><td>내부 온도 센서</td><td><code>TSVREFE = 1</code></td><td>사용 안 함 (02_ADC_Temperature)</td></tr>
+  <tr><td><span class="k3">CH17</span></td><td>내부 기준전압 Vrefint</td><td><code>ADC1_CR2.TSVREFE = 1</code> (ADC1에만 있음)</td><td>239.5 사이클, 16회 평균</td></tr>
+</table></div>
+<p>데이터시트 DS5319 Table 12(Embedded internal reference voltage)와 Table 47(ADC characteristics)에서 직접 확인한 값이다.</p>
+<div class="tablewrap"><table>
+  <tr><th>기호</th><th>항목</th><th>조건</th><th class="n">min</th><th class="n">typ</th><th class="n">max</th></tr>
+  <tr><td class="m">V<sub>REFINT</sub></td><td>내부 기준전압</td><td>−40~+85 °C</td><td class="n">1.16 V</td><td class="n">1.20 V</td><td class="n">1.24 V</td></tr>
+  <tr><td class="m">V<sub>REFINT</sub></td><td>내부 기준전압</td><td>−40~+105 °C</td><td class="n">1.16 V</td><td class="n">1.20 V</td><td class="n">1.26 V</td></tr>
+  <tr><td class="m">T<sub>S_vrefint</sub></td><td>Vrefint 읽기 샘플링 시간</td><td>–</td><td class="n">–</td><td class="n">5.1 µs</td><td class="n">17.1 µs</td></tr>
+  <tr><td class="m">V<sub>RERINT</sub></td><td>온도 범위 전체에서의 변동</td><td>VDD = 3 V ± 10 mV</td><td class="n">–</td><td class="n">–</td><td class="n">10 mV</td></tr>
+  <tr><td class="m">T<sub>Coeff</sub></td><td>온도 계수</td><td>–</td><td class="n">–</td><td class="n">–</td><td class="n">100 ppm/°C</td></tr>
+  <tr><td class="m">V<sub>DDA</sub></td><td>ADC 사용 시 아날로그 전원</td><td>–</td><td class="n">2.4 V</td><td class="n">–</td><td class="n">3.6 V</td></tr>
+</table></div>
+<p>요점은 두 가지이다. 첫째, 개체 사이 편차(±40 mV, 약 ±3.3%)가 온도 변동(최대 10 mV)보다 훨씬 크다. 그래서 칩마다 한 번만 교정하면 대부분의 오차가 사라진다. 둘째, T<sub>S_vrefint</sub>의 최댓값 17.1 µs 이상을 샘플링해야 모든 개체에서 충분하다. 예제는 239.5 사이클 / 10.67 MHz = <b>22.45 µs</b>로 이를 만족한다. 한 단계 아래인 71.5 사이클은 6.70 µs로 전형값 5.1 µs보다는 길지만 최댓값에는 못 미친다.</p>
+<div class="tablewrap"><table>
+  <tr><th>항목</th><th>값</th><th>근거</th></tr>
+  <tr><td>ADCCLK</td><td class="n">10.67 MHz</td><td>PCLK2 64 MHz ÷ 6 (<code>RCC_CFGR.ADCPRE = 10</code>), 최대 14 MHz</td></tr>
+  <tr><td>변환 1회</td><td class="n">23.6 µs</td><td>(239.5 + 12.5) 사이클 = 252 사이클</td></tr>
+  <tr><td>채널당 16회</td><td class="n">약 0.38 ms</td><td>16 × 23.6 µs (HAL 호출 시간 제외)</td></tr>
+  <tr><td>VDDA 핀</td><td>보드 AVDD 넷</td><td>Nucleo 회로도 <code>Docs/Schematic_STM32F103RB.pdf</code>의 VDDA/VREF+ 핀 = AVDD</td></tr>
+</table></div>
+</section>
+
+<section id="s4">
+<h2>4. 직접 만져 보기</h2>
+<p>아래 시뮬레이터는 예제의 정수 연산(<code>uint32_t</code> 곱셈·나눗셈, 16회 평균의 버림)을 그대로 따라 한다. &lsquo;실제 VDDA&rsquo;와 &lsquo;이 칩의 실제 Vrefint&rsquo;는 펌웨어가 모르는 값이다.</p>
+<ol>
+  <li>실제 VDDA를 3.0 V로 내린다. 보정 없음(<code>assume3.3V</code>)은 약 +10% 틀리고, 보정 값은 거의 맞는 것을 본다.</li>
+  <li>VDDA를 3.3 V로 두고 실제 Vrefint를 1.24 V로 바꾼다. 이번에는 보정 값이 약 −3.2% 틀리고 보정 없음이 정확하다.</li>
+  <li><b>1점 교정</b>을 켠다. 실제 VDDA를 멀티미터로 잰 값으로 이 칩의 Vrefint를 구해 상수로 쓰면, 두 슬라이더를 어떻게 움직여도 보정 오차가 수 mV로 줄어든다.</li>
+  <li><b>평균 대신 합 사용</b>을 켜고 잡음을 ±2 LSB로 둔다. VDDA 계산의 계단(약 2.2 mV)이 더 촘촘해진다.</li>
+  <li><b>1초 루프</b>를 여러 번 눌러 UART 출력이 잡음 때문에 몇 mV씩 흔들리는 폭을 본다.</li>
+</ol>
+<div class="sim" id="simbox">
+  <div class="subhead">펌웨어가 모르는 실제 값</div>
+  <div class="ctl">
+    <div><label for="rVdda">실제 VDDA = <b id="lVdda"></b></label><input id="rVdda" type="range" min="3000" max="3600" step="10" value="3300"></div>
+    <div><label for="rVref"><span class="k3">이 칩의 실제 Vrefint</span> = <b id="lVref"></b></label><input id="rVref" type="range" min="1160" max="1240" step="1" value="1200"></div>
+    <div><label for="rVin"><span class="k0">A0 실제 입력</span> = <b id="lVin"></b></label><input id="rVin" type="range" min="0" max="3600" step="10" value="1650"></div>
+    <div><label for="selNoise">변환 잡음</label>
+      <select id="selNoise"><option value="0">없음</option><option value="2" selected>±2 LSB (균일)</option><option value="6">±6 LSB</option></select></div>
+    <div><label for="selCal">VREFINT_MV 상수</label>
+      <select id="selCal"><option value="typ" selected>1200 (예제, 전형값)</option><option value="cal">1점 교정값 (실험 B)</option></select></div>
+    <div><label for="selRes">VDDA 계산</label>
+      <select id="selRes"><option value="avg" selected>평균값 raw_vref 사용 (예제)</option><option value="sum">16회 합 사용 (실험 C)</option></select></div>
+  </div>
+  <div class="subhead">펌웨어 계산 (정수 연산)</div>
+  <div class="regs">
+    <div class="stat"><div class="k">raw_vref (CH17)</div><div class="v" id="vRv">–</div></div>
+    <div class="stat"><div class="k">VDDA 계산</div><div class="v" id="vVd">–</div></div>
+    <div class="stat" id="sVdErr"><div class="k">VDDA 오차</div><div class="v" id="vVdErr">–</div></div>
+    <div class="stat"><div class="k">raw_a0 (CH0)</div><div class="v" id="vRa">–</div></div>
+    <div class="stat" id="sNa"><div class="k">assume3.3V / 오차</div><div class="v sm" id="vNa">–</div></div>
+    <div class="stat" id="sCo"><div class="k">corrected / 오차</div><div class="v sm" id="vCo">–</div></div>
+  </div>
+  <div class="subhead">A0 오차 [%] — 실제 VDDA 3.0~3.6 V (현재 Vrefint 기준)</div>
+  <div class="wave"><svg id="plot" viewBox="0 0 640 220" role="img" aria-label="실제 VDDA에 따른 보정 없음과 보정 후 A0 오차 곡선, 현재 설정점 표시"></svg></div>
+  <div class="btns">
+    <button class="sw" id="bLoop" type="button">1초 루프 (UART 1줄)</button>
+    <button class="hw" id="bSweep" type="button">VDDA 3.0 → 3.6 V 출력</button>
+    <button class="plain" id="bReset" type="button">초기화</button>
+  </div>
+  <div class="calc" id="calc" aria-live="polite">슬라이더를 움직이면 계산 과정이 표시된다.</div>
+  <div class="label" style="margin-top:12px">UART 출력 (115200 8N1)</div>
+  <div class="uart" id="uart"></div>
+</div>
+<p style="font-size:14.5px;color:var(--muted)">시뮬레이터 모델: 각 변환 코드 = round(V / VDDA × 4095) + 균일 정수 잡음이며 0~4095로 제한한다. ADC 자체의 오프셋·이득·비선형 오차(데이터시트 Table 49, 50)와 입력 임피던스 영향은 넣지 않았다. 16회 합을 <code>N_AVG</code>로 나눈 몫이 <code>raw</code>이고, 이후 계산은 예제와 같은 <code>uint32_t</code> 정수 나눗셈이다. &lsquo;1점 교정값&rsquo;은 VDDA = 3.300 V일 때 한 번, 오차 없는 멀티미터로 쟀다고 보고 <code>VREFINT_MV = raw_vref × VDDA_meas / 4095</code>로 구한 값이며, 소스에는 없는 확장이다. &lsquo;16회 합 사용&rsquo;은 <code>VDDA = 1200 × 4095 × 16 / sum</code>(실험 C)이다. 오차 곡선은 잡음 없이 계산한다.</p>
+</section>
+
+<section id="s5">
+<h2>5. HAL 함수와 레지스터·비트의 대응</h2>
+<div class="tablewrap"><table>
+  <tr><th>HAL 호출</th><th>레지스터·비트</th><th>이 예제에서</th></tr>
+  <tr><td><code>HAL_ADC_Init()</code></td><td><code>CR1.SCAN</code>, <code>CR2.CONT</code>, <code>CR2.EXTSEL</code>, <code>SQR1.L</code></td><td>SCAN = 0, <b>CONT = 1</b>, EXTSEL = 111(SWSTART), 변환 1개</td></tr>
+  <tr><td><code>HAL_ADCEx_Calibration_Start()</code></td><td><code>CR2.RSTCAL</code> → <code>CR2.CAL</code></td><td>시작 시 1회</td></tr>
+  <tr><td><code>HAL_ADC_ConfigChannel(VREFINT)</code></td><td><code>SQR3.SQ1 = 17</code>, <code>SMPR1.SMP17 = 111</code>, <code>CR2.TSVREFE = 1</code></td><td>처음 한 번 TSVREFE를 켜고 이후 유지. HAL의 10 µs 대기는 온도 센서(CH16)일 때만 들어간다</td></tr>
+  <tr><td><code>HAL_ADC_ConfigChannel(CH0)</code></td><td><code>SQR3.SQ1 = 0</code>, <code>SMPR2.SMP0 = 111</code></td><td>매 루프 채널을 바꿀 때마다 호출</td></tr>
+  <tr><td><code>HAL_ADC_Start()</code></td><td><code>CR2.ADON = 1</code>, <code>CR2.SWSTART</code> | <code>EXTTRIG</code></td><td>ADC가 꺼져 있으면 켜고 안정화 대기 후 시작</td></tr>
+  <tr><td><code>HAL_ADC_PollForConversion(…, 10)</code></td><td><code>SR.EOC</code> 대기</td><td>10 ms 안에 안 오면 <code>Error_Handler()</code></td></tr>
+  <tr><td><code>HAL_ADC_GetValue()</code></td><td><code>DR</code> 읽기 (EOC 자동 해제)</td><td>16회 합산</td></tr>
+  <tr><td><code>HAL_ADC_Stop()</code></td><td><code>CR2.ADON = 0</code></td><td>채널 전환 전에 연속 변환을 멈춘다</td></tr>
+</table></div>
+<div class="tablewrap"><table>
+  <tr><th>레지스터 (ADC1 = 0x4001 2400)</th><th>Vrefint 변환 중 값</th><th>해석</th></tr>
+  <tr><td class="m">ADC1_CR2 (+0x08)</td><td class="m">0x009E 0003</td><td>TSVREFE(23) = 1, EXTTRIG(20) = 1, EXTSEL = 111, CONT(1) = 1, ADON(0) = 1 (SWSTART는 하드웨어가 지움)</td></tr>
+  <tr><td class="m">ADC1_SMPR1 (+0x0C)</td><td class="m">0x00E0 0000</td><td>SMP17[23:21] = 111</td></tr>
+  <tr><td class="m">ADC1_SMPR2 (+0x10)</td><td class="m">0x0000 0007</td><td>SMP0 = 111 (Init에서 설정, 그대로 유지)</td></tr>
+  <tr><td class="m">ADC1_SQR3 (+0x34)</td><td class="m">0x0000 0011</td><td>SQ1 = 17. A0 변환 중에는 0x0000 0000</td></tr>
+  <tr><td class="m">ADC1_CR1 (+0x04)</td><td class="m">0x0000 0000</td><td>스캔·인터럽트·워치독 모두 사용 안 함</td></tr>
+</table></div>
+</section>
+
+<section id="s6">
+<h2>6. 실행 경로: 1초 루프 한 바퀴</h2>
+<p>인터럽트가 없으므로 모든 일은 main 문맥에서 차례로 일어난다. 동작하는 ISR은 HAL 틱용 <code>SysTick_Handler</code>뿐이다.</p>
+<ol class="flow">
+  <li class="sw"><div class="n">1</div><div class="tx"><b><code>adc_read_avg(ADC_CHANNEL_VREFINT)</code>: 채널 설정<span class="tag sw">main</span></b><span><code>SQ1 = 17</code>, <code>SMP17 = 111</code>. 첫 호출에서 <code>TSVREFE = 1</code>.</span></div></li>
+  <li class="hw"><div class="n">2</div><div class="tx"><b>연속 변환 16회<span class="tag hw">하드웨어</span></b><span>첫 <code>HAL_ADC_Start</code>로 ADC가 켜지면 <code>CONT = 1</code>이라 23.6 µs마다 결과가 나온다.</span></div></li>
+  <li class="sw"><div class="n">3</div><div class="tx"><b>EOC 폴링 → DR 읽기 × 16 → <code>HAL_ADC_Stop</code><span class="tag sw">main</span></b><span>합을 16으로 나눈 몫(버림)이 <code>raw_vref</code>이다.</span></div></li>
+  <li class="sw"><div class="n">4</div><div class="tx"><b><code>adc_read_avg(ADC_CHANNEL_0)</code><span class="tag sw">main</span></b><span>같은 절차로 PA0를 16회 평균해 <code>raw_a0</code>.</span></div></li>
+  <li class="sw"><div class="n">5</div><div class="tx"><b>정수 계산<span class="tag sw">main</span></b><span><code>vdda_mv = 1200 × 4095 / raw_vref</code>, <code>a0_naive = raw_a0 × 3300 / 4095</code>, <code>a0_corr = raw_a0 × vdda_mv / 4095</code>.</span></div></li>
+  <li class="sw"><div class="n">6</div><div class="tx"><b>UART 송신 후 <code>HAL_Delay(1000)</code><span class="tag sw">main</span></b><span>한 줄 약 85바이트 × 86.8 µs ≈ 7.4 ms. 루프 주기는 1초보다 조금 길다.</span></div></li>
+</ol>
+<div class="box"><div class="label">연속 모드와 루프 안의 Start</div>
+<p><code>ContinuousConvMode = ENABLE</code>이므로 첫 <code>HAL_ADC_Start</code> 뒤 ADC는 스스로 변환을 이어 간다. 16개 값은 연속된 변환 결과를 EOC마다 하나씩 읽은 것이다. 루프 안에서 매번 <code>HAL_ADC_Start</code>를 다시 부르는 것은 단일 변환 모드였다면 필수인 구조이며, 연속 모드에서는 필수가 아니다. 채널을 바꾸기 전에 <code>HAL_ADC_Stop</code>으로 <code>ADON</code>을 끄기 때문에, 변환이 진행 중인 채로 <code>SQR3</code>를 바꾸는 상황은 생기지 않는다.</p></div>
+</section>
+
+<section id="s7">
+<h2>7. 코드 읽기</h2>
+<p>계층은 <b>HAL</b>이다. 사용자 코드는 <code>/* USER CODE BEGIN ... */</code> 영역 안에 있다.</p>
+<div class="file">Core/Src/main.c — USER CODE BEGIN PD / 0</div>
+<div class="codepair">
+<pre><code><span class="kw">#define</span> VREFINT_MV 1200UL   <span class="cm">/* 전형값. 정밀도가 필요하면 개체별로 측정/보정 */</span>
+<span class="kw">#define</span> N_AVG      16U
+
+<span class="kw">static</span> uint32_t adc_read_avg(uint32_t channel)
+{
+    ADC_ChannelConfTypeDef ch = {0};
+    ch.Channel = channel;
+    ch.Rank = ADC_REGULAR_RANK_1;
+    ch.SamplingTime = <span class="hl">ADC_SAMPLETIME_239CYCLES_5</span>;
+    <span class="kw">if</span> (<span class="kw">HAL_ADC_ConfigChannel</span>(&amp;hadc1, &amp;ch) != HAL_OK) Error_Handler();
+
+    uint32_t sum = 0;
+    <span class="kw">for</span> (uint32_t i = 0; i &lt; N_AVG; i++)
+    {
+        <span class="kw">HAL_ADC_Start</span>(&amp;hadc1);                      <span class="cm">/* CR2.ADON / SWSTART */</span>
+        <span class="kw">if</span> (<span class="kw">HAL_ADC_PollForConversion</span>(&amp;hadc1, 10) != HAL_OK) Error_Handler();   <span class="cm">/* SR.EOC */</span>
+        sum += <span class="kw">HAL_ADC_GetValue</span>(&amp;hadc1);            <span class="cm">/* DR 읽기 */</span>
+    }
+    <span class="kw">HAL_ADC_Stop</span>(&amp;hadc1);
+    <span class="kw">return</span> <span class="hl">sum / N_AVG</span>;
+}</code></pre>
+<ol>
+  <li><code>VREFINT_MV</code>는 데이터시트 전형값이다. F1에는 개체별 교정값이 없으므로 이 상수가 보정 정확도의 상한을 정한다.</li>
+  <li>두 채널 모두 239.5 사이클. Vrefint는 T<sub>S_vrefint</sub> 최대 17.1 µs를 만족해야 한다(22.45 µs).</li>
+  <li><code>ADC_CHANNEL_VREFINT</code>를 넘기면 HAL이 <code>TSVREFE</code>를 켠다.</li>
+  <li>마지막 나눗셈이 소수부를 버린다. 합(<code>sum</code>)에는 4비트만큼의 추가 정보가 있는데 여기서 사라진다(실험 C).</li>
+</ol>
+</div>
+<div class="file">Core/Src/main.c — USER CODE BEGIN 2 / 3</div>
+<div class="codepair">
+<pre><code><span class="kw">HAL_ADCEx_Calibration_Start</span>(&amp;hadc1);            <span class="cm">/* ADC1-&gt;CR2.CAL */</span>
+
+uint32_t raw_vref = adc_read_avg(<span class="hl">ADC_CHANNEL_VREFINT</span>);
+uint32_t raw_a0   = adc_read_avg(ADC_CHANNEL_0);
+
+uint32_t vdda_mv = (raw_vref != 0) ? VREFINT_MV * 4095UL / raw_vref : 0;
+uint32_t a0_naive = raw_a0 * 3300UL / 4095UL;      <span class="cm">/* VDDA=3.3V 가정 */</span>
+uint32_t a0_corr  = raw_a0 * vdda_mv / 4095UL;     <span class="cm">/* 실측 VDDA 기준 */</span>
+
+<span class="kw">int</span> n = snprintf(msg, <span class="kw">sizeof</span> msg, <span class="hl">"raw_vref=%4lu -&gt; VDDA=%4lu mV | A0 raw=%4lu : assume3.3V=%4lu mV, corrected=%4lu mV\r\n"</span>, ...);
+<span class="kw">HAL_UART_Transmit</span>(&amp;huart2, (uint8_t *)msg, (uint16_t)n, 100);
+<span class="kw">HAL_Delay</span>(1000);</code></pre>
+<ol>
+  <li>교정은 첫 변환 전에 한 번. 오프셋 오차를 줄인다.</li>
+  <li>Vrefint를 먼저, A0를 나중에 잰다. 두 측정 사이 약 0.4 ms 동안 VDDA가 같다고 가정한다.</li>
+  <li><code>raw_vref != 0</code> 검사로 0 나눗셈을 막는다.</li>
+  <li>곱셈은 1200 × 4095 = 4,914,000, 4095 × 3600 ≈ 1,474만 수준이라 <code>uint32_t</code>(약 42.9억) 안이다. raw_vref가 4 이하로 비정상이면 <code>raw_a0 × vdda_mv</code>가 넘칠 수 있다.</li>
+  <li><code>a0_corr</code>는 나눗셈을 두 번 거치므로 버림 오차가 최대 약 2 mV 쌓인다.</li>
+</ol>
+</div>
+<div class="box"><div class="label">기대 출력 (USB 전원, VDDA ≈ 3.3 V, A0 = 가변저항 중간)</div>
+<pre><code>raw_vref=1489 -&gt; VDDA=3300 mV | A0 raw=2048 : assume3.3V=1650 mV, corrected=1650 mV
+raw_vref=1497 -&gt; VDDA=3282 mV | A0 raw=2049 : assume3.3V=1651 mV, corrected=1642 mV</code></pre>
+<p>둘째 줄은 VDDA가 3.28 V로 내려갔거나, 이 칩의 Vrefint가 1.20 V보다 약간 커서 생기는 출력의 예이다. 펌웨어만으로는 둘을 구별할 수 없다. 멀티미터로 3V3(또는 AVDD) 전압을 재서 비교해야 한다. 예시 수치는 계산으로 만든 것이다.</p></div>
+</section>
+
+<section id="s8">
+<h2>8. 실험</h2>
+<p><b>배선</b>: PA0(A0)에 가변저항 와이퍼(양 끝 3V3, GND). 멀티미터 또는 AD2 전압계로 Nucleo의 3V3 핀과 PA0를 함께 잰다. 터미널은 115200 8N1이다.</p>
+<h3>실험 A. 출력과 멀티미터 비교</h3>
+<p>출력의 <code>VDDA</code>와 멀티미터로 잰 3V3 값을 비교하고, A0의 <code>assume3.3V</code>, <code>corrected</code>를 PA0 실측값과 비교한다. 차이가 ±3% 안이면 Vrefint 편차 범위 안이다. USB 허브, 긴 케이블, 외부 전원 등으로 바꿔 VDDA를 흔들어 보고 두 값 중 어느 쪽이 실측을 더 잘 따라가는지 기록한다.</p>
+<h3>실험 B. 1점 교정</h3>
+<p>멀티미터로 잰 VDDA를 <code>V_meas</code>(mV)라 하면 이 칩의 Vrefint는 <code>raw_vref × V_meas / 4095</code>이다. 예: raw_vref = 1497, V_meas = 3300 → 1497 × 3300 / 4095 = 1206 mV. 이 값을 <code>VREFINT_MV</code>에 넣고 다시 빌드해 오차가 줄었는지 확인한다(실험용 사본에서 수정). 온도 변동은 데이터시트 기준 최대 10 mV(약 0.8%)이므로 교정 후 남는 오차의 상한이 크게 줄어든다.</p>
+<h3>실험 C. 평균 대신 합으로 계산</h3>
+<p><code>adc_read_avg()</code>가 <code>sum</code>을 돌려주게 바꾸고 <code>VDDA = 1200 × 4095 × 16 / sum</code>으로 계산한다(분자 78,624,000은 <code>uint32_t</code> 안이다). raw_vref 1 LSB가 VDDA 약 2.2 mV에 해당하던 계단이, 잡음이 있으면 약 0.14 mV 단위로 촘촘해진다. 잡음이 전혀 없으면 합도 16의 배수뿐이라 이득이 없다는 점(디더링 효과)도 생각해 본다.</p>
+<h3>실험 D. Vrefint 샘플 시간 줄이기</h3>
+<p><code>ADC_SAMPLETIME_239CYCLES_5</code>를 <code>71CYCLES_5</code>(6.70 µs), <code>7CYCLES_5</code>(0.70 µs)로 바꿔 <code>raw_vref</code>를 비교한다. 샘플링 커패시터가 덜 충전되면 raw_vref가 작아져 VDDA가 크게 계산된다. A0 채널은 그대로 두어 Vrefint 쪽만 변하는지 확인한다.</p>
+</section>
+
+<section id="s9">
+<h2>9. 트러블슈팅</h2>
+<div class="tablewrap"><table>
+  <tr><th>증상</th><th>원인</th><th>점검/조치</th></tr>
+  <tr><td>VDDA가 4000 mV 이상 또는 터무니없이 크다</td><td>raw_vref가 작다: 샘플 시간이 짧거나 <code>TSVREFE</code>가 꺼져 있다</td><td>239.5 사이클 사용, <code>ADC_CHANNEL_VREFINT</code>를 <code>HAL_ADC_ConfigChannel</code>로 설정했는지 확인</td></tr>
+  <tr><td>모든 값이 같은 비율(수 %)로 계속 틀린다</td><td>이 칩의 Vrefint가 1.20 V가 아니다(개체 편차 1.16~1.24 V)</td><td>1점 교정(실험 B)으로 <code>VREFINT_MV</code>를 바꾼다</td></tr>
+  <tr><td>VDDA가 2~3 mV씩 오르내린다</td><td>raw_vref 1 LSB ≈ VDDA 2.2 mV의 양자화 + 잡음</td><td>정상이다. 줄이려면 합으로 계산(실험 C)하거나 평균 횟수를 늘린다</td></tr>
+  <tr><td><code>corrected</code>가 <code>assume3.3V</code>보다 오히려 더 틀린다</td><td>VDDA가 3.3 V에 가까운데 Vrefint 편차가 더 크다(그림 1)</td><td>보정은 VDDA 변동이 Vrefint 편차(약 ±3%)보다 클 때 이득이다. 교정 후 사용</td></tr>
+  <tr><td>A0가 4095에 붙는다</td><td>입력이 VDDA 이상이다</td><td>가변저항 양 끝을 3V3/GND에 연결. 입력은 0~VDDA 범위여야 한다</td></tr>
+  <tr><td>UART 출력이 전혀 없다</td><td><code>HAL_ADC_PollForConversion</code>이 10 ms 안에 EOC를 받지 못해 <code>Error_Handler()</code>에서 멈췄다</td><td>디버거로 정지 위치 확인, ADC 클럭(<code>ADCPRE</code>)과 <code>HAL_ADC_ConfigChannel</code> 반환값 점검</td></tr>
+</table></div>
+</section>
+
+<section id="s10">
+<h2>10. 확인 문제</h2>
+<details><summary><b>문제 1.</b> raw_vref = 1638, A0 raw = 2000이면 예제가 출력하는 VDDA, assume3.3V, corrected는?</summary>
+<div class="ans"><p>VDDA = 1200 × 4095 / 1638 = 4,914,000 / 1638 = 3000 mV. assume3.3V = 2000 × 3300 / 4095 = 1611 mV(정수 나눗셈). corrected = 2000 × 3000 / 4095 = 1465 mV. VDDA가 실제로 3.0 V라면 보정 없는 값은 약 10% 크게 나온다.</p></div></details>
+<details><summary><b>문제 2.</b> 실제 VDDA는 정확히 3.3 V이고 이 칩의 Vrefint가 1.24 V이다. raw_vref와 출력 VDDA는? 오차는 몇 %인가?</summary>
+<div class="ans"><p>raw_vref = 1240 / 3300 × 4095 ≈ 1538.7 → 1539. VDDA = 4,914,000 / 1539 = 3192 mV이다. −108 mV, 약 −3.3%로, 1.20 / 1.24 − 1 ≈ −3.2%에 양자화 버림이 더해진 값이다. 이 경우 3.3 V 가정 쪽이 정확하다.</p></div></details>
+<details><summary><b>문제 3.</b> Vrefint 개체 편차가 1.16~1.24 V일 때, 보정이 최악의 경우에도 3.3 V 가정보다 낫다고 말할 수 있는 VDDA 범위는?</summary>
+<div class="ans"><p>보정 후 최악 오차는 +3.45% 또는 −3.23%로 크기 약 3.4%이다. 3.3 V 가정 오차 |3.3 / VDDA − 1|이 이보다 크려면 VDDA &lt; 3.3 / 1.0345 ≈ 3.19 V 또는 VDDA &gt; 3.3 / 0.9677 ≈ 3.41 V이어야 한다. 그 사이에서는 교정하지 않은 Vrefint 보정이 오히려 손해일 수 있다. 1점 교정을 하면 이 구간이 거의 사라진다.</p></div></details>
+<details><summary><b>문제 4.</b> Vrefint 샘플 시간으로 71.5 사이클이 아니라 239.5 사이클을 고른 이유를 데이터시트 수치로 설명하라.</summary>
+<div class="ans"><p>T<sub>S_vrefint</sub>는 typ 5.1 µs, max 17.1 µs이다. ADCCLK 10.67 MHz에서 71.5 사이클은 6.70 µs로 최댓값을 만족하지 못하고, 239.5 사이클은 22.45 µs로 만족한다. F1의 샘플 시간 선택지는 71.5 다음이 239.5이므로 239.5를 쓴다. 대가로 변환 1회가 23.6 µs로 길어지지만 1초 주기 측정에서는 문제가 되지 않는다.</p></div></details>
+</section>
+
+<section>
+  <h2>정리</h2>
+  <div class="tablewrap"><table>
+    <tr><th>예제</th><th>계층</th><th>변환 시작·결과 회수</th><th>핵심</th></tr>
+    <tr><td class="m"><a href="../01_ADC_Single/01_ADC_Single%20교안.html">01_ADC_Single</a></td><td>HAL</td><td>연속 변환 + 폴링</td><td>PA0(CH0), 교정, mV 환산</td></tr>
+    <tr><td class="m"><a href="../02_ADC_Temperature/02_ADC_Temperature%20교안.html">02_ADC_Temperature</a></td><td>HAL</td><td>연속 변환 + 폴링</td><td>내부 온도 센서(CH16), 긴 샘플링 시간</td></tr>
+    <tr><td class="m"><a href="../03_ADC_Multi/ADC%20다채널%20교안.html">03_ADC_Multi</a></td><td>HAL</td><td>스캔 + 불연속, 폴링</td><td>4채널(A0/A1/A2/Vrefint)</td></tr>
+    <tr><td class="m"><a href="../04_ADC_DMA_TimTrigger/ADC%20타이머%20트리거%20DMA%20교안.html">04_ADC_DMA_TimTrigger</a></td><td>HAL+TIM+DMA</td><td>TIM3 TRGO 1 kHz + DMA 원형</td><td>반 버퍼 처리</td></tr>
+    <tr><td class="m"><a href="../05_ADC_AnalogWatchdog_c/05_ADC_AnalogWatchdog%20교안.html">05_ADC_AnalogWatchdog_c</a></td><td>HAL+DMA</td><td>연속 변환 + DMA 1워드 원형, 하드웨어 창 비교</td><td>전압 창 이탈 감시</td></tr>
+    <tr><td class="m"><b>06_ADC_Vrefint_VDDA_c (이 교안)</b></td><td>HAL</td><td>연속 변환 + 폴링(16회 합)</td><td>Vrefint로 VDDA 역산·보정</td></tr>
+    <tr><td class="m"><a href="../07_ADC_Potentiometer_PWM_c/07_ADC_Potentiometer_PWM%20교안.html">07_ADC_Potentiometer_PWM_c</a></td><td>HAL+DMA+TIM</td><td>DMA + PWM 출력</td><td>이동평균·감마 → LED 밝기</td></tr>
+  </table></div>
+  <div class="nextprev"><a href="../05_ADC_AnalogWatchdog_c/05_ADC_AnalogWatchdog%20교안.html">← 05_ADC_AnalogWatchdog_c</a><a href="../07_ADC_Potentiometer_PWM_c/07_ADC_Potentiometer_PWM%20교안.html">07_ADC_Potentiometer_PWM_c →</a></div>
+  <footer>근거: 06_ADC_Vrefint_VDDA_c 소스(<code>Core/Src/main.c</code>, <code>stm32f1xx_hal_msp.c</code>, <code>stm32f1xx_it.c</code>, <code>ADC_Vrefint_VDDA.ioc</code>)와 HAL 드라이버 <code>stm32f1xx_hal_adc.c</code>(<code>HAL_ADC_ConfigChannel</code>). 계층: HAL. 레지스터·비트 이름은 RM0008(STM32F101xx~F107xx 레퍼런스 매뉴얼) 11장 기준이다. Vrefint·ADC 수치는 데이터시트 DS5319 Rev 19의 Table 12, Table 47에서 확인했다. 클럭은 SYSCLK 64 MHz(HSI/2 × PLL16), APB2 ÷1, ADCPRE ÷6 구성을 기준으로 한다. 코드는 해당 폴더의 소스에서 발췌한 것이며 일부 줄이 생략되어 있다.</footer>
+</section>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var N_AVG=16,uart=[];
+  function num(id){return Number($(id).value)}
+  function pad(x,n){x=String(x);while(x.length<n)x=' '+x;return x}
+  function clamp(c){return Math.max(0,Math.min(4095,c))}
+  /* 변환 1회: 코드 = round(V / VDDA × 4095) + 균일 정수 잡음 */
+  function conv(v,vdda,nz){return clamp(Math.round(v/vdda*4095)+(nz?Math.round((Math.random()*2-1)*nz):0))}
+  /* 1점 교정: VDDA = 3300 mV(멀티미터)에서 한 번 측정해 이 칩의 Vrefint를 구한 값 */
+  function calConst(vref){return Math.floor(Math.round(vref/3300*4095)*3300/4095)}
+  /* 펌웨어 1회 계산 (예제와 같은 uint32_t 정수 연산) */
+  function firmware(vdda,vref,vin,nz){
+    var sv=0,sa=0,i;
+    for(i=0;i<N_AVG;i++)sv+=conv(vref,vdda,nz);          /* adc_read_avg(ADC_CHANNEL_VREFINT) */
+    for(i=0;i<N_AVG;i++)sa+=conv(vin,vdda,nz);           /* adc_read_avg(ADC_CHANNEL_0) */
+    var rv=Math.floor(sv/N_AVG),ra=Math.floor(sa/N_AVG);
+    var K=$('selCal').value==='cal'?calConst(vref):1200,vd;
+    if($('selRes').value==='sum')vd=sv?Math.floor(K*4095*N_AVG/sv):0;
+    else vd=rv?Math.floor(K*4095/rv):0;
+    return {sv:sv,rv:rv,ra:ra,K:K,vd:vd,na:Math.floor(ra*3300/4095),co:Math.floor(ra*vd/4095)};
+  }
+  function line(r){
+    return 'raw_vref='+pad(r.rv,4)+' -> VDDA='+pad(r.vd,4)+' mV | A0 raw='+pad(r.ra,4)+' : assume3.3V='+pad(r.na,4)+' mV, corrected='+pad(r.co,4)+' mV';
+  }
+  function pct(a,b){return (a-b)/b*100}
+  function fmtE(mv,p){return (mv>=0?'+':'')+mv+' mV ('+(p>=0?'+':'')+p.toFixed(2)+'%)'}
+  function setBad(id,bad){$(id).className='stat'+(bad?' bad':'')}
+
+  function update(){
+    var vdda=num('rVdda'),vref=num('rVref'),vin=num('rVin'),nz=Number($('selNoise').value);
+    $('lVdda').textContent=(vdda/1000).toFixed(2)+' V';$('lVref').textContent=(vref/1000).toFixed(3)+' V';
+    $('lVin').textContent=vin+' mV'+(vin>vdda?' (VDDA 초과 → 4095 포화)':'');
+    var r=firmware(vdda,vref,vin,nz),sat=vin>=vdda;
+    $('vRv').textContent=r.rv;$('vVd').textContent=r.vd+' mV';$('vRa').textContent=r.ra;
+    var ev=r.vd-vdda,ep=pct(r.vd,vdda);$('vVdErr').textContent=fmtE(ev,ep);setBad('sVdErr',Math.abs(ep)>1);
+    if(sat){$('vNa').textContent=r.na+' mV / 포화';$('vCo').textContent=r.co+' mV / 포화';setBad('sNa',1);setBad('sCo',1)}
+    else{
+      var en=r.na-vin,ec=r.co-vin,pn=vin?pct(r.na,vin):0,pc=vin?pct(r.co,vin):0;
+      $('vNa').textContent=r.na+' mV / '+(pn>=0?'+':'')+pn.toFixed(1)+'%';$('vCo').textContent=r.co+' mV / '+(pc>=0?'+':'')+pc.toFixed(1)+'%';
+      setBad('sNa',Math.abs(pn)>1);setBad('sCo',Math.abs(pc)>1);
+    }
+    var ideal=vref/vdda*4095;
+    $('calc').textContent=
+      'raw_vref = '+(vref/1000).toFixed(3)+' V / '+(vdda/1000).toFixed(2)+' V × 4095 = '+ideal.toFixed(1)+' → 16회 합 '+r.sv+' / 16 = '+r.rv+'\n'+
+      ($('selRes').value==='sum'?'VDDA = '+r.K+' × 4095 × 16 / '+r.sv+' = '+r.vd+' mV':'VDDA = '+r.K+' × 4095 / '+r.rv+' = '+r.vd+' mV')+
+      (r.K!==1200?'   (VREFINT_MV = 1점 교정값 '+r.K+')':'')+'   실제 '+vdda+' mV\n'+
+      'assume3.3V = '+r.ra+' × 3300 / 4095 = '+r.na+' mV,  corrected = '+r.ra+' × '+r.vd+' / 4095 = '+r.co+' mV   실제 '+Math.min(vin,vdda)+' mV'+
+      '\n계산 VDDA / 실제 VDDA = '+(r.vd/vdda).toFixed(4)+'  ≈  VREFINT_MV / 실제 Vrefint = '+(r.K/vref).toFixed(4);
+    draw(vref,vin);
+    return r;
+  }
+  function draw(vref,vin){
+    var X=function(v){return 60+(v-3000)/600*560},Y=function(e){return 105-e*90/12};
+    var K=$('selCal').value==='cal'?calConst(vref):1200,g='';
+    var hi=(1200/1160-1)*100,lo=(1200/1240-1)*100;
+    g+='<rect class="band" x="60" y="'+Y(hi).toFixed(1)+'" width="560" height="'+(Y(lo)-Y(hi)).toFixed(1)+'"/>';
+    [10,5,0,-5,-10].forEach(function(e){g+='<line class="gd" x1="60" y1="'+Y(e)+'" x2="620" y2="'+Y(e)+'"/><text x="'+(e>=0?20:16)+'" y="'+(Y(e)+4)+'">'+(e>0?'+':'')+e+'%</text>'});
+    g+='<line class="ax" x1="60" y1="8" x2="60" y2="200"/><line class="ax" x1="60" y1="200" x2="620" y2="200"/>';
+    for(var k=0;k<=6;k++){var v=3000+k*100;g+='<text x="'+(X(v)-12)+'" y="214">'+(v/1000).toFixed(1)+'</text>'}
+    var dn='',dc='';
+    for(var vd=3000;vd<=3600;vd+=5){
+      if(vin>=vd||vin<=0)continue;
+      var rv=Math.round(vref/vd*4095),ra=Math.round(vin/vd*4095),vc=$('selRes').value==='sum'?Math.floor(K*4095*16/(rv*16)):Math.floor(K*4095/rv);
+      var na=Math.floor(ra*3300/4095),co=Math.floor(ra*vc/4095);
+      var en=Math.max(-12,Math.min(12,pct(na,vin))),ec=Math.max(-12,Math.min(12,pct(co,vin)));
+      dn+=(dn?'L':'M')+X(vd).toFixed(1)+','+Y(en).toFixed(1);dc+=(dc?'L':'M')+X(vd).toFixed(1)+','+Y(ec).toFixed(1);
+    }
+    if(dn)g+='<path class="s1" d="'+dn+'"/><path class="s0" d="'+dc+'"/>';
+    var cur=num('rVdda');
+    if(vin>0&&vin<cur){
+      var rv2=Math.round(vref/cur*4095),ra2=Math.round(vin/cur*4095),vc2=Math.floor(K*4095/rv2);
+      g+='<circle class="pt1" cx="'+X(cur).toFixed(1)+'" cy="'+Y(Math.max(-12,Math.min(12,pct(Math.floor(ra2*3300/4095),vin)))).toFixed(1)+'" r="5"/>';
+      g+='<circle class="pt" cx="'+X(cur).toFixed(1)+'" cy="'+Y(Math.max(-12,Math.min(12,pct(Math.floor(ra2*vc2/4095),vin)))).toFixed(1)+'" r="5"/>';
+    }else g+='<text x="250" y="100">A0 입력이 0이거나 VDDA 이상이라 오차를 정의할 수 없다</text>';
+    g+='<text x="470" y="20" class="tt">주황: 3.3 V 가정</text><text x="470" y="36" class="tt">파랑: Vrefint 보정</text><text x="470" y="52">보라 띠: 1.16~1.24 V 편차</text>';
+    $('plot').innerHTML=g;
+  }
+  function push(l){uart.push(l);if(uart.length>8)uart.shift();$('uart').textContent=uart.join('\n')}
+  $('bLoop').onclick=function(){var r=update();push(line(r))};
+  $('bSweep').onclick=function(){
+    var vref=num('rVref'),vin=num('rVin'),nz=Number($('selNoise').value),msg=['VDDA를 바꿔 가며 1초 루프를 한 번씩 실행한 결과 (Vrefint = '+vref+' mV, A0 = '+vin+' mV):'];
+    for(var vd=3000;vd<=3600;vd+=100){var r=firmware(vd,vref,vin,nz);push(line(r));
+      msg.push('실제 VDDA '+vd+' mV → 계산 '+r.vd+' mV, assume3.3V '+r.na+' mV, corrected '+r.co+' mV')}
+    $('calc').textContent=msg.join('\n');
+  };
+  $('bReset').onclick=function(){$('rVdda').value=3300;$('rVref').value=1200;$('rVin').value=1650;$('selNoise').value='2';$('selCal').value='typ';$('selRes').value='avg';uart=[];$('uart').textContent='';update()};
+  ['rVdda','rVref','rVin'].forEach(function(id){$(id).oninput=update});
+  ['selNoise','selCal','selRes'].forEach(function(id){$(id).onchange=update});
+  update();
+})();
+</script>
+</body></html>

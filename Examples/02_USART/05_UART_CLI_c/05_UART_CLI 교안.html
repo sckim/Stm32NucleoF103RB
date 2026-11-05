@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>05_UART_CLI 교안</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+
+/* Layout: 한 열 교안(최대 860px) — 문제 → 3단계 구조·명령 표 → 하드웨어·메모리 → 가상 터미널 → 함수 대응 → 실행 경로 → 코드 → 실험 → 트러블슈팅 → 문제 → 정리 순서.
+   색: 하드웨어(수신)=보라, 소프트웨어(main)=파랑, argv[0]=주황, 일치한 테이블 행=초록. (01_TIM_TimeBase 교안과 같은 기본 토큰) */
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --surface2:#E7ECF0; --fg:#14222C; --muted:#52636F; --line:#CBD5DC;
+  --c0:#1D4ED8; --c0-soft:#DCE6FB; --c1:#C2410C; --c1-soft:#FDE6DA; --c2:#0F766E; --c2-soft:#D5F0EC; --c3:#7E22CE; --c3-soft:#EEDFFB;
+  --code-bg:#0F1B24; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#9A3412; --warn-bg:#FFF1E6; --ok:#166534; --ok-bg:#E4F5EA;
+  --font-body:"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.75;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:860px;margin:0 auto}
+header{padding-block:40px 8px}
+.kicker{font-family:var(--font-mono);font-size:13px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.25;margin:8px 0 12px;text-wrap:balance;font-weight:700}
+.lead{color:var(--muted);margin:0;max-width:62ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0;padding:0;list-style:none}
+nav.toc a{display:block;padding:6px 12px;border:1px solid var(--line);border-radius:6px;color:var(--fg);text-decoration:none;font-size:14px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--c0);outline:2px solid var(--c0);outline-offset:1px}
+section{margin-top:56px}
+h2{font-size:24px;line-height:1.35;margin:0 0 12px;text-wrap:balance;font-weight:700}
+h3{font-size:18px;margin:28px 0 8px;font-weight:700}
+p{margin:0 0 14px;max-width:68ch}
+ul,ol{margin:0 0 14px;padding-left:22px;max-width:68ch}
+li{margin-bottom:4px}
+code{font-family:var(--font-mono);font-size:.9em;background:var(--surface2);padding:1px 6px;border-radius:4px}
+.k0{color:var(--c0);font-weight:700} .k1{color:var(--c1);font-weight:700} .k2{color:var(--c2);font-weight:700} .k3{color:var(--c3);font-weight:700}
+.box{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:16px 18px;margin:16px 0}
+.box.warn{background:var(--warn-bg);border-color:var(--warn)} .box.ok{background:var(--ok-bg);border-color:var(--ok)}
+.box > :last-child{margin-bottom:0}
+.label{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.tablewrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:15px;background:var(--surface)}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--surface2);font-weight:700;white-space:nowrap}
+td.m,th.m{font-family:var(--font-mono);font-size:13.5px}
+td.n{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+
+/* block diagram */
+.diag{max-width:720px;margin:18px auto}
+.diag svg{display:block;width:100%;height:auto}
+#blk .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+#blk .bx.hot{stroke:var(--warn);stroke-width:2.5;fill:var(--warn-bg)}
+#blk .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+#blk .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+#blk .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+#blk .w0{stroke:var(--c0)} #blk .w1{stroke:var(--c1)} #blk .w2{stroke:var(--c2)} #blk .w3{stroke:var(--c3)}
+#blk .d0{fill:var(--c0)} #blk .d1{fill:var(--c1)} #blk .d2{fill:var(--c2)} #blk .d3{fill:var(--c3)}
+#blk .ah{fill:var(--muted)}
+
+/* flow */
+.flow{list-style:none;padding:0;margin:16px 0;display:grid;gap:0;max-width:none}
+.flow li{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:0;padding:0 0 14px;position:relative}
+.flow li:not(:last-child)::before{content:"";position:absolute;left:16px;top:34px;bottom:0;width:2px;background:var(--line)}
+.flow .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:14px;font-weight:600;background:var(--surface2);border:2px solid var(--line)}
+.flow li.hw .n{border-color:var(--c3);color:var(--c3)} .flow li.sw .n{border-color:var(--c0);color:var(--c0)}
+.flow .tx{min-width:0} .flow .tx b{display:block}
+.flow .tx span{color:var(--muted);font-size:14.5px}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:11.5px;padding:0 6px;border-radius:4px;margin-left:6px;vertical-align:1px}
+.tag.hw{background:var(--c3-soft);color:var(--c3)} .tag.sw{background:var(--c0-soft);color:var(--c0)}
+
+/* mode cards */
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:16px 0}
+.mode{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:14px 16px;min-width:0}
+.mode.pick{border:2px solid var(--ok)}
+.mode b{display:block;margin-bottom:2px}
+.mode .reg{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);display:block;margin-bottom:8px}
+.trk{display:flex;gap:3px;margin:8px 0 6px;flex-wrap:wrap}
+.trk span{font-family:var(--font-mono);font-size:11.5px;font-weight:600;padding:2px 6px;border-radius:4px;border:1px solid var(--line)}
+.trk .g{color:var(--muted);border-style:dashed;background:none}
+.trk .r0{background:var(--c0-soft);color:var(--c0);border-color:var(--c0)} .trk .r1{background:var(--c1-soft);color:var(--c1);border-color:var(--c1)}
+.trk .r2{background:var(--c2-soft);color:var(--c2);border-color:var(--c2)} .trk .r3{background:var(--c3-soft);color:var(--c3);border-color:var(--c3)}
+.trk .x{text-decoration:line-through;opacity:.55}
+.mode p{font-size:14.5px;margin:0}
+
+/* simulator */
+.sim{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:18px;margin:16px 0}
+.subhead{font-weight:700;margin:18px 0 6px;padding-top:14px;border-top:1px dashed var(--line)}
+.subhead:first-child{margin-top:0;padding-top:0;border-top:0}
+.ranks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+@media (max-width:560px){.ranks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.rk{border:2px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);min-width:0;position:relative}
+.rk .h{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.rk .c{font-weight:700;font-size:15px;line-height:1.35}
+.rk .p{font-family:var(--font-mono);font-size:11.5px;color:var(--muted)}
+.rk .v{font-family:var(--font-mono);font-size:13px;font-variant-numeric:tabular-nums;margin-top:4px}
+.rk.nx{box-shadow:0 0 0 3px var(--fg) inset}
+.rk.nx::after{content:"다음 트리거";position:absolute;top:-11px;right:8px;font-size:11px;font-weight:700;background:var(--fg);color:var(--bg);padding:0 6px;border-radius:4px}
+.rk.r0 .c{color:var(--c0)} .rk.r1 .c{color:var(--c1)} .rk.r2 .c{color:var(--c2)} .rk.r3 .c{color:var(--c3)}
+.rk.on.r0{background:var(--c0-soft);border-color:var(--c0)} .rk.on.r1{background:var(--c1-soft);border-color:var(--c1)}
+.rk.on.r2{background:var(--c2-soft);border-color:var(--c2)} .rk.on.r3{background:var(--c3-soft);border-color:var(--c3)}
+.regs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.stat{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.stat .k{font-size:12px;color:var(--muted);font-family:var(--font-mono)}
+.stat .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3;overflow-wrap:anywhere}
+.lamp{display:inline-block;padding:0 10px;border-radius:999px;font-size:15px;border:1px solid var(--line)}
+.lamp.on{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+.outs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+@media (max-width:560px){.outs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.oc{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.oc .k{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.oc .v{font-family:var(--font-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.oc .f{font-size:12.5px}
+.oc.bad{border:2px solid var(--warn);background:var(--warn-bg)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+button,select,input{font-family:inherit}
+button{font-size:15px;font-weight:700;padding:9px 14px;border-radius:6px;border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;min-height:44px}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+button.hw{border-color:var(--c3);color:var(--c3)} button.hw:hover{background:var(--c3-soft)}
+button.sw{border-color:var(--c0);color:var(--c0)} button.sw:hover{background:var(--c0-soft)}
+button.plain:hover{background:var(--surface2)}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 16px;margin:10px 0}
+.ctl label{display:block;font-size:14px;color:var(--muted)}
+.ctl label b{font-family:var(--font-mono);color:var(--fg);font-weight:600}
+.ctl select{font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl input[type=range]{width:100%;min-height:32px}
+.calc{font-family:var(--font-mono);font-size:13.5px;line-height:1.65;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-height:5.4em;white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0 0}
+.uart{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);color:var(--code-fg);border-radius:6px;padding:10px 12px;white-space:pre;overflow-x:auto;margin:8px 0 0;min-height:2.6em}
+.log{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:8px 0 0;max-height:7.5em;overflow:auto;white-space:pre-wrap}
+
+/* code */
+pre{background:var(--code-bg);color:var(--code-fg);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:0;font-family:var(--font-mono);font-size:13.5px;line-height:1.7;tab-size:2}
+pre code{background:none;padding:0;font-size:inherit;color:inherit}
+.cm{color:var(--code-cmt)} .kw{color:var(--code-kw)} .hl{color:var(--code-hl)}
+.codepair{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;margin:14px 0;align-items:start}
+@media (max-width:760px){.codepair{grid-template-columns:minmax(0,1fr)}}
+.codepair ol{margin:0;padding-left:20px;font-size:15px} .codepair li{margin-bottom:8px}
+.file{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:18px 0 6px}
+
+/* quiz */
+details{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0;padding:0}
+summary{cursor:pointer;padding:12px 16px;font-weight:500;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--c0)} details[open] summary::before{content:"▾ "}
+summary:focus-visible{outline:3px solid var(--fg);outline-offset:-3px;border-radius:8px}
+details .ans{padding:0 16px 14px;color:var(--fg)} details .ans p{margin-bottom:8px}
+footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+
+/* 타이머 교안 추가 토큰 */
+.diag .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.diag .bx.hot{stroke:var(--warn);stroke-width:2.5;fill:var(--warn-bg)}
+.diag .bx.hw{stroke:var(--c3);fill:var(--c3-soft)} .diag .bx.sw{stroke:var(--c0);fill:var(--c0-soft)}
+.diag .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.diag .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.diag .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+.diag .ah{fill:var(--muted)}
+.diag .ax{stroke:var(--muted);stroke-width:1.3;fill:none}
+.diag .gd{stroke:var(--line);stroke-width:1.2;stroke-dasharray:5 4;fill:none}
+.diag .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .diag .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.diag .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .diag .s3{stroke:var(--c3);stroke-width:2.2;fill:none}
+.diag .d1{fill:var(--c1)} .diag .d0{fill:var(--c0)} .diag .d3{fill:var(--c3)}
+.diag .blk{fill:var(--c1-soft);stroke:var(--c1)}
+.diag text.m{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.diag text.t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.wave{margin:12px 0}
+.wave svg{display:block;width:100%;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px}
+.wave .ax{stroke:var(--muted);stroke-width:1.2;fill:none}
+.wave .gd{stroke:var(--line);stroke-width:1;stroke-dasharray:4 4;fill:none}
+.wave .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .wave .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.wave .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .wave .s3{stroke:var(--c3);stroke-width:2.2;fill:none}
+.wave .ev{stroke:var(--c3);stroke-width:1.6}
+.wave .bar{fill:var(--c1)} .wave .bar0{fill:var(--c0)}
+.wave text{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.wave text.tt{font-family:var(--font-body);font-size:12.5px;fill:var(--fg)}
+.bits{display:flex;margin:14px 0;font-family:var(--font-mono);font-size:13.5px;text-align:center}
+.bits div{flex:1;border:2px solid var(--c0);padding:10px 6px;background:var(--c0-soft);min-width:0}
+.bits div.lo{border-color:var(--c2);background:var(--c2-soft)}
+.bits small{display:block;color:var(--muted);font-size:12px}
+.eq{font-family:var(--font-mono);font-size:14.5px;background:var(--surface2);border-left:4px solid var(--c0);padding:10px 14px;margin:14px 0;overflow-x:auto;white-space:pre-wrap}
+.nextprev{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+.nextprev a{border:1px solid var(--line);border-radius:8px;padding:8px 14px;text-decoration:none;color:var(--c0);background:var(--surface)}
+td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
+.rowbad td{background:var(--warn-bg)}
+.cards2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:16px 0}
+.cards2 .mode{min-width:0}
+
+.wave .dot{fill:var(--c3)} .wave .blk{fill:var(--c1-soft);stroke:var(--c1)}
+.capt{font-size:14px;color:var(--muted);margin:6px 2px 14px}
+.stat .v.sm{font-size:15px}
+.sim .row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+
+
+/* USART 묶음(04~06) 추가: 기존 토큰만 사용 */
+.cellgrid{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));gap:3px;margin:10px 0}
+@media (max-width:560px){.cellgrid{grid-template-columns:repeat(8,minmax(0,1fr))}}
+.cellgrid .cl{border:1px solid var(--line);border-radius:4px;background:var(--bg);font-family:var(--font-mono);font-size:12px;text-align:center;min-height:32px;line-height:1.25;padding:2px 0;min-width:0;overflow:hidden}
+.cellgrid .cl small{display:block;font-size:9.5px;color:var(--muted)}
+.cellgrid .cl.nw{background:var(--c1-soft);border-color:var(--c1)}
+.cellgrid .cl.cp{background:var(--c2-soft);border-color:var(--c2)}
+.cellgrid .cl.wp{box-shadow:0 0 0 2px var(--c0) inset}
+.cellgrid .cl.op{outline:2px dashed var(--c3);outline-offset:-2px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13.5px;color:var(--muted);margin:4px 0 0}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1px solid var(--line);background:var(--bg)}
+.legend i.nw{background:var(--c1-soft);border-color:var(--c1)} .legend i.cp{background:var(--c2-soft);border-color:var(--c2)}
+.legend i.wp{box-shadow:0 0 0 2px var(--c0) inset} .legend i.op{outline:2px dashed var(--c3);outline-offset:-2px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;min-height:28px}
+.chips span{font-family:var(--font-mono);font-size:13px;padding:2px 8px;border-radius:4px;border:1px solid var(--c0);background:var(--c0-soft);color:var(--c0)}
+.chips span.a0{border-color:var(--c1);background:var(--c1-soft);color:var(--c1)}
+.ctl input[type=text]{font-family:var(--font-mono);font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl input[type=checkbox]{width:18px;height:18px;vertical-align:-3px;margin-right:6px}
+tr.hit td{background:var(--ok-bg)}
+p code,li code{overflow-wrap:anywhere}
+.lamp.bad{background:var(--warn-bg);color:var(--warn);border-color:var(--warn)}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">STM32 Nucleo-F103RB · USART · 교안</div>
+  <h1>UART 명령줄 인터페이스: 줄 편집과 명령 테이블</h1>
+  <p class="lead">보드를 디버깅하거나 설정을 바꿀 때마다 코드를 고쳐 다시 굽는 것은 비효율적이다. 터미널에서 <code>led on</code>, <code>peek 0x40010800</code>처럼 명령을 입력해 보드와 대화하면 된다. 이 예제는 인터럽트 링 버퍼로 바이트를 받고, main에서 줄 편집(에코·백스페이스·CR/LF)으로 한 줄을 조립한 뒤, 공백으로 토큰을 나눠 함수 포인터 명령 테이블에서 핸들러를 찾아 호출한다. 폴더는 <code>05_UART_CLI_c</code>이다.</p>
+  <nav class="toc" aria-label="목차">
+    <a href="#s1">1. 문제와 목표</a><a href="#s2">2. 3단계 구조</a><a href="#s3">3. 하드웨어와 메모리</a><a href="#s4">4. 직접 만져 보기</a><a href="#s5">5. 함수 대응</a><a href="#s6">6. 실행 경로</a><a href="#s7">7. 코드 읽기</a><a href="#s8">8. 실험</a><a href="#s9">9. 트러블슈팅</a><a href="#s10">10. 확인 문제</a>
+  </nav>
+</header>
+
+<section id="s1">
+<h2>1. 문제: 바이트 흐름을 명령으로 바꾼다</h2>
+<p>UART로 들어오는 것은 글자 하나하나이다. 사람이 입력하는 명령은 "Enter로 끝나는 한 줄"이고, 그 안에서 명령어와 인자가 공백으로 나뉜다. 바이트 흐름 → 줄 → 토큰 → 함수 호출로 단계를 나누면 각 단계를 따로 이해하고 고칠 수 있다. 학습 목표는 다음과 같다.</p>
+<ul>
+  <li>ISR(생산자)과 main(소비자) 사이의 링 버퍼를 03 예제와 연결해 설명한다.</li>
+  <li>에코, 백스페이스(<code>"\b \b"</code>), CR/LF 처리로 줄 편집기를 구현하는 원리를 설명한다.</li>
+  <li><code>strtok</code>로 <code>argc</code>/<code>argv</code>를 만들고, 구조체 배열 + 함수 포인터 테이블로 명령을 찾는다.</li>
+  <li>명령을 추가하는 절차와 <code>peek</code>처럼 위험한 명령의 주의점을 정리한다.</li>
+</ul>
+<div class="box"><div class="label">이 예제의 동작</div><p>부팅하면 <code>[UART CLI] type 'help'</code>와 프롬프트 <code>&gt; </code>를 출력한다. 사용자가 입력한 글자는 즉시 에코되고, Enter(CR 또는 LF)를 받으면 줄을 해석해 명령을 실행한 뒤 새 프롬프트를 띄운다. 지원 명령은 <code>help</code>, <code>led</code>, <code>uptime</code>, <code>echo</code>, <code>peek</code>, <code>reset</code>이다.</p></div>
+<div class="box warn"><p>이 예제는 검토 전(컴파일만 확인) 상태이다.</p></div>
+</section>
+
+<section id="s2">
+<h2>2. 3단계 구조: 수신 → 줄 조립 → 파싱</h2>
+<div class="diag"><svg viewBox="0 0 720 200" role="img" aria-label="UART 수신부터 명령 핸들러까지의 처리 단계">
+<rect class="bx hw" x="10" y="30" width="120" height="56" rx="6"/><text class="t" x="22" y="54">USART2 RX</text><text class="s" x="22" y="74">RXNE 인터럽트</text>
+<rect class="bx" x="160" y="30" width="120" height="56" rx="6"/><text class="t" x="172" y="54">rb_buf[64]</text><text class="s" x="172" y="74">링 버퍼 (FIFO)</text>
+<rect class="bx sw" x="310" y="30" width="120" height="56" rx="6"/><text class="t" x="322" y="54">line[64]</text><text class="s" x="322" y="74">에코 · BS · Enter</text>
+<rect class="bx sw" x="460" y="30" width="120" height="56" rx="6"/><text class="t" x="472" y="54">argv[6]</text><text class="s" x="472" y="74">strtok(" \t")</text>
+<rect class="bx sw" x="610" y="30" width="100" height="56" rx="6"/><text class="t" x="620" y="54">cmd_table</text><text class="s" x="620" y="74">strcmp → fn()</text>
+<line class="w" x1="130" y1="58" x2="152" y2="58"/><polygon class="ah" points="160,58 151,53 151,63"/>
+<line class="w" x1="280" y1="58" x2="302" y2="58"/><polygon class="ah" points="310,58 301,53 301,63"/>
+<line class="w" x1="430" y1="58" x2="452" y2="58"/><polygon class="ah" points="460,58 451,53 451,63"/>
+<line class="w" x1="580" y1="58" x2="602" y2="58"/><polygon class="ah" points="610,58 601,53 601,63"/>
+<text class="m" x="10" y="116">ISR 문맥 (생산자)</text><text class="m" x="310" y="116">main 루프 (소비자)</text>
+<line class="gd" x1="145" y1="20" x2="145" y2="130"/><line class="gd" x1="295" y1="20" x2="295" y2="130"/>
+<text class="m" x="160" y="150">"led on\r"  →  line = "led on"  →  argv = {"led","on"}, argc = 2  →  cmd_led(2, argv)</text>
+<text class="m" x="160" y="174">다음에 쓸 칸 rb_head는 ISR만, 다음에 읽을 칸 rb_tail은 main만 바꾼다</text>
+</svg><p class="capt">그림 1. 단계 사이의 경계가 곧 문맥의 경계이다. ISR은 1바이트를 링 버퍼에 넣고 끝나며, 줄 편집·파싱·명령 실행은 모두 main 루프에서 일어난다.</p></div>
+<h3>줄 편집 규칙 (main 루프)</h3>
+<div class="tablewrap"><table>
+<tr><th>수신 바이트</th><th>코드</th><th>동작</th></tr>
+<tr><td>CR 또는 LF</td><td class="m">0x0D, 0x0A</td><td><code>"\r\n"</code> 출력 → <code>line[len] = '\0'</code> → <code>execute(line)</code> → <code>len = 0</code> → <code>"&gt; "</code> 출력</td></tr>
+<tr><td>Backspace / DEL</td><td class="m">0x08, 0x7F</td><td><code>len &gt; 0</code>이면 <code>len--</code>, 화면에 <code>"\b \b"</code>(왼쪽 → 공백으로 덮기 → 왼쪽)</td></tr>
+<tr><td>출력 가능 문자</td><td class="m">0x20~0x7E</td><td><code>len &lt; 63</code>이면 <code>line</code>에 저장하고 그 글자를 에코. 꽉 차면 조용히 무시</td></tr>
+<tr><td>그 밖의 제어 문자</td><td class="m">0x09(Tab), 0x1B(ESC) 등</td><td>무시(저장도 에코도 안 함)</td></tr>
+</table></div>
+<h3>지원 명령 (<code>cmd_table</code>)</h3>
+<div class="tablewrap"><table>
+<tr><th>명령</th><th>핸들러</th><th>인자</th><th>동작 / 출력</th></tr>
+<tr><td class="m">help</td><td class="m">cmd_help</td><td>없음</td><td>테이블을 돌며 <code>"  이름 - 설명"</code> 6줄 출력</td></tr>
+<tr><td class="m">led</td><td class="m">cmd_led</td><td><code>on</code> | <code>off</code> | <code>toggle</code></td><td>LD2(PA5) 제어 후 <code>ok</code>. 인자 없음/오류면 <code>usage: led on|off|toggle</code></td></tr>
+<tr><td class="m">uptime</td><td class="m">cmd_uptime</td><td>없음</td><td><code>HAL_GetTick()</code>을 <code>초.밀리초 s</code>로 출력 (예: <code>12.345 s</code>)</td></tr>
+<tr><td class="m">echo</td><td class="m">cmd_echo</td><td><code>&lt;text...&gt;</code></td><td><code>argv[1]</code>부터 공백 하나로 이어 출력</td></tr>
+<tr><td class="m">peek</td><td class="m">cmd_peek</td><td><code>&lt;hex_addr&gt;</code></td><td><code>strtoul(…, 16)</code>로 주소 해석, 4바이트 정렬 검사 후 <code>[0xAAAAAAAA] = 0xVVVVVVVV</code></td></tr>
+<tr><td class="m">reset</td><td class="m">cmd_reset</td><td>없음</td><td><code>resetting...</code> 출력, 20 ms 대기 후 <code>NVIC_SystemReset()</code></td></tr>
+<tr><td>(그 외)</td><td>—</td><td>—</td><td><code>unknown command (type 'help')</code></td></tr>
+</table></div>
+</section>
+
+<section id="s3">
+<h2>3. 하드웨어와 메모리 예산</h2>
+<div class="tablewrap"><table>
+<tr><th>자원</th><th>설정 (소스 확인)</th><th>비고</th></tr>
+<tr><td>USART2</td><td>PA2 TX(<code>AF_PP</code>), PA3 RX(입력, 풀 없음), 115200 8N1</td><td>ST-LINK 가상 COM. <code>BRR</code> = 0x116 (PCLK1 32 MHz)</td></tr>
+<tr><td>LD2</td><td>PA5 출력 푸시풀, 초기 Low</td><td>High = 점등</td></tr>
+<tr><td>NVIC</td><td><code>USART2_IRQn</code> = (1, 0)</td><td>SysTick(<code>TICK_INT_PRIORITY</code> = 0)보다 낮은 우선순위</td></tr>
+<tr><td>클럭</td><td>SYSCLK 64 MHz (HSI ÷ 2 × 16), APB1 32 MHz, APB2 64 MHz</td><td><code>uptime</code>은 SysTick 1 ms 틱 기준</td></tr>
+</table></div>
+<div class="tablewrap"><table>
+<tr><th>버퍼</th><th>크기</th><th>한계</th></tr>
+<tr><td><code>rb_buf</code></td><td>64바이트 (<code>RB_MASK</code> = 63)</td><td>한 칸은 비워 두므로 최대 63바이트 대기. 가득 차면 새 바이트를 버린다</td></tr>
+<tr><td><code>line</code></td><td>64바이트</td><td>문자 63개 + <code>'\0'</code></td></tr>
+<tr><td><code>argv</code></td><td>6개 (<code>MAX_ARGS</code>)</td><td>7번째 토큰부터 무시</td></tr>
+</table></div>
+<p><code>peek</code>로 읽어 볼 만한 주소와 이 예제에서 예상되는 값은 다음과 같다(RM0008 주소, 초기화 코드로 계산).</p>
+<div class="tablewrap"><table>
+<tr><th>주소</th><th>레지스터</th><th>예상 값</th><th>근거</th></tr>
+<tr><td class="m">0x40010800</td><td>GPIOA_CRL</td><td class="m">0x44244A44</td><td>PA5 = 출력 2 MHz 푸시풀(0x2), PA2 = AF 푸시풀 2 MHz(0xA), PA3 등 = 입력 플로팅(0x4)</td></tr>
+<tr><td class="m">0x4001080C</td><td>GPIOA_ODR</td><td class="m">0x00000020 / 0x00000000</td><td>LD2 켬 / 끔 (bit5)</td></tr>
+<tr><td class="m">0x40004408</td><td>USART2_BRR</td><td class="m">0x00000116</td><td>DIV_Mantissa = 17, DIV_Fraction = 6</td></tr>
+<tr><td class="m">0x4000440C</td><td>USART2_CR1</td><td class="m">0x0000202C</td><td>UE | RXNEIE | TE | RE</td></tr>
+<tr><td class="m">0x08000000</td><td>벡터 테이블 0번</td><td class="m">0x20005000</td><td>초기 MSP = RAM 끝(<code>_estack</code>, 20 KB)</td></tr>
+</table></div>
+</section>
+
+<section id="s4">
+<h2>4. 직접 만져 보기: 키 입력에서 핸들러까지</h2>
+<p>아래 가상 터미널은 main 루프의 줄 편집 규칙, <code>strtok</code> 토큰화, <code>cmd_table</code> 검색을 소스 그대로 따른다.</p>
+<ol>
+  <li>입력 칸에 <code>led on</code>을 쓰고 <b>글자 보내기</b>를 누른 뒤 <b>Enter (CR)</b>를 누른다. 토큰과 일치한 테이블 행, LD2 상태를 본다.</li>
+  <li><code>led  toggle</code>(공백 두 칸)도 같은 결과가 되는지 확인한다.</li>
+  <li><b>Backspace</b>로 글자를 지우며 줄 버퍼 <code>len</code>이 줄어드는 것을 본다. <b>← 화살표</b>를 누르면 무엇이 줄에 들어가는가?</li>
+  <li><b>Enter (CR+LF)</b>를 눌러 터미널이 CR과 LF를 함께 보낼 때 프롬프트가 어떻게 되는지 관찰한다.</li>
+  <li><code>peek 0x40004408</code>, <code>peek 0x40004402</code>, <code>peek 0x60000000</code>을 차례로 실행한다.</li>
+</ol>
+<div class="sim">
+  <div class="subhead">PC 터미널 입력</div>
+  <div class="ctl">
+    <div><label for="kin">입력할 글자</label><input id="kin" type="text" value="led on" maxlength="80"></div>
+  </div>
+  <div class="btns">
+    <button class="hw" id="bType" type="button">글자 보내기</button>
+    <button class="hw" id="bCR" type="button">Enter (CR)</button>
+    <button class="hw" id="bCRLF" type="button">Enter (CR+LF)</button>
+    <button class="hw" id="bBS" type="button">Backspace (0x7F)</button>
+    <button class="hw" id="bArrow" type="button">← 화살표 (ESC [ D)</button>
+    <button class="plain" id="bReset" type="button">전원 재투입</button>
+  </div>
+  <div class="subhead">line 버퍼와 토큰</div>
+  <div class="regs">
+    <div class="stat"><div class="k">len</div><div class="v" id="vLen">0</div></div>
+    <div class="stat"><div class="k">line</div><div class="v sm" id="vLine">""</div></div>
+    <div class="stat"><div class="k">argc</div><div class="v" id="vArgc">–</div></div>
+    <div class="stat"><div class="k">LD2 (PA5)</div><div class="v"><span class="lamp" id="vLed">0</span></div></div>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div class="tablewrap"><table id="ctab"><tr><th>i</th><th>name</th><th>fn</th><th>strcmp(argv[0], name)</th></tr></table></div>
+  <div class="calc" id="calc" aria-live="polite">글자를 보내 줄 편집 과정을 확인한다.</div>
+  <div class="label" style="margin-top:12px">터미널 화면 (보드 → PC)</div>
+  <div class="uart" id="uart"></div>
+</div>
+<p style="font-size:14.5px;color:var(--muted)">시뮬레이터 모델: 링 버퍼는 넘치지 않는 것으로 보고 바이트를 즉시 main이 꺼낸다. <code>uptime</code>은 페이지를 연 시각부터의 경과 시간, <code>peek</code>는 위 표의 주소만 값을 알고 그 밖의 유효 주소는 "값 미상", 외부 메모리 영역(0x60000000~0x9FFFFFFF)은 BusFault → HardFault로 처리한다. <code>reset</code>은 화면과 상태를 지운다. <code>strcmp</code>의 반환값은 부호만 의미가 있어 0 / ≠0으로 표시한다.</p>
+</section>
+
+<section id="s5">
+<h2>5. 함수와 레지스터의 대응</h2>
+<div class="tablewrap"><table>
+<tr><th>함수</th><th>계층</th><th>레지스터/동작</th></tr>
+<tr><td><code>HAL_UART_Receive_IT(&amp;huart2, &amp;rx_byte, 1)</code></td><td>HAL</td><td><code>CR3.EIE</code> = 1, <code>CR1.RXNEIE</code> = 1 (패리티 없음이라 PEIE는 켜지 않음)</td></tr>
+<tr><td><code>HAL_UART_IRQHandler()</code></td><td>HAL</td><td><code>SR.RXNE</code> 확인 → <code>DR</code> 읽기(RXNE 클리어) → 1바이트 완료 시 RXNEIE = 0 → <code>HAL_UART_RxCpltCallback</code></td></tr>
+<tr><td><code>HAL_UART_Transmit()</code> / <code>out()</code></td><td>HAL</td><td><code>SR.TXE</code> 대기 → <code>DR</code> 쓰기 반복 → 끝에 <code>SR.TC</code> 대기 (블로킹)</td></tr>
+<tr><td><code>HAL_GPIO_WritePin</code> / <code>TogglePin</code></td><td>HAL</td><td><code>GPIOA_BSRR</code> BS5 / BR5, Toggle은 ODR을 읽어 BSRR로 반전</td></tr>
+<tr><td><code>HAL_GetTick()</code></td><td>HAL</td><td>SysTick 1 ms 인터럽트가 올리는 <code>uwTick</code></td></tr>
+<tr><td><code>NVIC_SystemReset()</code></td><td>CMSIS</td><td><code>SCB_AIRCR</code> ← VECTKEY(0x05FA) | PRIGROUP 유지 | <code>SYSRESETREQ</code>(bit2)</td></tr>
+<tr><td><code>strtok</code>, <code>strcmp</code>, <code>strtoul</code>, <code>snprintf</code></td><td>C 표준 라이브러리</td><td>레지스터와 무관. <code>strtok</code>은 원본 <code>line</code>에 <code>'\0'</code>을 써 넣어 자른다</td></tr>
+</table></div>
+<div class="tablewrap"><table>
+<tr><th>레지스터</th><th>대기 중 값</th><th>해석</th></tr>
+<tr><td class="m">USART2_CR1</td><td class="m">0x202C</td><td>UE(bit13) | RXNEIE(bit5) | TE(bit3) | RE(bit2)</td></tr>
+<tr><td class="m">USART2_CR3</td><td class="m">0x0001</td><td>EIE(bit0) — 프레이밍·노이즈·오버런 오류 인터럽트</td></tr>
+<tr><td class="m">USART2_BRR</td><td class="m">0x0116</td><td>115 108 bps (−0.08 %)</td></tr>
+</table></div>
+<p>콜백에서 <code>HAL_UART_Receive_IT</code>를 다시 호출하기 전까지 RXNEIE는 잠시 0이다. 그 사이(수 µs)에 다음 바이트가 와도 RXNE 플래그는 남아 있으므로 재무장 직후 바로 인터럽트가 걸린다.</p>
+</section>
+
+<section id="s6">
+<h2>6. 실행 경로: 키 하나가 명령이 되기까지</h2>
+<ol class="flow">
+<li class="hw"><div class="n">1</div><div class="tx"><b>PC 키 입력 → ST-LINK VCP → PA3<span class="tag hw">하드웨어</span></b><span>한 글자 = 1프레임(86.8 µs). <code>SR.RXNE</code> = 1, RXNEIE = 1이면 <code>USART2_IRQn</code> 요청.</span></div></li>
+<li class="sw"><div class="n">2</div><div class="tx"><b><code>USART2_IRQHandler</code> → <code>HAL_UART_IRQHandler</code><span class="tag sw">소프트웨어</span></b><span>DR을 <code>rx_byte</code>로 읽고 <code>HAL_UART_RxCpltCallback</code> 호출.</span></div></li>
+<li class="sw"><div class="n">3</div><div class="tx"><b>콜백: 링 버퍼 push + 재무장<span class="tag sw">ISR 문맥</span></b><span><code>next = (rb_head + 1) &amp; 63</code>, <code>next != rb_tail</code>이면 저장 후 <code>rb_head = next</code>. 가득 차면 버린다. 마지막에 <code>HAL_UART_Receive_IT</code> 재호출.</span></div></li>
+<li class="sw"><div class="n">4</div><div class="tx"><b>main: pop과 줄 편집<span class="tag sw">소프트웨어</span></b><span><code>rb_head != rb_tail</code>이면 1바이트를 꺼내 CR/LF, BS/DEL, 출력 가능 문자로 분기한다.</span></div></li>
+<li class="sw"><div class="n">5</div><div class="tx"><b>Enter → <code>execute(line)</code><span class="tag sw">소프트웨어</span></b><span><code>strtok(line, " \t")</code>로 최대 6개 토큰. <code>argc</code> = 0(빈 줄)이면 아무것도 하지 않는다.</span></div></li>
+<li class="sw"><div class="n">6</div><div class="tx"><b>테이블 검색과 호출<span class="tag sw">소프트웨어</span></b><span><code>cmd_table[i].name</code>과 <code>argv[0]</code>을 <code>strcmp</code>로 비교, 일치하면 <code>cmd_table[i].fn(argc, argv)</code>. 없으면 unknown 메시지.</span></div></li>
+<li class="sw"><div class="n">7</div><div class="tx"><b>결과 출력과 프롬프트<span class="tag sw">소프트웨어</span></b><span>핸들러가 <code>out()</code>으로 블로킹 송신 → main이 <code>len = 0</code>, <code>"&gt; "</code> 출력.</span></div></li>
+</ol>
+</section>
+
+<section id="s7">
+<h2>7. 코드 읽기</h2>
+<p>외부 부품은 필요 없다. 터미널은 115200 8N1, 로컬 에코 끔, 문자 인코딩 UTF-8(도움말의 한글)로 둔다.</p>
+<div class="file">main.c — 명령 테이블과 help</div>
+<div class="codepair">
+<pre><code><span class="kw">typedef</span> <span class="kw">void</span> (*cmd_fn)(<span class="kw">int</span> argc, <span class="kw">char</span> **argv);
+
+<span class="kw">static const struct</span> { <span class="kw">const char</span> *name; cmd_fn fn; <span class="kw">const char</span> *help; } cmd_table[] = {
+    { <span class="hl">"help"</span>,   cmd_help,   <span class="hl">"명령 목록"</span> },
+    { <span class="hl">"led"</span>,    cmd_led,    <span class="hl">"led on|off|toggle"</span> },
+    { <span class="hl">"uptime"</span>, cmd_uptime, <span class="hl">"부팅 후 경과 시간"</span> },
+    { <span class="hl">"echo"</span>,   cmd_echo,   <span class="hl">"echo &lt;text&gt;"</span> },
+    { <span class="hl">"peek"</span>,   cmd_peek,   <span class="hl">"peek &lt;hex_addr&gt;  (32비트 읽기)"</span> },
+    { <span class="hl">"reset"</span>,  cmd_reset,  <span class="hl">"소프트웨어 리셋"</span> },
+};
+<span class="kw">#define</span> N_CMDS (<span class="kw">sizeof</span> cmd_table / <span class="kw">sizeof</span> cmd_table[0])
+
+<span class="kw">static void</span> cmd_help(<span class="kw">int</span> argc, <span class="kw">char</span> **argv)
+{
+    (<span class="kw">void</span>)argc; (<span class="kw">void</span>)argv;
+    <span class="kw">for</span> (<span class="kw">unsigned</span> i = 0; i &lt; N_CMDS; i++) { out(<span class="hl">"  "</span>); out(cmd_table[i].name); out(<span class="hl">" - "</span>); out(cmd_table[i].help); out(<span class="hl">"\r\n"</span>); }
+}</code></pre>
+<ol><li>모든 핸들러가 같은 서명 <code>void f(int, char **)</code>을 가지므로 함수 포인터 하나로 부를 수 있다.</li><li>테이블은 <code>static const</code>라 플래시에 놓인다. 명령 추가 = 핸들러 작성 + 테이블 한 줄.</li><li><code>N_CMDS</code>는 컴파일 시 계산되어 테이블 길이를 따로 관리할 필요가 없다.</li><li><code>help</code>는 테이블을 그대로 순회하므로 명령을 추가하면 도움말도 자동으로 늘어난다.</li></ol>
+</div>
+<div class="file">main.c — execute(): 토큰화와 디스패치</div>
+<div class="codepair">
+<pre><code><span class="kw">static void</span> execute(<span class="kw">char</span> *line)
+{
+    <span class="kw">char</span> *argv[MAX_ARGS];
+    <span class="kw">int</span> argc = 0;
+    <span class="kw">for</span> (<span class="kw">char</span> *t = strtok(line, <span class="hl">" \t"</span>); t &amp;&amp; argc &lt; (<span class="kw">int</span>)MAX_ARGS; t = strtok(NULL, <span class="hl">" \t"</span>)) argv[argc++] = t;
+    <span class="kw">if</span> (argc == 0) <span class="kw">return</span>;
+    <span class="kw">for</span> (<span class="kw">unsigned</span> i = 0; i &lt; N_CMDS; i++)
+    {
+        <span class="kw">if</span> (!strcmp(argv[0], cmd_table[i].name)) { cmd_table[i].fn(argc, argv); <span class="kw">return</span>; }
+    }
+    out(<span class="hl">"unknown command (type 'help')\r\n"</span>);
+}</code></pre>
+<ol><li><code>strtok</code>은 구분자 연속을 하나로 취급하므로 <code>led   on</code>도 토큰 2개가 된다.</li><li><code>argv</code>의 포인터는 <code>line</code> 내부를 가리킨다. 복사가 없으므로 메모리를 아끼지만, <code>line</code>을 덮어쓰기 전에 처리를 끝내야 한다.</li><li><code>strcmp</code>는 대소문자를 구분한다. <code>LED on</code>은 unknown이다.</li></ol>
+</div>
+<div class="file">main.c — main 루프의 줄 편집</div>
+<div class="codepair">
+<pre><code><span class="kw">while</span> (1)
+{
+  <span class="kw">if</span> (rb_head == rb_tail) <span class="kw">continue</span>;                 <span class="cm">/* 수신 데이터 없음 */</span>
+  uint8_t c = rb_buf[rb_tail];
+  rb_tail = (rb_tail + 1U) &amp; RB_MASK;
+  <span class="kw">if</span> (c == <span class="hl">'\r'</span> || c == <span class="hl">'\n'</span>)                       <span class="cm">/* 줄 완성 */</span>
+  {
+    out(<span class="hl">"\r\n"</span>);
+    line[len] = <span class="hl">'\0'</span>;
+    execute(line);
+    len = 0;
+    out(<span class="hl">"&gt; "</span>);
+  }
+  <span class="kw">else if</span> (c == 0x08 || c == 0x7F)                  <span class="cm">/* 백스페이스: 화면에서 한 글자 지우기 "\b \b" */</span>
+  {
+    <span class="kw">if</span> (len &gt; 0) { len--; out(<span class="hl">"\b \b"</span>); }
+  }
+  <span class="kw">else if</span> (c &gt;= 0x20 &amp;&amp; c &lt; 0x7F &amp;&amp; len &lt; LINE_MAX - 1U)   <span class="cm">/* 출력 가능한 문자만 */</span>
+  {
+    line[len++] = (<span class="kw">char</span>)c;
+    <span class="kw">HAL_UART_Transmit</span>(&amp;huart2, &amp;c, 1, 10);          <span class="cm">/* 에코 */</span>
+  }
+}</code></pre>
+<ol><li>CR과 LF를 모두 줄 끝으로 본다. 터미널이 CR+LF를 보내면 빈 줄이 하나 더 처리되어 프롬프트가 두 번 찍힌다.</li><li><code>"\b \b"</code>: 커서를 왼쪽으로 옮기고, 공백으로 글자를 덮은 뒤, 다시 왼쪽으로 온다. 터미널 화면과 <code>line</code>이 같은 상태를 유지한다.</li><li>에코는 저장한 글자에만 한다. 무시된 글자는 화면에도 나타나지 않으므로 사용자는 줄이 꽉 찼음을 알 수 있다.</li></ol>
+</div>
+<div class="file">main.c — HAL_UART_RxCpltCallback (ISR 문맥)</div>
+<div class="codepair">
+<pre><code><span class="kw">void</span> <span class="kw">HAL_UART_RxCpltCallback</span>(UART_HandleTypeDef *huart)
+{
+  <span class="kw">if</span> (huart-&gt;Instance != USART2) <span class="kw">return</span>;
+  uint32_t next = (rb_head + 1U) &amp; RB_MASK;
+  <span class="kw">if</span> (next != rb_tail) { rb_buf[rb_head] = rx_byte; rb_head = next; }
+  <span class="kw">HAL_UART_Receive_IT</span>(&amp;huart2, &amp;rx_byte, 1);
+}</code></pre>
+<ol><li>03 예제와 같은 lock-free 링 버퍼이다. 데이터를 먼저 쓰고 <code>rb_head</code>를 나중에 갱신한다.</li><li><code>HAL_UART_ErrorCallback</code>도 같은 재무장을 하여 오버런 뒤에도 수신이 멈추지 않는다.</li></ol>
+</div>
+<div class="box"><div class="label">기대 출력 (터미널, Enter = CR)</div><pre><code>[UART CLI] type 'help'
+&gt; led on
+ok
+&gt; peek 0x40004408
+[0x40004408] = 0x00000116
+&gt; echo hello   world
+hello world
+&gt; peek 0x40004402
+address must be 4-byte aligned
+&gt; </code></pre></div>
+</section>
+
+<section id="s8">
+<h2>8. 실험</h2>
+<h3>실험 A. CR, LF, CR+LF</h3><p>터미널의 송신 줄바꿈 설정을 CR, LF, CR+LF로 바꿔 가며 <code>help</code>를 입력한다. CR+LF에서 프롬프트가 두 번 찍히는 이유를 코드로 설명하고, 직전 문자가 CR일 때 LF를 무시하도록 고치는 방법을 생각한다.</p>
+<h3>실험 B. 화살표 키</h3><p>명령 중간에 ← 키를 누르고 Enter를 친다. 터미널은 ESC <code>[</code> <code>D</code> 3바이트를 보내며, ESC는 무시되지만 <code>[</code>와 <code>D</code>는 출력 가능 문자라 줄에 들어간다. 명령이 unknown이 되는 것을 확인한다.</p>
+<h3>실험 C. 명령 추가</h3><p><code>ver</code> 명령을 추가한다. 핸들러 <code>cmd_ver</code>를 작성하고 <code>cmd_table</code>에 한 줄을 넣은 뒤 <code>help</code> 출력에 자동으로 나타나는지 확인한다. 테이블 위에 프로토타입이 필요한 이유(<code>cmd_help</code>의 선언 방식)도 살펴본다.</p>
+<h3>실험 D. 인자 한도와 줄 길이</h3><p><code>echo 1 2 3 4 5 6 7 8</code>을 입력하면 <code>argv[0]</code> = echo를 포함해 6개만 받으므로 <code>1 2 3 4 5</code>만 출력된다. 또 64글자 이상을 붙여넣어 63글자 이후가 무시되는지 확인한다.</p>
+</section>
+
+<section id="s9">
+<h2>9. 트러블슈팅</h2>
+<div class="tablewrap"><table>
+<tr><th>증상</th><th>원인</th><th>점검/조치</th></tr>
+<tr><td>프롬프트 <code>&gt;</code>가 두 번 찍힌다</td><td>터미널이 Enter에 CR+LF를 보냄 → 빈 줄 한 번 더 실행</td><td>터미널을 CR 또는 LF 하나로 설정하거나, 직전 CR 뒤의 LF를 무시하도록 수정</td></tr>
+<tr><td>입력한 글자가 두 번 보인다</td><td>터미널의 로컬 에코가 켜져 있고 보드도 에코함</td><td>터미널 로컬 에코를 끈다</td></tr>
+<tr><td><code>help</code>의 설명이 깨진다</td><td>설명 문자열이 UTF-8 한글</td><td>터미널 인코딩을 UTF-8로 설정</td></tr>
+<tr><td>명령이 unknown으로 나온다</td><td>대소문자 차이, 화살표 키 등으로 <code>[</code>·<code>D</code> 같은 문자가 끼어듦</td><td><code>echo</code>로 실제 토큰을 확인, 줄을 지우고 다시 입력</td></tr>
+<tr><td><code>peek</code> 후 응답이 없다</td><td>존재하지 않는 주소 읽기 → BusFault → HardFault (Error 핸들러 무한 루프)</td><td>리셋 후 RM0008 메모리 맵의 주소만 사용. 진단은 HardFault 진단 예제 참고</td></tr>
+<tr><td>긴 텍스트를 붙여넣으면 글자가 빠진다</td><td>main이 긴 출력(<code>help</code> 등)을 블로킹 송신하는 동안 63바이트를 넘게 수신하면 링 버퍼가 넘침</td><td><code>RB_SIZE</code>를 늘리거나(2의 거듭제곱), 송신을 인터럽트/DMA로 바꾼다</td></tr>
+</table></div>
+</section>
+
+<section id="s10">
+<h2>10. 확인 문제</h2>
+<details><summary><b>문제 1.</b> <code>led&nbsp;&nbsp;&nbsp;on</code>(공백 3칸)과 Tab으로 구분한 <code>led→on</code>은 각각 어떻게 처리되는가?</summary>
+<div class="ans"><p>공백 3칸은 <code>strtok</code>이 하나의 구분으로 처리해 <code>led on</code>과 같다. Tab(0x09)은 출력 가능 문자가 아니어서 줄 편집 단계에서 버려지므로 <code>line</code>은 <code>"ledon"</code>이 되고 unknown이다. <code>strtok</code>의 <code>"\t"</code> 구분자는 이 경로로는 쓰일 일이 없다.</p></div></details>
+<details><summary><b>문제 2.</b> 백스페이스 처리에서 <code>"\b"</code> 하나만 보내면 화면에 어떤 문제가 생기는가?</summary>
+<div class="ans"><p>커서만 왼쪽으로 가고 글자는 화면에 남는다. <code>line</code>에서는 지워졌는데 화면에는 보여 사용자가 혼동한다. 공백으로 덮고 다시 왼쪽으로 가야 화면과 버퍼가 일치한다.</p></div></details>
+<details><summary><b>문제 3.</b> <code>peek zz</code>를 입력하면 무엇이 출력되는가?</summary>
+<div class="ans"><p><code>strtoul("zz", NULL, 16)</code>은 변환할 숫자가 없어 0을 돌려준다. 0은 4바이트 정렬이므로 주소 0x00000000을 읽는다. 플래시 부팅이면 이 영역은 플래시의 별칭이라 초기 MSP <code>0x20005000</code>이 나온다. 입력 검증(<code>endptr</code> 확인)이 없다는 점을 보여 준다.</p></div></details>
+<details><summary><b>문제 4.</b> 명령 처리를 ISR(콜백) 안에서 하지 않고 main에서 하는 이유는?</summary>
+<div class="ans"><p>핸들러는 블로킹 송신(<code>out()</code>), <code>HAL_Delay</code>(reset) 등 오래 걸리는 일을 한다. ISR에서 하면 그동안 다음 바이트 수신이 막히고, 같은 우선순위 이하 인터럽트도 지연된다. ISR은 1바이트 저장만 하고 나머지는 main이 맡는다.</p></div></details>
+</section>
+
+<section>
+  <h2>정리</h2>
+  <div class="tablewrap"><table><tr><th>예제</th><th>계층</th><th>수신/출력 방식</th><th>핵심</th></tr>
+  <tr><td class="m"><a href="../01_USART_printf/01_USART_printf%20교안.html">01_USART_printf</a></td><td>HAL</td><td>송신(블로킹)</td><td>printf → __io_putchar → UART</td></tr>
+  <tr><td class="m"><a href="../02_USART_Interrupt/02_USART_Interrupt%20교안.html">02_USART_Interrupt</a></td><td>HAL+NVIC</td><td>1바이트 수신 인터럽트</td><td>콜백 → 플래그 → main</td></tr>
+  <tr><td class="m"><a href="../03_USART_RingBuffer/UART%20링%20버퍼%20교안.html">03_USART_RingBuffer</a></td><td>HAL</td><td>인터럽트 + 링 버퍼</td><td>ISR→main lock-free FIFO</td></tr>
+  <tr><td class="m"><a href="../04_USART_DMA_IdleLine_c/04_USART_DMA_IdleLine%20교안.html">04_USART_DMA_IdleLine_c</a></td><td>HAL+DMA</td><td>DMA 원형 + IDLE</td><td>가변 길이 패킷</td></tr>
+  <tr><td class="m"><b>05_UART_CLI_c (이 교안)</b></td><td>HAL</td><td>줄 단위 수신</td><td>줄 편집, 명령 테이블</td></tr>
+  <tr><td class="m"><a href="../06_USART_HalfDuplex_c/06_USART_HalfDuplex%20교안.html">06_USART_HalfDuplex_c</a></td><td>HAL</td><td>단선 반이중</td><td>방향 전환, 오픈드레인</td></tr>
+  <tr><td class="m"><a href="../07_USART_Stack/스택%20교안.html">07_USART_Stack</a></td><td>HAL+CMSIS</td><td>인터럽트 + 스택</td><td>LIFO 괄호 검사, PRIMASK</td></tr>
+  <tr><td class="m"><a href="../08_USART_printf_Dual/08_USART_printf_Dual%20교안.html">08_USART_printf_Dual</a></td><td>HAL</td><td>송신 2포트</td><td>USART2+USART1(D8), AD2 파형</td></tr>
+  </table></div>
+  <div class="nextprev"><a href="../04_USART_DMA_IdleLine_c/04_USART_DMA_IdleLine%20교안.html">← 04_USART_DMA_IdleLine_c</a><a href="../06_USART_HalfDuplex_c/06_USART_HalfDuplex%20교안.html">06_USART_HalfDuplex_c →</a></div>
+  <footer>근거: 05_UART_CLI_c 소스(main.c, stm32f1xx_hal_msp.c, stm32f1xx_it.c, STM32F103RBTX_FLASH.ld). 계층: HAL(+ CMSIS <code>NVIC_SystemReset</code>, C 표준 라이브러리). 레지스터·비트 이름은 RM0008(STM32F101xx~F107xx 레퍼런스 매뉴얼) 기준이다. 클럭은 SYSCLK 64 MHz(HSI/2 × PLL16), APB1 ÷2(32 MHz), APB2 ÷1 구성을 기준으로 한다. <code>peek</code> 예상 값은 초기화 코드로 계산한 값이며 보드에서 확인하지 않았다. 코드는 해당 폴더의 소스에서 발췌한 것이며 일부 줄이 생략되어 있다.</footer>
+</section>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var NAMES=['help','led','uptime','echo','peek','reset'];
+  var HELP={help:'명령 목록',led:'led on|off|toggle',uptime:'부팅 후 경과 시간',echo:'echo <text>',peek:'peek <hex_addr>  (32비트 읽기)',reset:'소프트웨어 리셋'};
+  var t0=Date.now(),S;
+  function hex8(v){return ('00000000'+(v>>>0).toString(16).toUpperCase()).slice(-8)}
+  function term(t){var u=$('uart');u.textContent+=t;
+    var l=u.textContent.split('\n');if(l.length>14)u.textContent=l.slice(-14).join('\n');u.scrollTop=u.scrollHeight}
+  function boot(){S={line:'',led:0,argv:[],hit:-1,hard:false};t0=Date.now();$('uart').textContent='';
+    term('\r\n[UART CLI] type \'help\'\r\n> '.replace(/\r/g,''));$('calc').textContent='전원 투입: 배너와 프롬프트 출력, HAL_UART_Receive_IT 무장.';render()}
+  function out(s){term(s.replace(/\r/g,''))}
+  function peekVal(a){
+    var M={0x40010800:0x44244A44,0x40004408:0x116,0x4000440C:0x202C,0x08000000:0x20005000,0x00000000:0x20005000};
+    if(a===0x4001080C)return S.led?0x20:0;
+    if(M.hasOwnProperty(a))return M[a];
+    if(a>=0x60000000&&a<=0x9FFFFFFF)return 'fault';
+    return null}
+  var H={
+    help:function(){for(var i=0;i<NAMES.length;i++)out('  '+NAMES[i]+' - '+HELP[NAMES[i]]+'\r\n');return 'cmd_help: 테이블 '+NAMES.length+'행을 순회해 출력'},
+    led:function(c,v){if(c<2){out('usage: led on|off|toggle\r\n');return 'argc < 2 → usage'}
+      if(v[1]==='on')S.led=1;else if(v[1]==='off')S.led=0;else if(v[1]==='toggle')S.led^=1;
+      else{out('usage: led on|off|toggle\r\n');return 'argv[1] = "'+v[1]+'" 불일치 → usage'}
+      out('ok\r\n');return 'LD2 = '+S.led+' (GPIOA_BSRR '+(S.led?'BS5':'BR5')+')'},
+    uptime:function(){var t=Date.now()-t0;out(Math.floor(t/1000)+'.'+('00'+(t%1000)).slice(-3)+' s\r\n');return 'HAL_GetTick() = '+t},
+    echo:function(c,v){for(var i=1;i<c;i++){out(v[i]);out(i+1<c?' ':'')}out('\r\n');return 'argv[1..'+(c-1)+']를 공백 하나로 이어 출력'},
+    peek:function(c,v){if(c<2){out('usage: peek <hex_addr>\r\n');return 'argc < 2 → usage'}
+      var m=/^\s*(0[xX])?([0-9a-fA-F]*)/.exec(v[1]),a=m[2]?parseInt(m[2].slice(-8),16)>>>0:0;
+      var r='strtoul("'+v[1]+'", NULL, 16) = 0x'+hex8(a);
+      if(a&3){out('address must be 4-byte aligned\r\n');return r+' → addr & 3 = '+(a&3)+' → 정렬 오류'}
+      var x=peekVal(a);
+      if(x==='fault'){S.hard=true;return r+' → 외부 메모리 영역(장치 없음) 읽기 → BusFault → HardFault. 보드가 멈춘다(전원 재투입 필요).'}
+      if(x===null){out('[0x'+hex8(a)+'] = 0x????????\r\n');return r+' → 시뮬레이터에 값이 없는 주소(실제 보드에서 확인)'}
+      out('[0x'+hex8(a)+'] = 0x'+hex8(x)+'\r\n');return r+' → *(volatile uint32_t *)addr'},
+    reset:function(){out('resetting...\r\n');return 'NVIC_SystemReset()'}
+  };
+  function execute(line){
+    var toks=line.split(/[ \t]+/).filter(function(s){return s.length>0});
+    var argv=toks.slice(0,6),c=argv.length;S.argv=argv;S.hit=-1;
+    var log='execute("'+line+'"): strtok → argc = '+c+(toks.length>6?' (MAX_ARGS 6, '+(toks.length-6)+'개 무시)':'')+'\n';
+    if(c===0){return log+'argc == 0 → return (빈 줄)'}
+    for(var i=0;i<NAMES.length;i++){if(argv[0]===NAMES[i]){S.hit=i;var r=H[NAMES[i]](c,argv);
+      if(NAMES[i]==='reset'){return log+'cmd_table['+i+'] 일치 → '+r+' → 리셋'} return log+'cmd_table['+i+'] "'+NAMES[i]+'" 일치 → '+r}}
+    out('unknown command (type \'help\')\r\n');return log+'테이블 '+NAMES.length+'행 모두 불일치 → unknown'
+  }
+  function rxByte(c){
+    if(S.hard)return 'HardFault 상태: CPU가 Error 루프에 있어 아무 바이트도 처리하지 않는다.';
+    var code=c.charCodeAt(0),hx='0x'+('0'+code.toString(16).toUpperCase()).slice(-2);
+    if(c==='\r'||c==='\n'){out('\r\n');var r=execute(S.line);var wasReset=S.hit>=0&&NAMES[S.hit]==='reset';
+      S.line='';if(wasReset){setTimeout(boot,400);return r}if(S.hard)return hx+' (줄 끝)\n'+r;out('> ');return hx+' (줄 끝) → line[len] = \'\\0\'\n'+r+'\nlen = 0, "> " 출력'}
+    if(code===0x08||code===0x7F){if(S.line.length>0){S.line=S.line.slice(0,-1);var u=$('uart');u.textContent=u.textContent.slice(0,-1);return hx+' → len-- , "\\b \\b" 송신'}return hx+' → len == 0, 무시'}
+    if(code>=0x20&&code<0x7F&&S.line.length<63){S.line+=c;out(c);return hx+' \''+c+'\' → line['+(S.line.length-1)+'] 저장 + 에코'}
+    if(code>=0x20&&code<0x7F)return hx+' → len == 63, 줄이 꽉 차 무시';
+    return hx+' → 제어 문자, 무시(저장·에코 없음)'
+  }
+  function feed(str,label){var lines=[];for(var i=0;i<str.length;i++)lines.push(rxByte(str.charAt(i)));
+    $('calc').textContent=(label?label+'\n':'')+lines.join('\n');render()}
+  function render(){
+    $('vLen').textContent=S.line.length;$('vLine').textContent='"'+S.line+'"';
+    $('vArgc').textContent=S.argv.length;$('vLed').textContent=S.led;$('vLed').className='lamp'+(S.led?' on':'');
+    var ch='';for(var i=0;i<S.argv.length;i++)ch+='<span'+(i===0?' class="a0"':'')+'>argv['+i+'] = "'+S.argv[i].replace(/&/g,'&amp;').replace(/</g,'&lt;')+'"</span>';
+    $('chips').innerHTML=ch;
+    var t='<tr><th>i</th><th>name</th><th>fn</th><th>strcmp(argv[0], name)</th></tr>';
+    for(i=0;i<NAMES.length;i++){var cmp=S.argv.length?(S.argv[0]===NAMES[i]?'0 → 호출':'≠ 0'):'–';
+      if(S.hit>=0&&i>S.hit)cmp='(검사 안 함)';
+      t+='<tr'+(i===S.hit?' class="hit"':'')+'><td>'+i+'</td><td class="m">'+NAMES[i]+'</td><td class="m">cmd_'+NAMES[i]+'</td><td class="m">'+cmp+'</td></tr>'}
+    $('ctab').innerHTML=t;
+  }
+  $('bType').onclick=function(){feed($('kin').value,'글자 보내기: "'+$('kin').value+'"')};
+  $('bCR').onclick=function(){feed('\r','Enter (CR)')};
+  $('bCRLF').onclick=function(){feed('\r\n','Enter (CR+LF): 0x0D 다음 0x0A')};
+  $('bBS').onclick=function(){feed('\x7F','Backspace')};
+  $('bArrow').onclick=function(){feed('\x1B[D','← 화살표: ESC [ D 3바이트')};
+  $('bReset').onclick=boot;
+  boot();
+})();
+</script>
+</body></html>

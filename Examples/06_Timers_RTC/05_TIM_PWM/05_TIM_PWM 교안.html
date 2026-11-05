@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>05_TIM_PWM 교안</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+
+/* Layout: 한 열 교안(최대 860px) — 문제 → 시퀀스 → 모드 비교 → 시뮬레이터 → HAL 흐름 → Vrefint → 코드 → 실험 → 문제 순서.
+   채널 색을 전 구간에서 고정한다: A0=파랑, A1=주황, A2=청록, Vrefint=보라. (링 버퍼/스택 교안과 같은 기본 토큰) */
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --surface2:#E7ECF0; --fg:#14222C; --muted:#52636F; --line:#CBD5DC;
+  --c0:#1D4ED8; --c0-soft:#DCE6FB; --c1:#C2410C; --c1-soft:#FDE6DA; --c2:#0F766E; --c2-soft:#D5F0EC; --c3:#7E22CE; --c3-soft:#EEDFFB;
+  --code-bg:#0F1B24; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#9A3412; --warn-bg:#FFF1E6; --ok:#166534; --ok-bg:#E4F5EA;
+  --font-body:"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.75;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:860px;margin:0 auto}
+header{padding-block:40px 8px}
+.kicker{font-family:var(--font-mono);font-size:13px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.25;margin:8px 0 12px;text-wrap:balance;font-weight:700}
+.lead{color:var(--muted);margin:0;max-width:62ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0;padding:0;list-style:none}
+nav.toc a{display:block;padding:6px 12px;border:1px solid var(--line);border-radius:6px;color:var(--fg);text-decoration:none;font-size:14px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--c0);outline:2px solid var(--c0);outline-offset:1px}
+section{margin-top:56px}
+h2{font-size:24px;line-height:1.35;margin:0 0 12px;text-wrap:balance;font-weight:700}
+h3{font-size:18px;margin:28px 0 8px;font-weight:700}
+p{margin:0 0 14px;max-width:68ch}
+ul,ol{margin:0 0 14px;padding-left:22px;max-width:68ch}
+li{margin-bottom:4px}
+code{font-family:var(--font-mono);font-size:.9em;background:var(--surface2);padding:1px 6px;border-radius:4px}
+.k0{color:var(--c0);font-weight:700} .k1{color:var(--c1);font-weight:700} .k2{color:var(--c2);font-weight:700} .k3{color:var(--c3);font-weight:700}
+.box{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:16px 18px;margin:16px 0}
+.box.warn{background:var(--warn-bg);border-color:var(--warn)} .box.ok{background:var(--ok-bg);border-color:var(--ok)}
+.box > :last-child{margin-bottom:0}
+.label{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.tablewrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:15px;background:var(--surface)}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--surface2);font-weight:700;white-space:nowrap}
+td.m,th.m{font-family:var(--font-mono);font-size:13.5px}
+td.n{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+
+/* block diagram */
+.diag{max-width:720px;margin:18px auto}
+.diag svg{display:block;width:100%;height:auto}
+#blk .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+#blk .bx.hot{stroke:var(--warn);stroke-width:2.5;fill:var(--warn-bg)}
+#blk .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+#blk .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+#blk .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+#blk .w0{stroke:var(--c0)} #blk .w1{stroke:var(--c1)} #blk .w2{stroke:var(--c2)} #blk .w3{stroke:var(--c3)}
+#blk .d0{fill:var(--c0)} #blk .d1{fill:var(--c1)} #blk .d2{fill:var(--c2)} #blk .d3{fill:var(--c3)}
+#blk .ah{fill:var(--muted)}
+
+/* flow */
+.flow{list-style:none;padding:0;margin:16px 0;display:grid;gap:0;max-width:none}
+.flow li{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:0;padding:0 0 14px;position:relative}
+.flow li:not(:last-child)::before{content:"";position:absolute;left:16px;top:34px;bottom:0;width:2px;background:var(--line)}
+.flow .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:14px;font-weight:600;background:var(--surface2);border:2px solid var(--line)}
+.flow li.hw .n{border-color:var(--c3);color:var(--c3)} .flow li.sw .n{border-color:var(--c0);color:var(--c0)}
+.flow .tx{min-width:0} .flow .tx b{display:block}
+.flow .tx span{color:var(--muted);font-size:14.5px}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:11.5px;padding:0 6px;border-radius:4px;margin-left:6px;vertical-align:1px}
+.tag.hw{background:var(--c3-soft);color:var(--c3)} .tag.sw{background:var(--c0-soft);color:var(--c0)}
+
+/* mode cards */
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:16px 0}
+.mode{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:14px 16px;min-width:0}
+.mode.pick{border:2px solid var(--ok)}
+.mode b{display:block;margin-bottom:2px}
+.mode .reg{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);display:block;margin-bottom:8px}
+.trk{display:flex;gap:3px;margin:8px 0 6px;flex-wrap:wrap}
+.trk span{font-family:var(--font-mono);font-size:11.5px;font-weight:600;padding:2px 6px;border-radius:4px;border:1px solid var(--line)}
+.trk .g{color:var(--muted);border-style:dashed;background:none}
+.trk .r0{background:var(--c0-soft);color:var(--c0);border-color:var(--c0)} .trk .r1{background:var(--c1-soft);color:var(--c1);border-color:var(--c1)}
+.trk .r2{background:var(--c2-soft);color:var(--c2);border-color:var(--c2)} .trk .r3{background:var(--c3-soft);color:var(--c3);border-color:var(--c3)}
+.trk .x{text-decoration:line-through;opacity:.55}
+.mode p{font-size:14.5px;margin:0}
+
+/* simulator */
+.sim{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:18px;margin:16px 0}
+.subhead{font-weight:700;margin:18px 0 6px;padding-top:14px;border-top:1px dashed var(--line)}
+.subhead:first-child{margin-top:0;padding-top:0;border-top:0}
+.ranks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+@media (max-width:560px){.ranks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.rk{border:2px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);min-width:0;position:relative}
+.rk .h{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.rk .c{font-weight:700;font-size:15px;line-height:1.35}
+.rk .p{font-family:var(--font-mono);font-size:11.5px;color:var(--muted)}
+.rk .v{font-family:var(--font-mono);font-size:13px;font-variant-numeric:tabular-nums;margin-top:4px}
+.rk.nx{box-shadow:0 0 0 3px var(--fg) inset}
+.rk.nx::after{content:"다음 트리거";position:absolute;top:-11px;right:8px;font-size:11px;font-weight:700;background:var(--fg);color:var(--bg);padding:0 6px;border-radius:4px}
+.rk.r0 .c{color:var(--c0)} .rk.r1 .c{color:var(--c1)} .rk.r2 .c{color:var(--c2)} .rk.r3 .c{color:var(--c3)}
+.rk.on.r0{background:var(--c0-soft);border-color:var(--c0)} .rk.on.r1{background:var(--c1-soft);border-color:var(--c1)}
+.rk.on.r2{background:var(--c2-soft);border-color:var(--c2)} .rk.on.r3{background:var(--c3-soft);border-color:var(--c3)}
+.regs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.stat{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.stat .k{font-size:12px;color:var(--muted);font-family:var(--font-mono)}
+.stat .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3;overflow-wrap:anywhere}
+.lamp{display:inline-block;padding:0 10px;border-radius:999px;font-size:15px;border:1px solid var(--line)}
+.lamp.on{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+.outs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+@media (max-width:560px){.outs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.oc{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.oc .k{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.oc .v{font-family:var(--font-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.oc .f{font-size:12.5px}
+.oc.bad{border:2px solid var(--warn);background:var(--warn-bg)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+button,select,input{font-family:inherit}
+button{font-size:15px;font-weight:700;padding:9px 14px;border-radius:6px;border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;min-height:44px}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+button.hw{border-color:var(--c3);color:var(--c3)} button.hw:hover{background:var(--c3-soft)}
+button.sw{border-color:var(--c0);color:var(--c0)} button.sw:hover{background:var(--c0-soft)}
+button.plain:hover{background:var(--surface2)}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 16px;margin:10px 0}
+.ctl label{display:block;font-size:14px;color:var(--muted)}
+.ctl label b{font-family:var(--font-mono);color:var(--fg);font-weight:600}
+.ctl select{font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl input[type=range]{width:100%;min-height:32px}
+.calc{font-family:var(--font-mono);font-size:13.5px;line-height:1.65;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-height:5.4em;white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0 0}
+.uart{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);color:var(--code-fg);border-radius:6px;padding:10px 12px;white-space:pre;overflow-x:auto;margin:8px 0 0;min-height:2.6em}
+.log{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:8px 0 0;max-height:7.5em;overflow:auto;white-space:pre-wrap}
+
+/* code */
+pre{background:var(--code-bg);color:var(--code-fg);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:0;font-family:var(--font-mono);font-size:13.5px;line-height:1.7;tab-size:2}
+pre code{background:none;padding:0;font-size:inherit;color:inherit}
+.cm{color:var(--code-cmt)} .kw{color:var(--code-kw)} .hl{color:var(--code-hl)}
+.codepair{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;margin:14px 0;align-items:start}
+@media (max-width:760px){.codepair{grid-template-columns:minmax(0,1fr)}}
+.codepair ol{margin:0;padding-left:20px;font-size:15px} .codepair li{margin-bottom:8px}
+.file{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:18px 0 6px}
+
+/* quiz */
+details{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0;padding:0}
+summary{cursor:pointer;padding:12px 16px;font-weight:500;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--c0)} details[open] summary::before{content:"▾ "}
+summary:focus-visible{outline:3px solid var(--fg);outline-offset:-3px;border-radius:8px}
+details .ans{padding:0 16px 14px;color:var(--fg)} details .ans p{margin-bottom:8px}
+footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+
+/* 타이머 교안 추가 토큰 */
+.diag .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.diag .bx.hot{stroke:var(--warn);stroke-width:2.5;fill:var(--warn-bg)}
+.diag .bx.hw{stroke:var(--c3);fill:var(--c3-soft)} .diag .bx.sw{stroke:var(--c0);fill:var(--c0-soft)}
+.diag .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.diag .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.diag .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+.diag .ah{fill:var(--muted)}
+.diag .ax{stroke:var(--muted);stroke-width:1.3;fill:none}
+.diag .gd{stroke:var(--line);stroke-width:1.2;stroke-dasharray:5 4;fill:none}
+.diag .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .diag .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.diag .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .diag .s3{stroke:var(--c3);stroke-width:2.2;fill:none}
+.diag .d1{fill:var(--c1)} .diag .d0{fill:var(--c0)} .diag .d3{fill:var(--c3)}
+.diag .blk{fill:var(--c1-soft);stroke:var(--c1)}
+.diag text.m{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.diag text.t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.wave{margin:12px 0}
+.wave svg{display:block;width:100%;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px}
+.wave .ax{stroke:var(--muted);stroke-width:1.2;fill:none}
+.wave .gd{stroke:var(--line);stroke-width:1;stroke-dasharray:4 4;fill:none}
+.wave .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .wave .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.wave .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .wave .s3{stroke:var(--c3);stroke-width:2.2;fill:none}
+.wave .ev{stroke:var(--c3);stroke-width:1.6}
+.wave .bar{fill:var(--c1)} .wave .bar0{fill:var(--c0)}
+.wave text{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.wave text.tt{font-family:var(--font-body);font-size:12.5px;fill:var(--fg)}
+.bits{display:flex;margin:14px 0;font-family:var(--font-mono);font-size:13.5px;text-align:center}
+.bits div{flex:1;border:2px solid var(--c0);padding:10px 6px;background:var(--c0-soft);min-width:0}
+.bits div.lo{border-color:var(--c2);background:var(--c2-soft)}
+.bits small{display:block;color:var(--muted);font-size:12px}
+.eq{font-family:var(--font-mono);font-size:14.5px;background:var(--surface2);border-left:4px solid var(--c0);padding:10px 14px;margin:14px 0;overflow-x:auto;white-space:pre-wrap}
+.nextprev{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+.nextprev a{border:1px solid var(--line);border-radius:8px;padding:8px 14px;text-decoration:none;color:var(--c0);background:var(--surface)}
+td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
+.rowbad td{background:var(--warn-bg)}
+.cards2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:16px 0}
+.cards2 .mode{min-width:0}
+
+.wave .dot{fill:var(--c3)} .wave .blk{fill:var(--c1-soft);stroke:var(--c1)}
+.capt{font-size:14px;color:var(--muted);margin:6px 2px 14px}
+.stat .v.sm{font-size:15px}
+.sim .row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">STM32 Nucleo-F103RB · 타이머 · 교안</div>
+  <h1>PWM 출력: 듀티로 평균 전압을 만든다</h1>
+  <p class="lead">MCU 핀은 High와 Low만 낼 수 있다. 일정 주기 안에서 High 구간의 비율(듀티)을 바꾸면 평균 전압을 조절할 수 있다. 이것이 PWM이다. 이 교안은 PWM이 출력 비교의 한 모드(<code>OCxM = 110</code>)임을 04 예제와 연결하고, TIM1의 두 채널(PA8, PA10)로 1 kHz PWM을 만들어 LED 밝기를 바꾸는 <code>05_TIM_PWM</code> 예제를 해석한다.</p>
+  <nav class="toc" aria-label="목차">
+    <a href="#s1">1. 문제: 아날로그 출력</a><a href="#s2">2. PWM 모드와 계산</a><a href="#s3">3. 클럭</a><a href="#s4">4. 직접 만져 보기</a><a href="#s5">5. 레지스터 분석</a><a href="#s6">6. HAL이 해 주는 일</a><a href="#s7">7. 코드 읽기</a><a href="#s8">8. 실험</a><a href="#s9">9. 트러블슈팅</a><a href="#s10">10. 확인 문제</a>
+  </nav>
+</header>
+
+<section id="s1">
+<h2>1. 문제: 디지털 핀으로 밝기를 바꾼다</h2>
+<p>04 예제는 일치 시마다 ISR이 개입해야 했다. PWM은 <b>CPU가 CCRx만 바꾸면 하드웨어가 파형을 계속 만든다.</b> 인터럽트가 필요 없다.</p><ul><li>PWM이 출력 비교의 한 모드(<code>OCxM = 110</code>)임을 04 예제와 연결한다.</li><li>주파수 <code>f = f_TIM / ((PSC+1)(ARR+1))</code>와 듀티 <code>D = CCR / (ARR+1)</code>를 계산한다.</li><li>한 타이머의 두 채널(CH1, CH3)이 <b>같은 주파수</b>, <b>독립된 듀티</b>를 가짐을 확인한다.</li><li>고급 타이머(TIM1)의 <code>BDTR.MOE</code> 조건과 HAL의 처리를 이해한다.</li></ul>
+</section>
+<section id="s2">
+<h2>2. PWM 모드 1과 2</h2>
+<div class="tablewrap"><table><tr><th>모드</th><th>OCxM</th><th>CNT &lt; CCR</th><th>CNT ≥ CCR</th></tr><tr><td>PWM 모드 1</td><td>110</td><td>High (활성)</td><td>Low</td></tr><tr><td>PWM 모드 2</td><td>111</td><td>Low</td><td>High</td></tr></table></div><div class="wave"><svg viewBox="0 0 640 226" role="img" aria-label="PWM 모드 1 파형: CNT와 CCR 비교">
+<text x="8" y="36" class="m">CNT</text>
+<line class="ax" x1="40" y1="110" x2="620" y2="110"/>
+<polyline class="s0" points="40,110 260,30 260,110 480,30 480,110"/>
+<line class="gd" x1="40" y1="30" x2="620" y2="30"/><text x="540" y="24" class="m">ARR = 999</text>
+<line class="gd" x1="40" y1="90" x2="620" y2="90"/><text x="546" y="86">CCR = 250</text>
+<line class="gd" x1="95" y1="90" x2="95" y2="185"/><line class="gd" x1="315" y1="90" x2="315" y2="185"/>
+<line class="gd" x1="260" y1="30" x2="260" y2="195"/><line class="gd" x1="480" y1="30" x2="480" y2="195"/>
+<text x="552" y="160" class="m">OC1 (PA8)</text>
+<polyline class="s1" points="40,170 40,140 95,140 95,180 260,180 260,140 315,140 315,180 480,180 480,140 540,140"/>
+<text x="46" y="134">High (CNT &lt; CCR)</text><text x="110" y="196">Low (CNT ≥ CCR)</text>
+<line class="ax" x1="40" y1="206" x2="260" y2="206"/><text x="86" y="221" class="m">주기 T = 1 ms (ARR+1 = 1000 카운트)</text>
+</svg><p class="capt">그림 1. PWM 모드 1: CNT &lt; CCR이면 High. 주기는 ARR이, High 구간 길이(듀티)는 CCR이 정한다. 위 그림은 듀티 25%이다.</p></div><div class="eq">f_PWM = 64 MHz / ((63+1) × (999+1)) = 1 kHz     듀티 D = CCR / (ARR+1) × 100 [%]</div><div class="tablewrap"><table><tr><th>CCR</th><th>듀티</th><th>비고</th></tr><tr><td>0</td><td>0%</td><td>항상 Low</td></tr><tr><td>250</td><td>25%</td><td></td></tr><tr><td>500</td><td>50%</td><td></td></tr><tr><td>750</td><td>75%</td><td></td></tr><tr><td>999</td><td>99.9%</td><td>한 카운트 Low가 남는다 (이 예제의 상한)</td></tr><tr><td>1000 이상</td><td>100%</td><td>CCR ≥ ARR+1이면 항상 High (PWM 모드 1)</td></tr></table></div><p>분해능은 ARR+1 = 1000단계(약 10비트)이다. 주파수를 낮추거나 PSC를 줄이면 분해능을 늘릴 수 있다.</p>
+</section>
+<section id="s3">
+<h2>3. 클럭</h2>
+<p>TIM1은 APB2에 연결된다. APB2 분주비가 1이므로 타이머 클럭은 ×1 = 64 MHz이다. APB1의 TIM2~4는 분주비 2라서 ×2로 64 MHz가 된다. 결과는 같지만 도출 과정이 다르다.</p><div class="tablewrap"><table><tr><th>타이머</th><th>버스</th><th>분주비</th><th>타이머 클럭</th></tr><tr><td>TIM1</td><td>APB2</td><td>÷1</td><td>64 MHz (×1)</td></tr><tr><td>TIM2~4</td><td>APB1</td><td>÷2</td><td>32 MHz × 2 = 64 MHz</td></tr></table></div>
+</section>
+<section id="s4">
+<h2>4. 직접 만져 보기</h2>
+
+  <p>아래 시뮬레이터는 PWM 파형 세 주기와 평균 전압, LED 전류를 계산한다.</p>
+  <ol>
+    <li>기본값(ARR=999, CCR=250)에서 듀티 25%, 평균 약 0.8 V를 확인한다.</li>
+    <li>모드를 <b>PWM 모드 2</b>로 바꾸어 파형이 반전되는 것을 본다.</li>
+    <li>CCR을 1000으로 올려 항상 High(100%)가 되는 것을 확인한다.</li>
+    <li><b>PSC=0, ARR=3199</b>로 바꾸어 20 kHz와 3200단계를 확인한다.</li>
+    <li><b>스윕 시간</b>을 눌러 <code>HAL_Delay(1)</code>이 약 2 ms일 때 0 → 100% 스윕 시간을 본다.</li>
+  </ol>
+  <div class="sim" id="simbox">
+    <div class="subhead">입력</div>
+    <div class="ctl"><div><label for="psc">PSC = <b id="l_psc"></b></label><input id="psc" type="range" min="0" max="999" step="1" value="63"></div><div><label for="arr">ARR = <b id="l_arr"></b></label><input id="arr" type="range" min="99" max="9999" step="1" value="999"></div><div><label for="ccr">CCR = <b id="l_ccr"></b></label><input id="ccr" type="range" min="0" max="10000" step="1" value="250"></div>
+      <div><label for="selMode">PWM 모드</label><select id="selMode"><option value="1" selected>모드 1 (CNT &lt; CCR → High)</option><option value="2">모드 2 (CNT &lt; CCR → Low)</option></select></div>
+    </div>
+    <div class="subhead">결과</div>
+    <div class="regs"><div class="stat"><div class="k">f_PWM</div><div class="v" id="vf">–</div></div><div class="stat"><div class="k">듀티</div><div class="v" id="vd">–</div></div><div class="stat"><div class="k">분해능</div><div class="v" id="vres">–</div></div><div class="stat"><div class="k">평균 전압 (3.3 V)</div><div class="v" id="vavg">–</div></div></div>
+    <div class="wave"><svg id="wv" viewBox="0 0 640 150" role="img" aria-label="PWM 파형"></svg></div>
+    <div class="btns"><button class="sw" id="bSweep" type="button">스윕 시간 (HAL_Delay 2 ms × 1000)</button></div>
+    <div class="calc" id="calc" aria-live="polite"></div>
+  </div>
+  <p style="font-size:14.5px;color:var(--muted)">시뮬레이터 모델: D = min(CCR, ARR+1)/(ARR+1). 평균 전압 = 3.3 V × D. LED 순방향 전류는 (3.3 − 2.0) / 330 Ω ≈ 4 mA로 가정하고 평균 전류는 듀티에 비례한다.</p>
+
+</section>
+<section id="s5">
+<h2>5. 레지스터 분석</h2>
+<div class="tablewrap"><table><tr><th>HAL 필드</th><th>값</th><th>레지스터/비트</th><th>의미</th></tr><tr><td><code>Prescaler</code></td><td>63</td><td><code>PSC</code></td><td>카운터 클럭 1 MHz</td></tr><tr><td><code>Period</code></td><td>999</td><td><code>ARR</code></td><td>주기 1000 카운트 = 1 ms</td></tr><tr><td><code>AutoReloadPreload</code></td><td>ENABLE</td><td><code>CR1.ARPE</code> = 1</td><td>ARR 변경이 다음 주기에서 반영</td></tr><tr><td><code>RepetitionCounter</code></td><td>0</td><td><code>RCR</code></td><td>고급 타이머 전용. 매 주기 갱신</td></tr><tr><td><code>OCMode</code></td><td>PWM1</td><td><code>CCMR1.OC1M</code>, <code>CCMR2.OC3M</code> = 110</td><td>PWM 모드 1</td></tr><tr><td><code>Pulse</code></td><td>0 (초기)</td><td><code>CCR1</code>, <code>CCR3</code></td><td>초기 듀티 0%</td></tr><tr><td><code>OCPolarity</code></td><td>HIGH</td><td><code>CCER.CC1P</code>, <code>CC3P</code> = 0</td><td>활성 레벨 High</td></tr><tr><td>채널 출력 활성</td><td>-</td><td><code>CCER.CC1E</code>, <code>CC3E</code> = 1</td><td><code>HAL_TIM_PWM_Start</code>가 설정</td></tr><tr><td>메인 출력 활성</td><td>-</td><td><code>BDTR.MOE</code> = 1</td><td>TIM1은 이 비트가 1이어야 핀으로 출력된다</td></tr><tr><td>브레이크/데드타임</td><td>사용 안 함</td><td><code>BDTR.DTG</code> = 0, <code>BKE</code> = 0</td><td>08 예제에서 다룬다</td></tr></table></div>
+</section>
+<section id="s6">
+<h2>6. HAL이 대신 해 주는 일</h2>
+<div class="tablewrap"><table><tr><th>레지스터</th><th>기대 값</th><th>근거</th></tr><tr><td><code>TIM1-&gt;CCMR1</code></td><td>0x0068</td><td><code>OC1M</code> = 110 (0x60) + <code>OC1PE</code> = 1 (0x08)</td></tr><tr><td><code>TIM1-&gt;CCMR2</code></td><td>0x0068</td><td><code>OC3M</code> = 110 + <code>OC3PE</code> = 1</td></tr><tr><td><code>TIM1-&gt;CCER</code></td><td>0x0101</td><td><code>CC1E</code>(bit 0), <code>CC3E</code>(bit 8)</td></tr><tr><td><code>TIM1-&gt;BDTR.MOE</code></td><td>1 (bit 15)</td><td><code>HAL_TIM_PWM_Start()</code>의 <code>__HAL_TIM_MOE_ENABLE()</code></td></tr></table></div><div class="box"><div class="label">확인</div><p>위 값은 HAL의 동작에서 유도한 기대값이다. 디버거의 Peripheral/SFR 뷰에서 실제 값을 확인한다.</p></div><ul><li>PWM 채널 설정(<code>HAL_TIM_PWM_ConfigChannel</code>)은 <code>OCxPE</code>(CCR 프리로드)를 켠다. CCR을 바꿔도 <b>다음 주기부터</b> 반영되어 주기 중간의 글리치가 없다. (04의 OC 설정은 프리로드가 꺼져 있었다.)</li><li><code>HAL_TIM_PWM_Init()</code>은 타이머 클럭 허용을, <code>HAL_TIM_MspPostInit()</code>은 핀을 AF 푸시풀로 설정한다 (PA8 = TIM1_CH1, PA10 = TIM1_CH3, 리맵 불필요).</li><li>온보드 LD2(PA5)는 타이머 채널이 아니므로 PWM이 불가하다. 외부 LED가 필요하다.</li></ul>
+</section>
+<section id="s7">
+<h2>7. 코드 읽기</h2>
+<pre><code>PA8  (D7) ── 330 Ω ── 외부 LED 1 ── GND
+PA10 (D2) ── 330 Ω ── 외부 LED 2 ── GND</code></pre><p>적색 LED(Vf ≈ 2 V 가정)의 순방향 전류는 (3.3 − 2.0) / 330 ≈ 4 mA이다. 평균 전류는 듀티에 비례한다.</p><div class="file">main.c — 타이머·채널 초기화</div>
+<div class="codepair">
+<pre><code><span class="kw">static</span> <span class="kw">void</span> MX_TIM1_Init(<span class="kw">void</span>)
+{
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
+
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 63;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 999;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  <span class="kw">if</span> (<span class="kw">HAL_TIM_PWM_Init</span>(&amp;htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  <span class="kw">if</span> (<span class="kw">HAL_TIMEx_MasterConfigSynchronization</span>(&amp;htim1, &amp;sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  <span class="kw">if</span> (<span class="kw">HAL_TIM_PWM_ConfigChannel</span>(&amp;htim1, &amp;sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  <span class="kw">if</span> (<span class="kw">HAL_TIM_PWM_ConfigChannel</span>(&amp;htim1, &amp;sConfigOC, TIM_CHANNEL_3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
+  sBreakDeadTimeConfig.DeadTime = 0;
+  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  <span class="kw">if</span> (<span class="kw">HAL_TIMEx_ConfigBreakDeadTime</span>(&amp;htim1, &amp;sBreakDeadTimeConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  <span class="cm">/* PSC=64-1 -&gt; 1MHz, ARR=1000-1 -&gt; 1kHz, CCR1/CCR3 초기값 0 (OC1M/OC3M=110 PWM1, CR1.ARPE=1)
+     BDTR: DTG=0, BKE=0, AOE=0 -&gt; MOE 는 HAL_TIM_PWM_Start() 에서 세트 */</span>
+  <span class="kw">HAL_TIM_MspPostInit</span>(&amp;htim1);
+
+}</code></pre>
+<ol><li><code>Prescaler</code> 63, <code>Period</code> 999가 1 kHz를 만든다.</li><li><code>OCMode</code>가 PWM1이고 초기 <code>Pulse</code>는 0이다.</li><li><code>AutoReloadPreload</code>가 켜져 있다.</li></ol>
+</div><div class="file">main.c — 시작과 듀티 스윕</div>
+<div class="codepair">
+<pre><code><span class="kw">if</span> (<span class="kw">HAL_TIM_PWM_Start</span>(&amp;htim1, TIM_CHANNEL_1) != HAL_OK) Error_Handler();
+<span class="kw">if</span> (<span class="kw">HAL_TIM_PWM_Start</span>(&amp;htim1, TIM_CHANNEL_3) != HAL_OK) Error_Handler();
+
+<span class="cm">/* Infinite loop */</span>
+<span class="kw">while</span> (1)
+{
+
+  <span class="kw">__HAL_TIM_SET_COMPARE</span>(&amp;htim1, TIM_CHANNEL_1, (uint32_t)duty);   <span class="cm">/* TIM1-&gt;CCR1 = duty */</span>
+  <span class="kw">__HAL_TIM_SET_COMPARE</span>(&amp;htim1, TIM_CHANNEL_3, (uint32_t)duty);   <span class="cm">/* TIM1-&gt;CCR3 = duty */</span>
+
+  duty += step;
+  <span class="kw">if</span> (duty &gt;= 999) step = -1;
+  <span class="kw">if</span> (duty &lt;= 0)   step = 1;
+  <span class="kw">HAL_Delay</span>(1);                                                    <span class="cm">/* 1ms x 1000 = 1초에 0-&gt;100% */</span>
+}</code></pre>
+<ol><li>채널마다 <code>HAL_TIM_PWM_Start</code>를 호출한다 (TIM1은 MOE도 함께 켜진다).</li><li>두 채널에 같은 <code>duty</code>를 쓰므로 두 LED가 함께 변한다. 채널별로 다른 값을 쓰면 독립 제어된다.</li><li><code>duty</code>가 0~999 사이를 ±1씩 왕복한다.</li></ol>
+</div><div class="box warn"><div class="label">소요 시간</div><p>소스 주석은 '1 ms × 1000 = 1초'라고 되어 있으나, <code>HAL_Delay(1)</code>은 최소 대기를 보장하려고 1틱을 더 기다리므로 실제로는 약 2 ms이다 (03 예제에서 실측). 따라서 0 → 100% 스윕에 약 2초가 걸린다.</p></div><h3>서보 응용</h3><div class="tablewrap"><table><tr><th>설정</th><th>값</th><th>결과</th></tr><tr><td><code>PSC</code></td><td>63</td><td>1 MHz (1 µs)</td></tr><tr><td><code>ARR</code></td><td>19999</td><td>주기 20 ms = 50 Hz</td></tr><tr><td><code>CCR1</code></td><td>1000 ~ 2000</td><td>펄스 폭 1 ~ 2 ms (11 예제에서 0~180°)</td></tr></table></div>
+</section>
+<section id="s8">
+<h2>8. 실험</h2>
+<h3>실험 A. 채널별 듀티</h3><p>CH1은 25%, CH3은 75%로 고정되도록 코드를 바꾼다. 같은 주파수에서 듀티만 독립적인지 확인한다.</p><h3>실험 B. PWM 모드 2</h3><p><code>OCMode</code>를 PWM2로 바꾸면 같은 CCR에서 High/Low가 반전되는지 시뮬레이터와 비교한다.</p><h3>실험 C. 20 kHz</h3><p>PSC=0, ARR=3199로 바꾸면 64 MHz/3200 = 20 kHz, 3200단계이다. LED 밝기 변화와 가청 소음을 비교한다.</p><h3>실험 D. 스윕 시간 측정</h3><p>03 예제의 µs 시계로 스윕 한 번의 시간을 재어 약 2초인지 확인한다.</p><h3>실험 E. 감마 보정</h3><p>듀티를 제곱한 표로 스윕하여 밝기 변화가 더 선형으로 보이는지 비교한다.</p>
+</section>
+<section id="s9">
+<h2>9. 트러블슈팅</h2>
+<div class="tablewrap"><table><tr><th>증상</th><th>원인</th><th>점검/조치</th></tr><tr><td>LED가 켜지지 않는다</td><td><code>HAL_TIM_PWM_Start()</code> 누락, 핀 AF 미설정, LED 극성/저항 오류</td><td>채널마다 Start 호출, 핀 모드 AF_PP, 배선 확인</td></tr><tr><td>TIM1에서만 출력이 없다 (레지스터 구현 시)</td><td><code>BDTR.MOE</code> = 0</td><td><code>TIM1-&gt;BDTR |= TIM_BDTR_MOE</code>. HAL은 Start에서 자동 설정</td></tr><tr><td>밝기가 선형으로 변하지 않는다</td><td>눈의 밝기 인지가 비선형</td><td>듀티를 감마 보정한 표를 사용</td></tr><tr><td>주파수가 1 kHz가 아니다</td><td>타이머 클럭 가정 오류</td><td>TIM1은 APB2(×1), TIM2~4는 APB1(×2) 규칙 확인</td></tr><tr><td>동작 중 PSC/ARR을 바꾸자 글리치가 생긴다</td><td>프리로드 없이 즉시 반영</td><td>ARPE=1 유지, 갱신 이벤트 후 적용</td></tr><tr><td>듀티를 100%로 올릴 수 없다</td><td>상한이 999로 코딩됨</td><td>CCR ≥ ARR+1(1000)이면 100%</td></tr><tr><td>LD2를 PWM으로 쓰고 싶다</td><td>PA5는 타이머 채널이 아님</td><td>외부 LED를 PA8/PA10에 연결</td></tr></table></div>
+</section>
+<section id="s10">
+<h2>10. 확인 문제</h2>
+<details><summary><b>문제 1.</b> PWM 모드 2(<code>OCxM = 111</code>)로 바꾸면 같은 CCR에서 파형이 어떻게 달라지는가?</summary>
+<div class="ans"><p>High와 Low가 반전된다. CNT &lt; CCR이면 Low, CNT ≥ CCR이면 High이다.</p></div></details>
+<details><summary><b>문제 2.</b> PWM 주파수를 20 kHz로 올리려면 PSC·ARR은? 분해능은?</summary>
+<div class="ans"><p>PSC=0, ARR=3199이면 64 MHz/3200 = 20 kHz이고 3200단계이다.</p></div></details>
+<details><summary><b>문제 3.</b> 04 예제의 Toggle 방식으로 1 kHz, 25% 듀티 파형을 만들 수 있는가? 필요한 ISR 횟수는?</summary>
+<div class="ans"><p>High 간격과 Low 간격을 번갈아 더하면 가능하다. 주기마다 에지가 두 번이므로 ISR이 초당 2000회 필요하다. PWM은 ISR이 필요 없다.</p></div></details>
+<details><summary><b>문제 4.</b> CH1은 25%, CH3은 75%로 고정하려면 코드를 어떻게 바꾸는가?</summary>
+<div class="ans"><p>스윕 대신 시작 후 한 번 <code>__HAL_TIM_SET_COMPARE(&amp;htim1, TIM_CHANNEL_1, 250)</code>, <code>(…, TIM_CHANNEL_3, 750)</code>을 쓴다. ARR을 공유하므로 주파수는 같다.</p></div></details>
+
+</section>
+
+<section>
+  <h2>정리</h2>
+  <div class="tablewrap"><table><tr><th>예제</th><th>타이머</th><th>이벤트 처리</th><th>타이머를 쓰는 방식</th></tr><tr><td class="m"><a href="../01_TIM_TimeBase/01_TIM_TimeBase%20교안.html">01_TIM_TimeBase</a></td><td>TIM3</td><td>인터럽트(UIE)</td><td>주기 신호 (1 ms)</td></tr><tr><td class="m"><a href="../02_TIM_TimeBase_Polling/02_TIM_TimeBase_Polling%20교안.html">02_TIM_TimeBase_Polling</a></td><td>TIM3</td><td>폴링(UIF)</td><td>주기 신호 (1 ms)</td></tr><tr><td class="m"><a href="../03_TIM_Overflow_Counter/03_TIM_Overflow_Counter%20교안.html">03_TIM_Overflow_Counter</a></td><td>TIM2</td><td>UEV 인터럽트</td><td>CNT 값 자체 (1 µs)</td></tr><tr><td class="m"><a href="../04_TIM_OutputCompare/04_TIM_OutputCompare%20교안.html">04_TIM_OutputCompare</a></td><td>TIM2</td><td>CCx 인터럽트</td><td>CNT == CCR 일치</td></tr><tr><td class="m"><b>05_TIM_PWM (이 교안)</b></td><td>TIM1</td><td>없음 (하드웨어)</td><td>CNT &lt; CCR 비교</td></tr></table></div>
+  <div class="nextprev"><a href="../04_TIM_OutputCompare/04_TIM_OutputCompare%20교안.html">← 04_TIM_OutputCompare</a><span></span></div>
+  <footer>근거: 05_TIM_PWM 소스. 계층: HAL. 레지스터·비트 이름은 RM0008(STM32F101xx~F107xx 레퍼런스 매뉴얼) 기준이다. 타이머 클럭은 SYSCLK 64 MHz(HSI/2 × PLL16), APB1 ÷2, APB2 ÷1 구성을 기준으로 한다. 코드는 해당 폴더의 소스에서 발췌한 것이며 일부 줄이 생략되어 있다.</footer>
+</section>
+</div>
+
+<script>
+
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var NS='http://www.w3.org/2000/svg';
+  function fmt(f){return f>=1e3?(f/1e3).toFixed(2)+' kHz':f.toFixed(1)+' Hz'}
+  function show(){
+    ['psc','arr','ccr'].forEach(function(i){$('l_'+i).textContent=$(i).value});
+    var psc=+$('psc').value, arr=+$('arr').value, ccr=+$('ccr').value, mode=$('selMode').value;
+    var N=arr+1, f=64e6/((psc+1)*N), c=Math.min(ccr,N), d1=c/N, d=mode==='1'?d1:1-d1;
+    $('vf').textContent=fmt(f); $('vd').textContent=(d*100).toFixed(1)+' %';
+    $('vres').textContent=N+'단계 (≈'+Math.log2(N).toFixed(1)+'비트)';
+    $('vavg').textContent=(3.3*d).toFixed(2)+' V';
+    var svg=$('wv'); while(svg.firstChild)svg.removeChild(svg.firstChild);
+    var mk=function(t,a){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);return e};
+    var P=190,x0=40,hi=30,lo=100;
+    var pts=[],T=3;
+    for(var k=0;k<T;k++){
+      var xs=x0+k*P, xm=xs+P*d1, xe=xs+P;
+      if(mode==='1'){pts.push([xs,hi],[xm,hi],[xm,lo],[xe,lo])}else{pts.push([xs,lo],[xm,lo],[xm,hi],[xe,hi])}
+      if(k<T-1)pts.push([xe,mode==='1'?hi:lo]);
+    }
+    var cnt=[];for(var k=0;k<T;k++){cnt.push((x0+k*P)+',128',(x0+k*P+P)+',128')}
+    svg.appendChild(mk('line',{x1:x0,y1:lo+10,x2:x0+T*P,y2:lo+10,'class':'ax'}));
+    for(var k=0;k<=T;k++)svg.appendChild(mk('line',{x1:x0+k*P,y1:15,x2:x0+k*P,y2:125,'class':'gd'}));
+    svg.appendChild(mk('polyline',{points:pts.map(function(a){return a.join(',')}).join(' '),'class':'s0'}));
+    var t=mk('text',{x:4,y:hi+4});t.textContent='High';svg.appendChild(t);
+    t=mk('text',{x:4,y:lo+4});t.textContent='Low';svg.appendChild(t);
+    t=mk('text',{x:x0+4,y:142});t.textContent='주기 T = '+(1e3/f>=1?(1e3/f).toFixed(3)+' ms':(1e6/f).toFixed(1)+' µs');svg.appendChild(t);
+    $('calc').textContent='f = 64 MHz / (('+psc+'+1) × ('+arr+'+1)) = '+fmt(f)+'\nD = min('+ccr+', '+N+') / '+N+' = '+(d1*100).toFixed(1)+' %'+(mode==='2'?'  → 모드 2이므로 출력 High 비율은 '+(d*100).toFixed(1)+' %':'')+'\n평균 전압 = 3.3 V × '+d.toFixed(3)+' = '+(3.3*d).toFixed(2)+' V, LED 평균 전류 ≈ '+(4*d).toFixed(1)+' mA';
+  }
+  ['psc','arr','ccr'].forEach(function(i){$(i).oninput=show});$('selMode').onchange=show;
+  $('bSweep').onclick=function(){
+    var arr=+$('arr').value, steps=arr+1, one=2e-3*steps*2; // 0→max→0 왕복이 아닌 0→max 한 방향: steps × 2 ms
+    var up=steps*2e-3;
+    $('calc').textContent='HAL_Delay(1) ≈ 2 ms (최소 대기 보장으로 1틱 추가)\n0 → 100% 한 방향: '+steps+' × 2 ms = '+up.toFixed(2)+' s, 왕복 '+(up*2).toFixed(2)+' s\n※ 소스 주석의 "1초"는 HAL_Delay(1) = 1 ms 가정이다.';
+  };
+  show();
+})();
+
+</script>
+</body></html>

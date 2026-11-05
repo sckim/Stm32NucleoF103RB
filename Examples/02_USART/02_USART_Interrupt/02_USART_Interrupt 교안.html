@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>02_USART_Interrupt 교안</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: 한 열 교안(최대 860px) — 문제 → RXNE·재무장 → 핀·NVIC → 시뮬레이터 → 레지스터 대응 → 인터럽트 경로 → 코드 → 실험 → 트러블슈팅 → 문제 순서.
+   색 고정: 하드웨어=보라(c3), ISR·HAL=파랑(c0), 사용자 콜백=주황(c1), RXNE=청록(c2). (링 버퍼/스택/타이머 교안과 같은 기본 토큰) */
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --surface2:#E7ECF0; --fg:#14222C; --muted:#52636F; --line:#CBD5DC;
+  --c0:#1D4ED8; --c0-soft:#DCE6FB; --c1:#C2410C; --c1-soft:#FDE6DA; --c2:#0F766E; --c2-soft:#D5F0EC; --c3:#7E22CE; --c3-soft:#EEDFFB;
+  --code-bg:#0F1B24; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#9A3412; --warn-bg:#FFF1E6; --ok:#166534; --ok-bg:#E4F5EA;
+  --font-body:"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.75;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:860px;margin:0 auto}
+header{padding-block:40px 8px}
+.kicker{font-family:var(--font-mono);font-size:13px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.25;margin:8px 0 12px;text-wrap:balance;font-weight:700}
+.lead{color:var(--muted);margin:0;max-width:62ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0;padding:0;list-style:none}
+nav.toc a{display:block;padding:6px 12px;border:1px solid var(--line);border-radius:6px;color:var(--fg);text-decoration:none;font-size:14px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--c0);outline:2px solid var(--c0);outline-offset:1px}
+section{margin-top:56px}
+h2{font-size:24px;line-height:1.35;margin:0 0 12px;text-wrap:balance;font-weight:700}
+h3{font-size:18px;margin:28px 0 8px;font-weight:700}
+p{margin:0 0 14px;max-width:68ch}
+ul,ol{margin:0 0 14px;padding-left:22px;max-width:68ch}
+li{margin-bottom:4px}
+code{font-family:var(--font-mono);font-size:.9em;background:var(--surface2);padding:1px 6px;border-radius:4px}
+.k0{color:var(--c0);font-weight:700} .k1{color:var(--c1);font-weight:700} .k2{color:var(--c2);font-weight:700} .k3{color:var(--c3);font-weight:700}
+.box{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:16px 18px;margin:16px 0}
+.box.warn{background:var(--warn-bg);border-color:var(--warn)} .box.ok{background:var(--ok-bg);border-color:var(--ok)}
+.box > :last-child{margin-bottom:0}
+.label{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.tablewrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:15px;background:var(--surface)}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--surface2);font-weight:700;white-space:nowrap}
+td.m,th.m{font-family:var(--font-mono);font-size:13.5px}
+td.n{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+
+/* block diagram */
+.diag{max-width:720px;margin:18px auto}
+.diag svg{display:block;width:100%;height:auto}
+#blk .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+#blk .bx.hot{stroke:var(--warn);stroke-width:2.5;fill:var(--warn-bg)}
+#blk .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+#blk .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+#blk .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+#blk .w0{stroke:var(--c0)} #blk .w1{stroke:var(--c1)} #blk .w2{stroke:var(--c2)} #blk .w3{stroke:var(--c3)}
+#blk .d0{fill:var(--c0)} #blk .d1{fill:var(--c1)} #blk .d2{fill:var(--c2)} #blk .d3{fill:var(--c3)}
+#blk .ah{fill:var(--muted)}
+
+/* flow */
+.flow{list-style:none;padding:0;margin:16px 0;display:grid;gap:0;max-width:none}
+.flow li{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:0;padding:0 0 14px;position:relative}
+.flow li:not(:last-child)::before{content:"";position:absolute;left:16px;top:34px;bottom:0;width:2px;background:var(--line)}
+.flow .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:14px;font-weight:600;background:var(--surface2);border:2px solid var(--line)}
+.flow li.hw .n{border-color:var(--c3);color:var(--c3)} .flow li.sw .n{border-color:var(--c0);color:var(--c0)}
+.flow .tx{min-width:0} .flow .tx b{display:block}
+.flow .tx span{color:var(--muted);font-size:14.5px}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:11.5px;padding:0 6px;border-radius:4px;margin-left:6px;vertical-align:1px}
+.tag.hw{background:var(--c3-soft);color:var(--c3)} .tag.sw{background:var(--c0-soft);color:var(--c0)}
+
+/* mode cards */
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:16px 0}
+.mode{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:14px 16px;min-width:0}
+.mode.pick{border:2px solid var(--ok)}
+.mode b{display:block;margin-bottom:2px}
+.mode .reg{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);display:block;margin-bottom:8px}
+.trk{display:flex;gap:3px;margin:8px 0 6px;flex-wrap:wrap}
+.trk span{font-family:var(--font-mono);font-size:11.5px;font-weight:600;padding:2px 6px;border-radius:4px;border:1px solid var(--line)}
+.trk .g{color:var(--muted);border-style:dashed;background:none}
+.trk .r0{background:var(--c0-soft);color:var(--c0);border-color:var(--c0)} .trk .r1{background:var(--c1-soft);color:var(--c1);border-color:var(--c1)}
+.trk .r2{background:var(--c2-soft);color:var(--c2);border-color:var(--c2)} .trk .r3{background:var(--c3-soft);color:var(--c3);border-color:var(--c3)}
+.trk .x{text-decoration:line-through;opacity:.55}
+.mode p{font-size:14.5px;margin:0}
+
+/* simulator */
+.sim{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:18px;margin:16px 0}
+.subhead{font-weight:700;margin:18px 0 6px;padding-top:14px;border-top:1px dashed var(--line)}
+.subhead:first-child{margin-top:0;padding-top:0;border-top:0}
+.ranks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+@media (max-width:560px){.ranks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.rk{border:2px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);min-width:0;position:relative}
+.rk .h{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.rk .c{font-weight:700;font-size:15px;line-height:1.35}
+.rk .p{font-family:var(--font-mono);font-size:11.5px;color:var(--muted)}
+.rk .v{font-family:var(--font-mono);font-size:13px;font-variant-numeric:tabular-nums;margin-top:4px}
+.rk.nx{box-shadow:0 0 0 3px var(--fg) inset}
+.rk.nx::after{content:"다음 트리거";position:absolute;top:-11px;right:8px;font-size:11px;font-weight:700;background:var(--fg);color:var(--bg);padding:0 6px;border-radius:4px}
+.rk.r0 .c{color:var(--c0)} .rk.r1 .c{color:var(--c1)} .rk.r2 .c{color:var(--c2)} .rk.r3 .c{color:var(--c3)}
+.rk.on.r0{background:var(--c0-soft);border-color:var(--c0)} .rk.on.r1{background:var(--c1-soft);border-color:var(--c1)}
+.rk.on.r2{background:var(--c2-soft);border-color:var(--c2)} .rk.on.r3{background:var(--c3-soft);border-color:var(--c3)}
+.regs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.stat{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.stat .k{font-size:12px;color:var(--muted);font-family:var(--font-mono)}
+.stat .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3;overflow-wrap:anywhere}
+.lamp{display:inline-block;padding:0 10px;border-radius:999px;font-size:15px;border:1px solid var(--line)}
+.lamp.on{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+.outs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+@media (max-width:560px){.outs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.oc{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.oc .k{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.oc .v{font-family:var(--font-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.oc .f{font-size:12.5px}
+.oc.bad{border:2px solid var(--warn);background:var(--warn-bg)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+button,select,input{font-family:inherit}
+button{font-size:15px;font-weight:700;padding:9px 14px;border-radius:6px;border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;min-height:44px}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+button.hw{border-color:var(--c3);color:var(--c3)} button.hw:hover{background:var(--c3-soft)}
+button.sw{border-color:var(--c0);color:var(--c0)} button.sw:hover{background:var(--c0-soft)}
+button.plain:hover{background:var(--surface2)}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 16px;margin:10px 0}
+.ctl label{display:block;font-size:14px;color:var(--muted)}
+.ctl label b{font-family:var(--font-mono);color:var(--fg);font-weight:600}
+.ctl select{font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl input[type=range]{width:100%;min-height:32px}
+.calc{font-family:var(--font-mono);font-size:13.5px;line-height:1.65;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-height:5.4em;white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0 0}
+.uart{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);color:var(--code-fg);border-radius:6px;padding:10px 12px;white-space:pre;overflow-x:auto;margin:8px 0 0;min-height:2.6em}
+.log{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:8px 0 0;max-height:7.5em;overflow:auto;white-space:pre-wrap}
+
+/* code */
+pre{background:var(--code-bg);color:var(--code-fg);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:0;font-family:var(--font-mono);font-size:13.5px;line-height:1.7;tab-size:2}
+pre code{background:none;padding:0;font-size:inherit;color:inherit}
+.cm{color:var(--code-cmt)} .kw{color:var(--code-kw)} .hl{color:var(--code-hl)}
+.codepair{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;margin:14px 0;align-items:start}
+@media (max-width:760px){.codepair{grid-template-columns:minmax(0,1fr)}}
+.codepair ol{margin:0;padding-left:20px;font-size:15px} .codepair li{margin-bottom:8px}
+.file{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:18px 0 6px}
+
+/* quiz */
+details{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0;padding:0}
+summary{cursor:pointer;padding:12px 16px;font-weight:500;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--c0)} details[open] summary::before{content:"▾ "}
+summary:focus-visible{outline:3px solid var(--fg);outline-offset:-3px;border-radius:8px}
+details .ans{padding:0 16px 14px;color:var(--fg)} details .ans p{margin-bottom:8px}
+footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+
+/* 타이머 교안 추가 토큰 */
+.diag .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.diag .bx.hot{stroke:var(--warn);stroke-width:2.5;fill:var(--warn-bg)}
+.diag .bx.hw{stroke:var(--c3);fill:var(--c3-soft)} .diag .bx.sw{stroke:var(--c0);fill:var(--c0-soft)}
+.diag .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.diag .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.diag .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+.diag .ah{fill:var(--muted)}
+.diag .ax{stroke:var(--muted);stroke-width:1.3;fill:none}
+.diag .gd{stroke:var(--line);stroke-width:1.2;stroke-dasharray:5 4;fill:none}
+.diag .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .diag .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.diag .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .diag .s3{stroke:var(--c3);stroke-width:2.2;fill:none}
+.diag .d1{fill:var(--c1)} .diag .d0{fill:var(--c0)} .diag .d3{fill:var(--c3)}
+.diag .blk{fill:var(--c1-soft);stroke:var(--c1)}
+.diag text.m{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.diag text.t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.wave{margin:12px 0}
+.wave svg{display:block;width:100%;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px}
+.wave .ax{stroke:var(--muted);stroke-width:1.2;fill:none}
+.wave .gd{stroke:var(--line);stroke-width:1;stroke-dasharray:4 4;fill:none}
+.wave .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .wave .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.wave .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .wave .s3{stroke:var(--c3);stroke-width:2.2;fill:none}
+.wave .ev{stroke:var(--c3);stroke-width:1.6}
+.wave .bar{fill:var(--c1)} .wave .bar0{fill:var(--c0)}
+.wave text{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.wave text.tt{font-family:var(--font-body);font-size:12.5px;fill:var(--fg)}
+.bits{display:flex;margin:14px 0;font-family:var(--font-mono);font-size:13.5px;text-align:center}
+.bits div{flex:1;border:2px solid var(--c0);padding:10px 6px;background:var(--c0-soft);min-width:0}
+.bits div.lo{border-color:var(--c2);background:var(--c2-soft)}
+.bits small{display:block;color:var(--muted);font-size:12px}
+.eq{font-family:var(--font-mono);font-size:14.5px;background:var(--surface2);border-left:4px solid var(--c0);padding:10px 14px;margin:14px 0;overflow-x:auto;white-space:pre-wrap}
+.nextprev{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+.nextprev a{border:1px solid var(--line);border-radius:8px;padding:8px 14px;text-decoration:none;color:var(--c0);background:var(--surface)}
+td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
+.rowbad td{background:var(--warn-bg)}
+.cards2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:16px 0}
+.cards2 .mode{min-width:0}
+
+.wave .dot{fill:var(--c3)} .wave .blk{fill:var(--c1-soft);stroke:var(--c1)}
+.capt{font-size:14px;color:var(--muted);margin:6px 2px 14px}
+.stat .v.sm{font-size:15px}
+.sim .row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+/* 수신 인터럽트 교안 추가: 경로 카드의 다음 표시 문구 */
+#ranks .rk.nx::after{content:"다음 단계"}
+button:disabled{opacity:.45;cursor:not-allowed}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">STM32 Nucleo-F103RB · USART · 교안</div>
+  <h1>UART 수신 인터럽트: RXNE에서 콜백, 그리고 재무장까지</h1>
+  <p class="lead">PC에서 보낸 글자는 언제 도착할지 모른다. 폴링으로 기다리면 CPU가 묶이고, 다른 일을 하다 보면 글자를 놓친다. 이 교안은 USART2가 1바이트를 받으면 RXNE 인터럽트로 CPU를 부르고, 진짜 ISR인 <code>USART2_IRQHandler</code>에서 HAL을 거쳐 사용자 콜백까지 이어지는 경로를 레지스터 수준으로 추적한다. 콜백은 플래그만 세우고 main 루프가 LED 제어와 에코를 처리한다. 대상 예제는 <code>02_USART_Interrupt</code>이다.</p>
+  <nav class="toc" aria-label="목차">
+    <a href="#s1">1. 문제와 목표</a><a href="#s2">2. RXNE와 재무장</a><a href="#s3">3. 핀·NVIC</a><a href="#s4">4. 직접 만져 보기</a><a href="#s5">5. 레지스터 대응</a><a href="#s6">6. 인터럽트 경로</a><a href="#s7">7. 코드 읽기</a><a href="#s8">8. 실험</a><a href="#s9">9. 트러블슈팅</a><a href="#s10">10. 확인 문제</a>
+  </nav>
+</header>
+
+<section id="s1">
+<h2>1. 문제: 언제 올지 모르는 1바이트</h2>
+<p><code>HAL_UART_Receive(&amp;huart2, &amp;c, 1, timeout)</code>처럼 폴링으로 받으면 바이트가 올 때까지 CPU가 <code>SR.RXNE</code>만 확인한다. 115200 bps에서 바이트는 86.8 µs마다 올 수 있으므로, 다른 일을 하느라 한 프레임 시간 안에 DR을 읽지 못하면 다음 바이트가 들어올 때 오버런(ORE)으로 데이터가 사라진다. 인터럽트 수신은 바이트가 도착한 순간 하드웨어가 CPU를 불러 DR을 읽게 한다. 학습 목표는 다음과 같다.</p>
+<ul>
+  <li><code>HAL_UART_Receive_IT()</code>가 켜는 비트(<code>CR1.RXNEIE</code>, <code>CR3.EIE</code>)와 그 결과 생기는 인터럽트 요청을 설명한다.</li>
+  <li>진짜 ISR(<code>USART2_IRQHandler</code>), HAL 디스패처(<code>HAL_UART_IRQHandler</code>), 사용자 콜백(<code>HAL_UART_RxCpltCallback</code>)을 구분한다.</li>
+  <li>1바이트 수신이 끝나면 HAL이 RXNEIE를 끄기 때문에 콜백에서 <b>재무장</b>(re-arm)해야 함을 설명한다.</li>
+  <li>오버런(ORE) 발생 조건과, ISR → main 사이 단일 변수 전달의 한계를 이해한다.</li>
+</ul>
+<div class="box"><div class="label">이 예제의 동작</div><p>시작 시 안내 문구를 보내고 1바이트 수신 인터럽트를 시작한다. PC 터미널에서 <code>'1'</code>을 보내면 LD2(PA5) 켜짐, <code>'0'</code>은 꺼짐, <code>'t'</code>는 토글이며, 받은 문자는 무엇이든 그대로 되돌려 보낸다(에코). 콜백은 <code>rx_data</code>와 <code>rx_ready</code>만 기록하고 즉시 재무장하며, LED 제어와 에코 송신은 main 루프에서 한다.</p></div>
+</section>
+
+<section id="s2">
+<h2>2. 핵심 개념: RXNE, RXNEIE, 그리고 재무장</h2>
+<div class="tablewrap"><table><tr><th>비트</th><th>위치</th><th>누가 바꾸는가</th><th>의미</th></tr>
+<tr><td><code>RXNE</code></td><td><code>USART_SR</code> 비트 5</td><td>하드웨어가 1로, DR 읽기로 0</td><td>시프트 레지스터의 수신 바이트가 DR로 옮겨졌다(읽을 데이터 있음)</td></tr>
+<tr><td><code>ORE</code></td><td><code>USART_SR</code> 비트 3</td><td>하드웨어가 1로, SR 읽은 뒤 DR 읽기로 0</td><td>RXNE = 1인 상태에서 다음 바이트 수신이 끝났다. 새 바이트는 버려지고 DR에는 이전 값이 남는다</td></tr>
+<tr><td><code>RXNEIE</code></td><td><code>USART_CR1</code> 비트 5</td><td>소프트웨어(HAL)</td><td>1이면 RXNE = 1 또는 ORE = 1일 때 인터럽트 요청</td></tr>
+<tr><td><code>EIE</code></td><td><code>USART_CR3</code> 비트 0</td><td>소프트웨어(HAL)</td><td>1이면 FE·NE·ORE(멀티버퍼 통신 시) 오류도 인터럽트 요청</td></tr>
+</table></div>
+<p>HAL의 수신 API는 "정해진 개수를 받으면 끝나는 작업" 단위로 동작한다. <code>HAL_UART_Receive_IT(&amp;huart2, &amp;rx_byte, 1)</code>은 "1바이트를 받아 <code>rx_byte</code>에 넣어라"라는 작업 하나를 시작한다. 1바이트가 들어오면 HAL은 <code>RxXferCount</code>를 0으로 만들고 <b>RXNEIE와 EIE를 끈 뒤</b> 완료 콜백을 부른다. 따라서 콜백 안에서 같은 함수를 다시 불러 작업을 새로 시작하지 않으면 두 번째 바이트부터는 인터럽트가 일어나지 않는다.</p>
+<div class="wave"><svg viewBox="0 0 640 250" role="img" aria-label="두 바이트 수신 시 RX 선, RXNE, RXNEIE 타이밍과 재무장이 없을 때의 RXNE">
+<text x="8" y="40">PA3 RX</text>
+<polyline class="s0" points="80,30 88,30 88,50 100,50 100,30 112,30 112,50 148,50 148,30 172,30 172,50 196,50 196,30 330,30 330,50 366,50 366,30 378,30 378,50 390,50 390,30 426,30 426,50 438,50 438,30 630,30"/>
+<rect class="blk" x="88" y="58" width="120" height="14" rx="3"/><text x="112" y="69">'1' 0x31</text>
+<rect class="blk" x="330" y="58" width="120" height="14" rx="3"/><text x="356" y="69">'t' 0x74</text>
+<text x="8" y="106">RXNE</text>
+<polyline class="s2" points="80,110 208,110 208,92 236,92 236,110 450,110 450,92 478,92 478,110 630,110"/>
+<text x="8" y="156">RXNEIE</text>
+<polyline class="s3" points="80,142 238,142 238,160 252,160 252,142 482,142 482,160 496,160 496,142 630,142"/>
+<line class="ev" x1="208" y1="80" x2="208" y2="170"/><line class="ev" x1="450" y1="80" x2="450" y2="170"/>
+<text x="212" y="186">ISR: DR 읽기 → RXNEIE 끔 → 콜백 재무장</text>
+<text x="8" y="222">RXNE*</text>
+<polyline class="s1" points="80,228 208,228 208,210 236,210 236,228 450,228 450,210 630,210"/>
+<text x="460" y="242">재무장 없음: 아무도 DR을 읽지 않는다</text>
+</svg><p class="capt">그림 1. 위 세 줄은 이 예제의 정상 동작이다. RXNE가 서면 ISR이 DR을 읽어 RXNE를 지우고, HAL이 RXNEIE를 끈 직후 콜백이 다시 켠다(짧은 0 구간). 맨 아래 RXNE*는 콜백에서 재무장을 뺀 경우이다. 두 번째 바이트의 RXNE가 1로 남고, 세 번째 바이트가 오면 ORE가 된다.</p></div>
+<h3>오버런(ORE)이 생기는 조건</h3>
+<div class="tablewrap"><table><tr><th>상황</th><th>DR을 읽는 주체</th><th>결과</th></tr>
+<tr><td>정상: 인터럽트가 제때 처리됨</td><td>ISR이 RXNE 직후 읽음</td><td>바이트 간격(86.8 µs) 안에 처리되면 손실 없음</td></tr>
+<tr><td>인터럽트가 오래 막힘 (<code>__disable_irq()</code>, 더 높은 우선순위 ISR이 길게 실행)</td><td>늦게 읽음</td><td>다음 바이트 수신 완료 시 RXNE = 1이면 ORE = 1, 새 바이트 손실</td></tr>
+<tr><td>재무장 누락</td><td>아무도 읽지 않음</td><td>RXNEIE = 0, EIE = 0이라 ORE도 인터럽트를 만들지 못한다. 수신이 멈춘 것처럼 보인다</td></tr>
+<tr><td>ORE가 발생했고 재무장 상태</td><td>ISR</td><td>HAL이 오류로 보고 수신 작업을 중단한 뒤 <code>HAL_UART_ErrorCallback</code> 호출. 이 예제는 여기서 다시 시작한다</td></tr>
+</table></div>
+</section>
+
+<section id="s3">
+<h2>3. 하드웨어 구조: 핀, 클럭, NVIC</h2>
+<div class="tablewrap"><table><tr><th>항목</th><th>설정</th><th>근거</th></tr>
+<tr><td>USART2_TX</td><td>PA2, AF 푸시풀 2 MHz (<code>GPIOA_CRL</code> MODE2 = 10, CNF2 = 10)</td><td>msp.c</td></tr>
+<tr><td>USART2_RX</td><td>PA3, 입력 플로팅 (MODE3 = 00, CNF3 = 01)</td><td>msp.c <code>GPIO_MODE_INPUT</code>, <code>GPIO_NOPULL</code></td></tr>
+<tr><td>LD2</td><td>PA5, 범용 푸시풀 출력 2 MHz, 초기값 Low</td><td><code>MX_GPIO_Init()</code></td></tr>
+<tr><td>USART2 클럭</td><td>APB1 = PCLK1 = 32 MHz (HSI/2 × 16 = 64 MHz, APB1 ÷2)</td><td><code>SystemClock_Config()</code></td></tr>
+<tr><td>통신 형식</td><td>115200 bps 8N1, <code>USART2_BRR</code> = 0x0116 (17 + 6/16, 오차 −0.08 %)</td><td><code>MX_USART2_UART_Init()</code>, 01 예제 교안 참고</td></tr>
+<tr><td>보드 연결</td><td>PA2/PA3 ↔ ST-LINK 가상 COM 포트</td><td>Nucleo 기본 솔더 브리지</td></tr>
+</table></div>
+<div class="tablewrap"><table><tr><th>인터럽트</th><th>IRQ 번호</th><th>우선순위 (선점, 하위)</th><th>벡터 주소</th><th>핸들러</th></tr>
+<tr><td>USART2 global</td><td class="n">38</td><td>(1, 0)</td><td class="m">0x0000 00D8</td><td><code>USART2_IRQHandler</code></td></tr>
+<tr><td>SysTick</td><td class="n">−1</td><td>(0, 0) — <code>TICK_INT_PRIORITY</code> = 0</td><td class="m">0x0000 003C</td><td><code>SysTick_Handler</code></td></tr>
+</table></div>
+<div class="box"><div class="label">우선순위 해석</div><p>HAL 기본 우선순위 그룹(4비트 모두 선점)에서 숫자가 작을수록 높다. SysTick(0)이 USART2(1)보다 높으므로 USART2 ISR 실행 중에도 1 ms 틱은 끼어들어 <code>HAL_GetTick()</code>이 계속 증가한다. NVIC 레지스터로는 <code>NVIC_IPR9</code>의 IRQ38 바이트 = 0x10, <code>NVIC_ISER1</code> 비트 6 = 1이다.</p></div>
+<p>이 예제의 GPIO 초기화에는 01 예제에 있던 B1(PC13) EXTI 설정이 없다. 동작 중인 인터럽트는 USART2와 SysTick 두 개뿐이다.</p>
+</section>
+
+<section id="s4">
+<h2>4. 직접 만져 보기</h2>
+<p>아래 시뮬레이터는 바이트 도착부터 콜백, main 처리까지를 한 단계씩 진행한다. 하드웨어가 하는 일(보라)과 소프트웨어가 하는 일(파랑)을 구분해 보고, 재무장을 빼면 무엇이 멈추는지 확인한다.</p>
+<ol>
+  <li>문자 <code>'1'</code>을 고르고 <b>바이트 도착</b>을 누른다. RXNE = 1이 되고 다음 단계 카드가 표시된다.</li>
+  <li><b>ISR 다음 단계</b>를 눌러 NVIC → <code>USART2_IRQHandler</code> → <code>HAL_UART_IRQHandler</code> → 콜백 순서로 진행한다. HAL 단계에서 RXNEIE가 0으로, 콜백에서 다시 1로 바뀌는 것을 본다.</li>
+  <li><b>main 루프 1회</b>를 누르면 LD2가 켜지고 에코가 나간다.</li>
+  <li><b>콜백의 재무장 줄 빼기</b>를 체크하고 초기화한 뒤 바이트 두 개를 보낸다. 두 번째 바이트에서 인터럽트가 일어나지 않고, 세 번째에서 ORE가 생기는 것을 확인한다.</li>
+  <li>재무장을 다시 켜고, ISR 단계를 진행하지 않은 채 <b>바이트 도착</b>을 두 번 눌러 ORE → <code>HAL_UART_ErrorCallback</code> 경로를 본다. 또 ISR을 끝까지 진행하되 main을 돌리지 않고 두 바이트를 받으면 <code>rx_data</code>가 덮어쓰이는 것을 본다.</li>
+</ol>
+<div class="sim" id="simbox">
+  <div class="subhead">입력</div>
+  <div class="ctl">
+    <div><label for="ch">PC가 보낼 문자</label><select id="ch"><option value="1">'1' (0x31) — LD2 켜기</option><option value="0">'0' (0x30) — LD2 끄기</option><option value="t">'t' (0x74) — LD2 토글</option><option value="A">'A' (0x41) — 명령 아님, 에코만</option></select></div>
+    <div><label for="norearm"><input id="norearm" type="checkbox"> 콜백의 재무장 줄 빼기 (<b>HAL_UART_Receive_IT</b> 삭제 실험)</label></div>
+  </div>
+  <div class="subhead">USART2 레지스터</div>
+  <div class="regs">
+    <div class="stat"><div class="k">USART2_DR</div><div class="v" id="vDR">–</div></div>
+    <div class="stat"><div class="k">SR.RXNE / SR.ORE</div><div class="v"><span class="lamp" id="vRXNE">RXNE</span> <span class="lamp" id="vORE">ORE</span></div></div>
+    <div class="stat"><div class="k">CR1.RXNEIE / CR3.EIE</div><div class="v"><span class="lamp" id="vIE">RXNEIE</span> <span class="lamp" id="vEIE">EIE</span></div></div>
+    <div class="stat"><div class="k">huart2.RxState</div><div class="v sm" id="vState">–</div></div>
+  </div>
+  <div class="subhead">인터럽트 경로</div>
+  <div class="ranks" id="ranks">
+    <div class="rk r3" id="k0"><div class="h">하드웨어</div><div class="c">IRQ 요청</div><div class="p">RXNE·ORE &amp; IE → NVIC</div></div>
+    <div class="rk r0" id="k1"><div class="h">진짜 ISR</div><div class="c">USART2_IRQHandler</div><div class="p">stm32f1xx_it.c</div></div>
+    <div class="rk r0" id="k2"><div class="h">HAL</div><div class="c">HAL_UART_IRQHandler</div><div class="p">SR 해석, DR 읽기</div></div>
+    <div class="rk r1" id="k3"><div class="h">사용자 콜백</div><div class="c">RxCplt / Error</div><div class="p">main.c, ISR 문맥</div></div>
+  </div>
+  <div class="subhead">콜백 ↔ main 공유 변수</div>
+  <div class="regs">
+    <div class="stat"><div class="k">rx_byte</div><div class="v" id="vRb">–</div></div>
+    <div class="stat"><div class="k">rx_data</div><div class="v" id="vRd">–</div></div>
+    <div class="stat"><div class="k">rx_ready</div><div class="v"><span class="lamp" id="vRr">0</span></div></div>
+    <div class="stat"><div class="k">LD2 (PA5)</div><div class="v"><span class="lamp" id="vLed">OFF</span></div></div>
+    <div class="stat"><div class="k">ORE 손실 / 덮어씀</div><div class="v" id="vLost">0 / 0</div></div>
+  </div>
+  <div class="btns">
+    <button class="hw" id="bArr" type="button">바이트 도착 (PC → PA3)</button>
+    <button class="sw" id="bStep" type="button">ISR 다음 단계</button>
+    <button class="sw" id="bRun" type="button">ISR 끝까지</button>
+    <button class="sw" id="bMain" type="button">main 루프 1회</button>
+    <button class="plain" id="bReset" type="button">초기화</button>
+  </div>
+  <div class="calc" id="calc" aria-live="polite">초기화 상태: HAL_UART_Receive_IT(&amp;huart2, &amp;rx_byte, 1)이 실행되어 RXNEIE = 1, EIE = 1이다.</div>
+  <div class="log" id="log"></div>
+  <div class="label" style="margin-top:12px">PC 터미널 (에코)</div>
+  <div class="uart" id="uart"></div>
+</div>
+<p style="font-size:14.5px;color:var(--muted)">시뮬레이터 모델: 이 보드 HAL(stm32f1xx_hal_uart.c)의 <code>UART_Start_Receive_IT</code>, <code>HAL_UART_IRQHandler</code>, <code>UART_Receive_IT</code> 흐름을 단계로 나눈 것이다. 실제로는 2~4단계가 수 µs 안에 연속 실행되며, 단계 사이에 바이트가 도착하는 상황은 "인터럽트 처리가 늦어진 경우"를 과장해 보여 준다. 패리티 오류·프레이밍 오류·노이즈 오류는 다루지 않는다.</p>
+</section>
+
+<section id="s5">
+<h2>5. HAL 함수와 레지스터의 대응</h2>
+<div class="tablewrap"><table><tr><th>HAL 함수/매크로</th><th>레지스터 동작</th><th>위치</th></tr>
+<tr><td><code>HAL_UART_Init()</code></td><td>MSP(클럭·핀·NVIC) → <code>BRR</code> = 0x0116, <code>CR1</code> = UE|TE|RE</td><td>main.c <code>MX_USART2_UART_Init</code></td></tr>
+<tr><td><code>HAL_NVIC_SetPriority(USART2_IRQn, 1, 0)</code></td><td><code>NVIC_IPR9</code>의 IRQ38 바이트 = 0x10</td><td>msp.c</td></tr>
+<tr><td><code>HAL_NVIC_EnableIRQ(USART2_IRQn)</code></td><td><code>NVIC_ISER1</code> 비트 6 = 1</td><td>msp.c</td></tr>
+<tr><td><code>HAL_UART_Receive_IT(&amp;huart2, &amp;rx_byte, 1)</code></td><td><code>RxXferCount</code> = 1, <code>RxState</code> = BUSY_RX, <code>CR3.EIE</code> = 1, <code>CR1.RXNEIE</code> = 1 (패리티 사용 시 <code>PEIE</code>도)</td><td>main.c 시작부와 두 콜백</td></tr>
+<tr><td><code>HAL_UART_IRQHandler()</code></td><td><code>SR</code>, <code>CR1</code>, <code>CR3</code>를 읽어 원인 판별. 오류가 없고 RXNE &amp; RXNEIE면 <code>UART_Receive_IT</code></td><td>stm32f1xx_it.c에서 호출</td></tr>
+<tr><td><code>UART_Receive_IT()</code> (HAL 내부)</td><td><code>DR</code> 읽기(RXNE 자동 해제) → 개수 0이면 <code>RXNEIE</code>·<code>PEIE</code>·<code>EIE</code> 끔, <code>RxState</code> = READY → <code>HAL_UART_RxCpltCallback</code></td><td>HAL 라이브러리</td></tr>
+<tr><td>ORE 처리 (HAL 내부)</td><td><code>ErrorCode</code> |= ORE, DR 읽기로 ORE 해제, <code>UART_EndRxTransfer</code>로 수신 인터럽트 끔 → <code>HAL_UART_ErrorCallback</code></td><td>HAL 라이브러리</td></tr>
+<tr><td><code>HAL_UART_Transmit(&amp;huart2, &amp;c, 1, 100)</code></td><td><code>SR.TXE</code> 대기 → <code>DR</code> 쓰기 → <code>SR.TC</code> 대기 (블로킹, 약 86.8 µs)</td><td>main 루프 에코</td></tr>
+<tr><td><code>HAL_GPIO_WritePin</code> / <code>TogglePin</code></td><td><code>GPIOA_BSRR</code> BS5 또는 BR5 / <code>ODR</code> 읽고 BSRR로 반전</td><td>main 루프</td></tr>
+</table></div>
+<div class="tablewrap"><table><tr><th>레지스터</th><th>수신 대기 중</th><th>콜백 진입 직후 (재무장 전)</th><th>해석</th></tr>
+<tr><td class="m"><code>USART2_CR1</code></td><td class="m">0x202C</td><td class="m">0x200C</td><td>UE(13), TE(3), RE(2) + RXNEIE(5)</td></tr>
+<tr><td class="m"><code>USART2_CR3</code></td><td class="m">0x0001</td><td class="m">0x0000</td><td>EIE(0)</td></tr>
+<tr><td class="m"><code>USART2_BRR</code></td><td class="m" colspan="2">0x0116</td><td>32 MHz / (16 × 17.375) = 115 107.9 bps</td></tr>
+<tr><td class="m"><code>GPIOA_CRL</code></td><td class="m" colspan="2">0x4424 4A44</td><td>PA2 = 0xA (AF 푸시풀), PA3 = 0x4 (입력 플로팅), PA5 = 0x2 (출력 푸시풀)</td></tr>
+</table></div>
+</section>
+
+<section id="s6">
+<h2>6. 인터럽트 경로: 진짜 ISR과 콜백</h2>
+<ol class="flow">
+<li class="hw"><div class="n">1</div><div class="tx"><b>프레임 수신 완료 → <code>SR.RXNE</code> = 1<span class="tag hw">하드웨어</span></b><span>정지 비트까지 받으면 시프트 레지스터 값이 DR로 옮겨진다. 이미 RXNE = 1이었다면 대신 ORE = 1이 된다.</span></div></li>
+<li class="hw"><div class="n">2</div><div class="tx"><b>RXNEIE = 1 → NVIC <code>USART2_IRQn</code><span class="tag hw">하드웨어</span></b><span>우선순위 판정 후 CPU가 레지스터를 스택에 저장하고 벡터 0x0000 00D8의 주소로 분기한다.</span></div></li>
+<li class="sw"><div class="n">3</div><div class="tx"><b><code>USART2_IRQHandler()</code> — stm32f1xx_it.c<span class="tag sw">소프트웨어</span></b><span>벡터 테이블이 직접 호출하는 진짜 ISR이다. 내용은 <code>HAL_UART_IRQHandler(&amp;huart2)</code> 한 줄이다.</span></div></li>
+<li class="sw"><div class="n">4</div><div class="tx"><b><code>HAL_UART_IRQHandler()</code> → <code>UART_Receive_IT()</code><span class="tag sw">소프트웨어</span></b><span>SR을 읽고 오류 비트가 없음을 확인한 뒤 DR을 <code>rx_byte</code>에 저장한다(RXNE 해제). 요청한 1바이트를 채웠으므로 RXNEIE·EIE를 끄고 <code>RxState</code>를 READY로 둔다.</span></div></li>
+<li class="sw"><div class="n">5</div><div class="tx"><b><code>HAL_UART_RxCpltCallback()</code> — main.c<span class="tag sw">소프트웨어</span></b><span>ISR 문맥에서 실행되는 사용자 함수. <code>rx_data = rx_byte</code>, <code>rx_ready = 1</code>을 기록하고 <code>HAL_UART_Receive_IT()</code>로 재무장한다.</span></div></li>
+<li class="sw"><div class="n">6</div><div class="tx"><b>main 루프<span class="tag sw">소프트웨어</span></b><span><code>rx_ready</code>를 확인하면 값을 복사하고 플래그를 지운 뒤 LED를 바꾸고 에코를 블로킹 송신한다. 송신 중에도 수신 인터럽트는 계속 동작한다.</span></div></li>
+</ol>
+<div class="tablewrap"><table><tr><th>구분</th><th>위치</th><th>성격</th></tr>
+<tr><td><code>USART2_IRQHandler</code></td><td>stm32f1xx_it.c</td><td>벡터 테이블이 직접 호출하는 진짜 ISR</td></tr>
+<tr><td><code>HAL_UART_IRQHandler</code></td><td>HAL 라이브러리</td><td>SR·CR1·CR3로 원인 판별, DR 읽기, 오류 처리 후 콜백 호출</td></tr>
+<tr><td><code>HAL_UART_RxCpltCallback</code></td><td>main.c (사용자 코드)</td><td>ISR이 아니라 ISR 문맥에서 호출되는 함수. 짧게 끝내야 한다</td></tr>
+<tr><td><code>HAL_UART_ErrorCallback</code></td><td>main.c (사용자 코드)</td><td>ORE·FE 등으로 HAL이 수신을 중단했을 때 호출. 이 예제는 재무장만 한다</td></tr>
+</table></div>
+</section>
+
+<section id="s7">
+<h2>7. 코드 읽기</h2>
+<p>외부 배선은 필요 없다. 시리얼 터미널을 ST-LINK COM 포트, 115200 8N1로 열고 키를 하나씩 누른다. 터미널의 로컬 에코는 꺼 두어야 MCU가 돌려준 글자만 보인다.</p>
+<div class="file">main.c — ISR과 main이 공유하는 변수 (USER CODE PV)</div>
+<div class="codepair">
+<pre><code><span class="kw">static</span> uint8_t rx_byte;               <span class="cm">/* HAL_UART_Receive_IT 가 채워 주는 1바이트 버퍼 */</span>
+<span class="kw">static</span> <span class="kw">volatile</span> uint8_t rx_data;      <span class="cm">/* 콜백 -&gt; main 으로 전달하는 데이터 */</span>
+<span class="kw">static</span> <span class="kw">volatile</span> uint8_t rx_ready;     <span class="cm">/* 콜백 -&gt; main 으로 전달하는 플래그 */</span></code></pre>
+<ol><li><code>rx_byte</code>는 HAL이 DR 값을 써 넣는 곳이고, main은 직접 읽지 않는다.</li><li><code>rx_data</code>·<code>rx_ready</code>는 콜백이 쓰고 main이 읽으므로 <code>volatile</code>이 필요하다. 없으면 컴파일러가 main 루프 안의 <code>rx_ready</code> 읽기를 레지스터 값으로 대체할 수 있다.</li></ol>
+</div>
+<div class="file">main.c — 시작과 main 루프 (USER CODE 2, 3)</div>
+<div class="codepair">
+<pre><code><span class="kw">const</span> <span class="kw">char</span> *banner = <span class="hl">"\r\n[USART2 RX interrupt] 1/0/t 를 입력하세요\r\n"</span>;
+<span class="kw">HAL_UART_Transmit</span>(&amp;huart2, (uint8_t *)banner, (uint16_t)strlen(banner), 100);
+
+<span class="cm">/* 수신 인터럽트 시작: USART2-&gt;CR1.RXNEIE=1, CR3.EIE=1 (HAL 내부에서 설정) */</span>
+<span class="kw">HAL_UART_Receive_IT</span>(&amp;huart2, &amp;rx_byte, 1);
+
+<span class="kw">while</span> (1)
+{
+  <span class="kw">if</span> (rx_ready)
+  {
+    uint8_t c = rx_data;
+    rx_ready = 0;
+
+    <span class="kw">switch</span> (c)
+    {
+    <span class="kw">case</span> <span class="hl">'1'</span>: <span class="kw">HAL_GPIO_WritePin</span>(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);   <span class="kw">break</span>;
+    <span class="kw">case</span> <span class="hl">'0'</span>: <span class="kw">HAL_GPIO_WritePin</span>(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET); <span class="kw">break</span>;
+    <span class="kw">case</span> <span class="hl">'t'</span>: <span class="kw">HAL_GPIO_TogglePin</span>(LD2_GPIO_Port, LD2_Pin);                <span class="kw">break</span>;
+    <span class="kw">default</span>: <span class="kw">break</span>;
+    }
+    <span class="kw">HAL_UART_Transmit</span>(&amp;huart2, &amp;c, 1, 100);   <span class="cm">/* 에코 (main 문맥에서 블로킹 송신) */</span>
+  }
+}</code></pre>
+<ol><li>배너 문자열에는 한글이 있어 UTF-8 바이트로 나간다. 터미널 인코딩이 UTF-8이어야 제대로 보인다.</li><li>main은 값을 지역 변수 <code>c</code>로 복사한 다음 플래그를 지운다. 이후 콜백이 새 값을 써도 <code>c</code>는 바뀌지 않는다.</li><li>명령 문자는 <code>'1'</code>, <code>'0'</code>, <code>'t'</code> 세 개이며 대소문자를 구분한다(<code>'T'</code>는 에코만 된다).</li><li>에코는 main 문맥의 블로킹 송신이다. ISR 안에서 송신하지 않는다.</li></ol>
+</div>
+<div class="file">main.c — 콜백 (USER CODE 4, ISR 문맥)</div>
+<div class="codepair">
+<pre><code><span class="kw">void</span> <span class="kw">HAL_UART_RxCpltCallback</span>(UART_HandleTypeDef *huart)
+{
+  <span class="kw">if</span> (huart-&gt;Instance == USART2)
+  {
+    rx_data = rx_byte;
+    rx_ready = 1;  <span class="cm">//flag set: main 루프에서 처리하도록 알림</span>
+    <span class="kw">HAL_UART_Receive_IT</span>(&amp;huart2, &amp;rx_byte, 1);   <span class="cm">/* 다음 바이트를 위해 재무장(필수) */</span>
+  }
+}
+
+<span class="cm">/* 오버런/프레이밍 오류(SR.ORE/FE)가 나면 HAL 이 수신을 중단하므로 여기서 다시 시작한다 */</span>
+<span class="kw">void</span> <span class="kw">HAL_UART_ErrorCallback</span>(UART_HandleTypeDef *huart)
+{
+  <span class="kw">if</span> (huart-&gt;Instance == USART2)
+  {
+    <span class="kw">HAL_UART_Receive_IT</span>(&amp;huart2, &amp;rx_byte, 1);
+  }
+}</code></pre>
+<ol><li>모든 UART 인스턴스가 같은 콜백을 공유하므로 <code>Instance</code>를 검사한다.</li><li>재무장은 RXNEIE·EIE를 다시 켠다. 콜백 진입 시 HAL이 이미 <code>RxState</code>를 READY로 바꿔 두었으므로 이 호출은 BUSY 오류 없이 성공한다.</li><li><code>ErrorCallback</code>이 없으면 ORE 한 번에 수신이 영구히 멈춘다.</li></ol>
+</div>
+<div class="file">stm32f1xx_it.c / stm32f1xx_hal_msp.c — 진짜 ISR과 NVIC 설정 (생성 코드)</div>
+<div class="codepair">
+<pre><code><span class="kw">void</span> USART2_IRQHandler(<span class="kw">void</span>)
+{
+  <span class="kw">HAL_UART_IRQHandler</span>(&amp;huart2);
+}
+
+<span class="cm">/* HAL_UART_MspInit() 안 */</span>
+GPIO_InitStruct.Pin = USART_RX_Pin;
+GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+GPIO_InitStruct.Pull = GPIO_NOPULL;
+<span class="kw">HAL_GPIO_Init</span>(USART_RX_GPIO_Port, &amp;GPIO_InitStruct);
+
+<span class="cm">/* USART2 interrupt Init */</span>
+<span class="kw">HAL_NVIC_SetPriority</span>(USART2_IRQn, 1, 0);
+<span class="kw">HAL_NVIC_EnableIRQ</span>(USART2_IRQn);</code></pre>
+<ol><li>핸들러 이름은 startup 파일의 벡터 테이블 이름과 정확히 같아야 한다. 오타가 나면 기본 핸들러(무한 루프)로 들어간다.</li><li>RX 핀은 입력 플로팅이다. ST-LINK가 유휴 High를 구동한다.</li><li>NVIC 허용은 MSP에서, USART 쪽 인터럽트 허용(RXNEIE)은 <code>Receive_IT</code>에서 한다. 둘 다 있어야 인터럽트가 걸린다.</li></ol>
+</div>
+<div class="box"><div class="label">관찰 결과</div><pre><code>
+[USART2 RX interrupt] 1/0/t 를 입력하세요
+10tA</code></pre><p><code>1</code>, <code>0</code>, <code>t</code>, <code>A</code>를 차례로 누르면 글자가 에코되고 LD2가 켜짐 → 꺼짐 → 켜짐이 된다. <code>A</code>는 LED를 바꾸지 않는다. Enter 키는 터미널 설정에 따라 CR(0x0D)이 에코되어 커서가 줄 처음으로 돌아간다.</p></div>
+</section>
+
+<section id="s8">
+<h2>8. 실험</h2>
+<h3>실험 A. 재무장 빼기</h3><p>콜백의 <code>HAL_UART_Receive_IT(&amp;huart2, &amp;rx_byte, 1);</code> 줄을 주석 처리한다. 첫 글자는 동작하고 이후 글자는 반응이 없음을 확인한다. 디버거로 <code>USART2-&gt;CR1</code>(0x200C, RXNEIE = 0)과 <code>USART2-&gt;SR</code>(RXNE, ORE)을 읽어 시뮬레이터 결과와 비교한다.</p>
+<h3>실험 B. 인터럽트를 막아 ORE 만들기</h3><p>main 루프의 처리 부분에 <code>__disable_irq(); for (volatile int i = 0; i &lt; 200000; i++); __enable_irq();</code>를 넣고 여러 글자를 빠르게 입력한다. <code>HAL_UART_ErrorCallback</code>에 카운터를 두어 오버런 횟수를 세고, 처리 지연 시간과 바이트 간격 86.8 µs를 비교한다.</p>
+<h3>실험 C. 붙여넣기와 단일 변수의 한계</h3><p>터미널에 <code>1010101010t</code> 같은 긴 문자열을 한 번에 붙여 넣는다. 에코된 글자 수가 보낸 글자 수와 같은지 센다. 에코 송신(86.8 µs)과 다음 바이트 도착 간격이 비슷하므로, main이 늦으면 <code>rx_data</code>가 덮어쓰여 글자가 빠질 수 있다. 이 문제를 03 예제의 링 버퍼가 해결한다.</p>
+<h3>실험 D. ISR에서 에코하기</h3><p>에코 송신을 콜백 안으로 옮겨 본다. 동작은 비슷해 보이지만 ISR 안에서 86.8 µs 동안 블로킹하는 구조가 된다. 실험 C와 같은 붙여넣기에서 결과가 어떻게 달라지는지, 그리고 왜 권장되지 않는지 설명한다.</p>
+</section>
+
+<section id="s9">
+<h2>9. 트러블슈팅</h2>
+<div class="tablewrap"><table><tr><th>증상</th><th>원인</th><th>점검/조치</th></tr>
+<tr><td>첫 글자만 반응하고 이후 무반응</td><td>콜백에서 재무장 누락</td><td>콜백 끝의 <code>HAL_UART_Receive_IT</code> 확인. <code>CR1.RXNEIE</code>가 1인지 디버거로 확인</td></tr>
+<tr><td>처음부터 전혀 반응하지 않는다</td><td><code>HAL_NVIC_EnableIRQ(USART2_IRQn)</code> 누락, <code>USART2_IRQHandler</code> 이름 오타, 시작 시 <code>Receive_IT</code> 호출 누락</td><td>msp.c NVIC 줄, it.c 핸들러, main의 USER CODE 2 확인</td></tr>
+<tr><td>빠르게 입력하면 가끔 수신이 멈춘다</td><td>ORE 발생 후 HAL이 수신을 중단했는데 <code>ErrorCallback</code>이 없음</td><td><code>HAL_UART_ErrorCallback</code>에서 재무장, <code>huart2.ErrorCode</code> 확인</td></tr>
+<tr><td>붙여 넣은 문자열 일부가 빠진다</td><td>main이 처리하기 전에 콜백이 <code>rx_data</code>를 덮어씀(단일 변수)</td><td>링 버퍼 사용(03 예제), 또는 main 루프의 블로킹 작업 줄이기</td></tr>
+<tr><td>main이 <code>rx_ready</code> 변화를 보지 못한다(최적화 빌드)</td><td><code>volatile</code> 누락</td><td>ISR과 공유하는 변수는 <code>volatile</code>로 선언</td></tr>
+<tr><td>배너의 한글이 깨진다</td><td>터미널 문자 인코딩이 UTF-8이 아니다</td><td>터미널 인코딩을 UTF-8로 설정. 동작에는 영향 없음</td></tr>
+</table></div>
+</section>
+
+<section id="s10">
+<h2>10. 확인 문제</h2>
+<details><summary><b>문제 1.</b> <code>HAL_UART_RxCpltCallback</code>이 ISR이 아니라고 하는 이유는?</summary>
+<div class="ans"><p>벡터 테이블에 등록되어 하드웨어가 직접 호출하는 함수는 <code>USART2_IRQHandler</code>뿐이다. 콜백은 그 안에서 <code>HAL_UART_IRQHandler</code>가 원인을 판별한 뒤 일반 함수 호출로 부르는 함수이다. 다만 ISR 문맥에서 실행되므로 ISR과 같은 제약(짧게, 블로킹 금지)을 따라야 한다.</p></div></details>
+<details><summary><b>문제 2.</b> 콜백에서 재무장을 빼면 두 번째 바이트와 세 번째 바이트에서 각각 어떤 레지스터 변화가 생기는가?</summary>
+<div class="ans"><p>두 번째 바이트: RXNE = 1이 되지만 RXNEIE = 0이므로 인터럽트가 없고 DR에 그대로 남는다. 세 번째 바이트: RXNE = 1인 상태에서 수신이 끝나 ORE = 1이 되고 세 번째 바이트는 버려진다. EIE도 0이므로 ORE 역시 인터럽트를 만들지 못한다.</p></div></details>
+<details><summary><b>문제 3.</b> 115200 bps 8N1에서 ISR이 DR을 읽기까지 허용되는 최대 지연은 대략 얼마인가?</summary>
+<div class="ans"><p>RXNE가 선 뒤 다음 바이트 수신이 끝나기 전까지, 즉 연속 수신 시 한 프레임 시간인 약 86.8 µs이다. 64 MHz에서 약 5 500 사이클에 해당한다.</p></div></details>
+<details><summary><b>문제 4.</b> main 루프에서 <code>uint8_t c = rx_data;</code> 다음에 <code>rx_ready = 0;</code>을 두는 순서가 반대라면 어떤 문제가 생길 수 있는가?</summary>
+<div class="ans"><p>플래그를 먼저 지운 뒤 값을 읽기 전에 인터럽트가 들어와 새 바이트를 쓰고 <code>rx_ready = 1</code>을 세우면, main은 새 값을 읽고도 플래그가 다시 서 있어 같은 값을 한 번 더 처리할 수 있다. 값 복사 후 플래그 해제 순서가 경쟁을 줄인다. 그래도 그 사이에 두 바이트가 오면 하나는 사라지므로 근본 해결은 버퍼이다.</p></div></details>
+</section>
+
+<section>
+  <h2>정리</h2>
+  <div class="tablewrap"><table><tr><th>예제</th><th>계층</th><th>수신/출력 방식</th><th>핵심</th></tr>
+<tr><td class="m"><a href="../01_USART_printf/01_USART_printf%20교안.html">01_USART_printf</a></td><td>HAL</td><td>송신(블로킹)</td><td>printf → __io_putchar → UART</td></tr>
+<tr><td class="m"><b>02_USART_Interrupt (이 교안)</b></td><td>HAL+NVIC</td><td>1바이트 수신 인터럽트</td><td>콜백 → 플래그 → main</td></tr>
+<tr><td class="m"><a href="../03_USART_RingBuffer/UART%20링%20버퍼%20교안.html">03_USART_RingBuffer</a></td><td>HAL</td><td>인터럽트 + 링 버퍼</td><td>ISR→main lock-free FIFO</td></tr>
+<tr><td class="m"><a href="../04_USART_DMA_IdleLine_c/04_USART_DMA_IdleLine%20교안.html">04_USART_DMA_IdleLine_c</a></td><td>HAL+DMA</td><td>DMA 원형 + IDLE</td><td>가변 길이 패킷</td></tr>
+<tr><td class="m"><a href="../05_UART_CLI_c/05_UART_CLI%20교안.html">05_UART_CLI_c</a></td><td>HAL</td><td>줄 단위 수신</td><td>줄 편집, 명령 테이블</td></tr>
+<tr><td class="m"><a href="../06_USART_HalfDuplex_c/06_USART_HalfDuplex%20교안.html">06_USART_HalfDuplex_c</a></td><td>HAL</td><td>단선 반이중</td><td>방향 전환, 오픈드레인</td></tr>
+<tr><td class="m"><a href="../07_USART_Stack/스택%20교안.html">07_USART_Stack</a></td><td>HAL+CMSIS</td><td>인터럽트 + 스택</td><td>LIFO 괄호 검사, PRIMASK</td></tr>
+<tr><td class="m"><a href="../08_USART_printf_Dual/08_USART_printf_Dual%20교안.html">08_USART_printf_Dual</a></td><td>HAL</td><td>송신 2포트</td><td>USART2+USART1(D8), AD2 파형</td></tr>
+</table></div>
+  <div class="nextprev"><a href="../01_USART_printf/01_USART_printf%20교안.html">← 01_USART_printf</a><a href="../03_USART_RingBuffer/UART%20링%20버퍼%20교안.html">03_USART_RingBuffer →</a></div>
+  <footer>근거: 02_USART_Interrupt 소스(main.c, stm32f1xx_it.c, stm32f1xx_hal_msp.c, stm32f1xx_hal_conf.h)와 같은 폴더의 HAL 드라이버 stm32f1xx_hal_uart.c. 계층: HAL + NVIC(수신 인터럽트, 송신은 폴링). 레지스터·비트 이름은 RM0008(STM32F101xx~F107xx 레퍼런스 매뉴얼) 기준이다. 클럭은 SYSCLK 64 MHz(HSI/2 × PLL16), APB1 ÷2 = 32 MHz 구성을 기준으로 한다. 코드는 해당 폴더의 소스에서 발췌한 것이며 일부 줄이 생략되어 있다.</footer>
+</section>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var S;
+  function init(){
+    S={dr:null,rxne:0,ore:0,ie:1,eie:1,state:'BUSY_RX',rb:null,rd:null,rr:0,led:0,lost:0,ovw:0,pipe:[],done:[],next:-1};
+  }
+  function hx(v){if(v===null)return '–';var s=v.toString(16).toUpperCase();return '0x'+(s.length<2?'0'+s:s)}
+  function ch(v){if(v===null)return '';return v===13?'␍':v===10?'␊':String.fromCharCode(v)}
+  function log(t){var l=$('log');l.textContent=(t+'\n'+l.textContent).split('\n').slice(0,12).join('\n')}
+  function lamp(id,on,txt){var e=$(id);e.className='lamp'+(on?' on':'');if(txt!==undefined)e.textContent=txt}
+  function render(){
+    $('vDR').textContent=S.dr===null?'–':hx(S.dr)+' \''+ch(S.dr)+'\'';
+    lamp('vRXNE',S.rxne); lamp('vORE',S.ore); lamp('vIE',S.ie); lamp('vEIE',S.eie);
+    $('vState').textContent=S.state;
+    $('vRb').textContent=S.rb===null?'–':hx(S.rb)+' \''+ch(S.rb)+'\'';
+    $('vRd').textContent=S.rd===null?'–':hx(S.rd)+' \''+ch(S.rd)+'\'';
+    lamp('vRr',S.rr,String(S.rr)); lamp('vLed',S.led,S.led?'ON':'OFF');
+    $('vLost').textContent=S.lost+' / '+S.ovw;
+    for(var i=0;i<4;i++){
+      var k=$('k'+i); k.classList.toggle('on',S.done.indexOf(i)>=0); k.classList.toggle('nx',S.next===i);
+    }
+    $('bStep').disabled=$('bRun').disabled=false;
+  }
+  var CARD={nvic:1,hal:2,halerr:2,abort:2,cb:3,errcb:3};
+  function setNext(){S.next=S.pipe.length?CARD[S.pipe[0]]:-1}
+  function checkIrq(){
+    if(S.pipe.length) return;
+    if((S.rxne&&S.ie)||(S.ore&&(S.ie||S.eie))){
+      S.done=[0];
+      S.pipe=S.ore?['nvic','halerr','cb','abort','errcb']:['nvic','hal','cb'];
+      setNext();
+      return true;
+    }
+    return false;
+  }
+  function arrive(){
+    var v=$('ch').value.charCodeAt(0);
+    var msg;
+    if(S.rxne){
+      S.ore=1; S.lost++;
+      msg='바이트 '+hx(v)+' 도착: RXNE = 1(이전 바이트 '+hx(S.dr)+'가 DR에 남음) → SR.ORE = 1, 새 바이트는 버려진다.';
+    }else{
+      S.dr=v; S.rxne=1;
+      msg='바이트 '+hx(v)+' \''+ch(v)+'\' 도착: 정지 비트까지 수신 → DR ← '+hx(v)+', SR.RXNE = 1';
+    }
+    var fired=checkIrq();
+    if(fired) msg+='\nRXNEIE·EIE 조건 충족 → USART2 인터럽트 요청(IRQ38) 대기. "ISR 다음 단계"로 진행한다.';
+    else if(S.pipe.length) msg+='\n(인터럽트 처리가 아직 진행 중이다)';
+    else msg+='\nCR1.RXNEIE = 0, CR3.EIE = 0 → 인터럽트 요청 없음. 이 바이트를 읽을 코드가 없다.';
+    $('calc').textContent=msg; log(msg.split('\n')[0]);
+    render();
+  }
+  function step(){
+    if(!S.pipe.length){
+      if(!checkIrq()){$('calc').textContent='대기 중인 인터럽트가 없다. 바이트 도착 또는 main 루프 1회를 누른다.';render();return false}
+    }
+    var st=S.pipe.shift(), m='';
+    if(st==='hal'&&S.ore){st='halerr';S.pipe=['cb','abort','errcb'];}
+    if(st==='nvic'){
+      m='NVIC: USART2_IRQn(우선순위 1) 승인 → 스택 저장 → 벡터 0x000000D8 → USART2_IRQHandler() 진입 (진짜 ISR)\n  → HAL_UART_IRQHandler(&huart2) 호출';
+    }else if(st==='hal'){
+      S.rb=S.dr; S.rxne=0; S.ie=0; S.eie=0; S.state='READY';
+      m='HAL_UART_IRQHandler: SR 읽기 → 오류 비트 없음, RXNE & RXNEIE = 1 → UART_Receive_IT()\n  rx_byte ← DR = '+hx(S.rb)+' (DR 읽기로 RXNE = 0)\n  RxXferCount 1 → 0 : CR1.RXNEIE = 0, CR3.EIE = 0, RxState = READY → 완료 콜백 호출';
+    }else if(st==='halerr'){
+      S.rb=S.dr; S.rxne=0; S.ore=0; S.ie=0; S.eie=0; S.state='READY';
+      m='HAL_UART_IRQHandler: SR 읽기 → ORE = 1 검출, ErrorCode |= ORE\n  RXNE & RXNEIE = 1이므로 UART_Receive_IT(): rx_byte ← DR = '+hx(S.rb)+' (SR→DR 읽기로 RXNE·ORE 해제)\n  개수 0 → RXNEIE·EIE 끔 → 완료 콜백이 먼저 호출된다';
+    }else if(st==='cb'){
+      var rearm=!$('norearm').checked;
+      if(S.rr){S.ovw++; m='HAL_UART_RxCpltCallback: rx_ready가 아직 1이다 → main이 처리하지 않은 '+hx(S.rd)+'를 덮어쓴다!\n';}
+      S.rd=S.rb; S.rr=1;
+      m+='HAL_UART_RxCpltCallback (ISR 문맥): rx_data = '+hx(S.rd)+', rx_ready = 1\n';
+      if(rearm){S.ie=1; S.eie=1; S.state='BUSY_RX'; m+='  재무장: HAL_UART_Receive_IT(&huart2, &rx_byte, 1) → CR1.RXNEIE = 1, CR3.EIE = 1';}
+      else m+='  재무장 줄이 없다 → RXNEIE = 0, EIE = 0으로 남는다. 다음 바이트부터 인터럽트가 일어나지 않는다.';
+    }else if(st==='abort'){
+      S.ie=0; S.eie=0; S.state='READY';
+      m='HAL: ORE는 "중단 오류"로 처리 → UART_EndRxTransfer(): RXNEIE·EIE 끔, RxState = READY\n  → HAL_UART_ErrorCallback 호출';
+    }else if(st==='errcb'){
+      S.ie=1; S.eie=1; S.state='BUSY_RX';
+      m='HAL_UART_ErrorCallback: HAL_UART_Receive_IT(&huart2, &rx_byte, 1)로 다시 시작 → RXNEIE = 1, EIE = 1\n  (ORE로 버려진 바이트는 복구되지 않는다)';
+    }
+    S.done.push(CARD[st]);
+    if(!S.pipe.length){
+      m+='\nISR 종료(예외 복귀).';
+      S.next=-1;
+      if(checkIrq()) m+='\nRXNE = 1이고 RXNEIE = 1이므로 곧바로 인터럽트가 다시 걸린다.';
+    }else setNext();
+    $('calc').textContent=m; log(m.split('\n')[0]);
+    render(); return true;
+  }
+  function runAll(){var n=0;while(S.pipe.length&&n<12){step();n++} if(!n) step();}
+  function mainOnce(){
+    if(!S.rr){$('calc').textContent='main: rx_ready = 0 → 할 일이 없다. (루프를 계속 돈다)';render();return}
+    var c=S.rd, act='LED 변화 없음';
+    S.rr=0;
+    if(c===49){S.led=1;act='HAL_GPIO_WritePin(SET) → GPIOA_BSRR.BS5 = 1 → LD2 ON'}
+    else if(c===48){S.led=0;act='HAL_GPIO_WritePin(RESET) → GPIOA_BSRR.BR5 = 1 → LD2 OFF'}
+    else if(c===116){S.led^=1;act='HAL_GPIO_TogglePin → ODR5 반전 → LD2 '+(S.led?'ON':'OFF')}
+    var u=$('uart'); u.textContent=(u.textContent+ch(c)).slice(-60);
+    $('calc').textContent='main: rx_ready = 1 → c = rx_data = '+hx(c)+' 복사 → rx_ready = 0\n  switch(\''+ch(c)+'\'): '+act+'\n  에코: HAL_UART_Transmit(&huart2, &c, 1, 100) — TXE→DR→TC, 약 86.8 µs 블로킹';
+    log('main: \''+ch(c)+'\' 처리, 에코');
+    render();
+  }
+  $('bArr').onclick=arrive; $('bStep').onclick=step; $('bRun').onclick=runAll; $('bMain').onclick=mainOnce;
+  $('bReset').onclick=function(){init();$('uart').textContent='';$('log').textContent='';$('calc').textContent='초기화: HAL_UART_Receive_IT(&huart2, &rx_byte, 1) 실행 → CR1.RXNEIE = 1, CR3.EIE = 1, RxState = BUSY_RX'+($('norearm').checked?'\n(콜백 재무장 줄 없음 모드)':'');render()};
+  $('norearm').onchange=function(){$('bReset').onclick()};
+  init(); render();
+})();
+</script>
+</body></html>

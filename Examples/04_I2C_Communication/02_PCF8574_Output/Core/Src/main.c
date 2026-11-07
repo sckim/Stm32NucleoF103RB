@@ -73,10 +73,11 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-/* USER CODE BEGIN PV */
 I2C_HandleTypeDef hi2c1;
+
 UART_HandleTypeDef huart2;
 
+/* USER CODE BEGIN PV */
 /* 출력 패턴 표 (액티브 Low: 0 인 비트의 LED 가 켜진다)
  *   0xFF : 모두 끔 (전원 투입 직후 PCF8574 의 기본 상태와 같다)
  *   0x00 : 모두 켬

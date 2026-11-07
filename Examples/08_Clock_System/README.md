@@ -16,6 +16,12 @@
 | 10 | [10_DWT_Profiling_Reg_c](10_DWT_Profiling_Reg_c) | 레지스터 | 사이클 단위 실행 시간 측정 |
 | 11 | [11_NonBlocking_StateMachine_c](11_NonBlocking_StateMachine_c) | HAL | 상태 머신, 디바운스 |
 | 12 | [12_DeviceInfo_UniqueID_Reg_c](12_DeviceInfo_UniqueID_Reg_c) | 레지스터 | 고유 ID, 리셋 원인 |
+| 13 | [13_BusAccess_Latency_Reg_c](13_BusAccess_Latency_Reg_c) | 레지스터 | 버스별 접근 사이클 실측(SRAM·Flash·APB2·APB1), APB 8/16비트 복제, 비트 밴딩 별칭 — 02 다음에 본다 |
+| 14 | [14_Clock_Gating_FlashWait_Reg_c](14_Clock_Gating_FlashWait_Reg_c) | 레지스터 | 클럭 게이팅·리셋 레지스터 실측, Flash 웨이트·프리페치별 실행 사이클 비교 — 04 다음에 본다 |
+| 15 | [15_NVIC_Pending_TailChain_Reg_c](15_NVIC_Pending_TailChain_Reg_c) | 레지스터 | NVIC 대기·우선순위 판정·중첩·테일 체이닝·BASEPRI를 순서 기록과 사이클로 확인 — 06 다음에 본다 |
+| 16 | [16_EXTI_Shared_PR_Reg_c](16_EXTI_Shared_PR_Reg_c) | 레지스터 | EXTI 경로 직접 설정, 공유 벡터 판별, PR 지우기 시점과 재진입, 접점 튐 — 15 다음에 본다 |
+
+13~16은 강의자료 폴더의 교안 「메모리 맵과 버스」(13), 「클럭 트리(RCC)」(14), 「인터럽트 체계(NVIC·EXTI·SysTick)」(15·16)에 맞춰 추가한 레지스터 수준 보충 예제이다.
 
 ## 이 그룹에서 배우는 것
 

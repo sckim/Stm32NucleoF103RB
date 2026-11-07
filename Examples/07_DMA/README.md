@@ -6,6 +6,9 @@ DMA(Direct Memory Access)는 CPU 개입 없이 버스 마스터로 데이터를 
 |---|---|---|---|
 | 01 | [01_DMA_MemToMem](01_DMA_MemToMem) | HAL | 메모리→메모리 복사, CPU 복사와 사이클 비교 |
 | 02 | [02_DMA_Circular_GPIO](02_DMA_Circular_GPIO) | HAL, TIM, DMA | 원형 DMA + 핑퐁 버퍼로 GPIO 패턴 출력 |
+| 03 | [03_DMA_Width_Error_Reg_c](03_DMA_Width_Error_Reg_c) | 레지스터 | 데이터 폭 변환 9조합, APB 복제, EN=1 규칙, 전송 오류(TEIF), CPU와의 버스 공유 실측 |
+
+03은 강의자료 교안 「DMA」 장에 맞춰 추가한 레지스터 수준 보충 예제이다.
 
 교안(HTML): 각 예제 폴더의 `<예제명> 교안.html`(예: `01_DMA_MemToMem/01_DMA_MemToMem 교안.html`).
 

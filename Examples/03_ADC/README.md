@@ -11,6 +11,10 @@ STM32F103의 12비트 ADC1(약 1µs 변환, 채널 0~17)을 폴링에서 시작�
 | 05 | [05_ADC_AnalogWatchdog_c](05_ADC_AnalogWatchdog_c) | HAL, DMA | 전압 창 이탈을 하드웨어가 감시 |
 | 06 | [06_ADC_Vrefint_VDDA_c](06_ADC_Vrefint_VDDA_c) | HAL | Vrefint로 실제 VDDA 측정 후 보정 |
 | 07 | [07_ADC_Potentiometer_PWM_c](07_ADC_Potentiometer_PWM_c) | HAL, DMA, TIM | 가변저항 → 이동평균/감마 → PWM 밝기 |
+| 08 | [08_ADC_SampleTime_SourceZ_Reg_c](08_ADC_SampleTime_SourceZ_Reg_c) | 레지스터 | 샘플링 시간과 소스 저항: 샘플-홀드 충전 오차를 SMP별로 실측(DS 식 1) |
+| 09 | [09_ADC_TriggerJitter_Reg_c](09_ADC_TriggerJitter_Reg_c) | 레지스터 | 소프트웨어 시작 vs TIM3 TRGO 트리거의 샘플링 간격 지터(DWT 실측), ADON 재기록 함정 |
+
+08·09는 강의자료 교안 「ADC」 장에 맞춰 추가한 레지스터 수준 보충 예제이다.
 
 ## 이 그룹에서 배우는 것
 
@@ -21,6 +25,8 @@ STM32F103의 12비트 ADC1(약 1µs 변환, 채널 0~17)을 폴링에서 시작�
 
 교안(HTML): 각 예제 폴더의 `<예제명> 교안.html` (폴더명 끝의 `_c`는 파일명에서 뺀다. 예: `05_ADC_AnalogWatchdog_c/05_ADC_AnalogWatchdog 교안.html`). 03과 04는 `03_ADC_Multi/ADC 다채널 교안.html`, `04_ADC_DMA_TimTrigger/ADC 타이머 트리거 DMA 교안.html`이다.
 
+**상위 교안**: [03_ADC 교안.html](03_ADC%20교안.html)은 ADC 하드웨어를 RM0008·DS5319의 원본 블록도로 설명한다. 다루는 내용은 샘플링·양자화·샘플-홀드·축차 비교, 클럭과 변환 시간·신호원 저항 계산, 시퀀서 모드와 트리거, 플래그·인터럽트·DMA, 설계상 한계, 확인 문제이며, 각 예제가 어느 경로를 쓰는지 연결한다. 그림 원본은 `img/` 폴더에 있다.
+
 ## 공통
 
-ADC 클럭은 PCLK2(64MHz)/6 = 10.67MHz. 입력 예제(`03_ADC_Multi`(+PA4), `04_ADC_DMA_TimTrigger`, `05_ADC_AnalogWatchdog_c`, `06_ADC_Vrefint_VDDA_c`)는 PA0/PA1에 가변저항(0~3.3V) 연결 (미연결 시 플로팅 값).
+ADC 클럭은 PCLK2(64MHz)를 나눠 14MHz 이하로 맞춘다. `01_ADC_Single`·`02_ADC_Temperature`는 ÷8 = 8MHz, `03`~`07`은 ÷6 = 10.67MHz이다. 입력 예제(`03_ADC_Multi`(+PA4), `04_ADC_DMA_TimTrigger`, `05_ADC_AnalogWatchdog_c`, `06_ADC_Vrefint_VDDA_c`)는 PA0/PA1에 가변저항(0~3.3V) 연결 (미연결 시 플로팅 값).

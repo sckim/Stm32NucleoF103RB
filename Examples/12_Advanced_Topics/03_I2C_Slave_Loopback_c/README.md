@@ -2,7 +2,7 @@
 
 > 계층: **HAL** — 검토 전 (컴파일만 확인)
 
-> CubeMX(`I2C_Slave_Loopback.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+> CubeMX(`I2C_Slave_Loopback.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `02_USART/01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
 
 **I2C 슬레이브 모드**를 보드 한 장에서 시험한다. I2C1(마스터)과 I2C2(슬레이브, 주소 0x32)를 점퍼선으로 연결하고, 슬레이브는 16바이트 레지스터 파일을 가진 가상 센서처럼 동작한다.
 
@@ -23,4 +23,4 @@ PB6(I2C1_SCL) ─ PB10(I2C2_SCL), PB7(I2C1_SDA) ─ PB11(I2C2_SDA). SCL/SDA 에 
 
 ## 관련 예제
 
-`04_I2C_Communication/01_I2C_Scan`(이 슬레이브 주소 0x32 도 스캔에 나타난다), `05_SPI_Communication/04_SPI_Slave_Loopback_c`.
+`04_I2C_Communication/01_I2C_Scan`(이 슬레이브 주소 0x32 도 스캔에 나타난다), `12_Advanced_Topics/04_SPI_Slave_Loopback_c`.

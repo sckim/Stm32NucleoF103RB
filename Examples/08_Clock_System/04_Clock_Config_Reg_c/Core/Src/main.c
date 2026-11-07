@@ -34,8 +34,10 @@ static void clock_use_hsi_8mhz(void)
 
 static void clock_use_pll_48mhz(void)
 {
-    /* 1) 플래시 웨이트 스테이트: 24~48MHz -> 1WS. 프리페치 버퍼(PRFTBE) 켬 */
-    FLASH->ACR = (FLASH->ACR & ~FLASH_ACR_LATENCY) | FLASH_ACR_LATENCY_1 | FLASH_ACR_PRFTBE;
+    /* 1) 플래시 웨이트 스테이트: 24~48MHz -> 1WS (ACR.LATENCY[2:0] = 001). 프리페치 버퍼(PRFTBE) 켬
+     *    주의: CMSIS의 FLASH_ACR_LATENCY_0/_1/_2는 웨이트 수가 아니라 필드의 비트 0/1/2(0x1/0x2/0x4)이다.
+     *    1WS = FLASH_ACR_LATENCY_0, 2WS = FLASH_ACR_LATENCY_1. */
+    FLASH->ACR = (FLASH->ACR & ~FLASH_ACR_LATENCY) | FLASH_ACR_LATENCY_0 | FLASH_ACR_PRFTBE;
 
     /* 2) PLL 소스/배수: PLLSRC(bit16)=0 -> HSI/2, PLLMULL[21:18] = 1010 -> x12 */
     RCC->CFGR &= ~(RCC_CFGR_PLLSRC | RCC_CFGR_PLLMULL);

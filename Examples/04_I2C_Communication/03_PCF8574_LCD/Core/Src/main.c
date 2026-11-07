@@ -62,12 +62,13 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-/* USER CODE BEGIN PV */
-// 1. LCD 핸들 인스턴스 선언 (전역 또는 main 상단)
-I2C_LCD_HandleTypeDef lcd1;
 I2C_HandleTypeDef hi2c1;
 
 UART_HandleTypeDef huart2;
+
+/* USER CODE BEGIN PV */
+// 1. LCD 핸들 인스턴스 선언 (전역 또는 main 상단)
+I2C_LCD_HandleTypeDef lcd1;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/

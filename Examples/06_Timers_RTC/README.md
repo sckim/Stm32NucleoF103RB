@@ -3,6 +3,7 @@
 STM32F103의 범용 타이머(TIM2~4)와 고급 타이머(TIM1)를 시간 기준, 출력 비교·PWM 출력, 입력 캡처, 엔코더, 원 펄스로 활용하고, RTC를 달력 시계로 쓴다.
 
 예제 번호는 학습 순서이다: **시간 기준 → 출력(OC → PWM) → 입력(IC → PWM 입력) → 고급·응용 → RTC**.
+14~16은 교안 「타이머(TIM): 카운터와 비교기로 시간을 만드는 장치」(강의자료 폴더)의 6.1~6.3절에 맞춰 추가한 레지스터 수준 보충 예제이다. 번호는 뒤에 붙였지만, 권장 순서는 **01 → 02 → 03 → 14 → 04 → 05 → 15 → 06 → 07 → 16 → 08~13**이다.
 
 | 번호 | 예제 | 계층 | 핵심 |
 |---|---|---|---|
@@ -19,6 +20,9 @@ STM32F103의 범용 타이머(TIM2~4)와 고급 타이머(TIM1)를 시간 기준
 | 11 | [11_TIM_Servo_c](11_TIM_Servo_c) | HAL | 50Hz PWM, 1~2ms = 0~180° 서보 |
 | 12 | [12_TIM_MotorDriver_TB6612_c](12_TIM_MotorDriver_TB6612_c) | HAL | H-브리지 모터: 20kHz PWM, 브레이크/코스트, 비상 정지 |
 | 13 | [13_RTC_Calendar_c](13_RTC_Calendar_c) | HAL+레지스터 | 32비트 카운터 기반 달력 |
+| 14 | [14_TIM_Preload_URS_Reg_c](14_TIM_Preload_URS_Reg_c) | 레지스터 | ARR 이중 버퍼(ARPE)와 UG/URS 함정을 실측 — 01~03 다음에 본다 |
+| 15 | [15_TIM_CenterAligned_PWM_Reg_c](15_TIM_CenterAligned_PWM_Reg_c) | 레지스터 | 가장자리·중앙 정렬 PWM 비교, 경계 조건, 마스터/슬레이브 동기 시작 — 05 다음에 본다 |
+| 16 | [16_TIM_IC_Filter_Overcapture_Reg_c](16_TIM_IC_Filter_Overcapture_Reg_c) | 레지스터 | 입력 캡처 디지털 필터(ICxF) 경계와 오버캡처(CCxOF) — 07 다음에 본다 |
 
 ## 이 그룹에서 배우는 것
 

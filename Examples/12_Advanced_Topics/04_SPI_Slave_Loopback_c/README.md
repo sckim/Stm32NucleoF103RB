@@ -2,7 +2,7 @@
 
 > 계층: **HAL** — 검토 전 (컴파일만 확인)
 
-> CubeMX(`SPI_Slave_Loopback.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+> CubeMX(`SPI_Slave_Loopback.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `02_USART/01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
 
 **SPI 슬레이브 모드**를 보드 한 장에서 시험한다. SPI1(마스터)과 SPI2(슬레이브)를 점퍼선 4개로 연결한다. 슬레이브의 응답이 "직전 프레임에 대한 결과"로 한 프레임 늦게 오는 SPI 특유의 파이프라인 동작을 확인한다.
 
@@ -23,4 +23,4 @@ PA5→PB13(SCK), PA7→PB15(MOSI), PB14→PA6(MISO), PA4(마스터 CS)→PB12(�
 
 ## 관련 예제
 
-`05_SPI_Communication/01_SPI_Loopback_c`, `05_SPI_Communication/02_SPI_DMA_Fullduplex_c`, `04_I2C_Communication/03_I2C_Slave_Loopback_c`.
+`05_SPI_Communication/01_SPI_Loopback_c`, `05_SPI_Communication/02_SPI_DMA_Fullduplex_c`, `12_Advanced_Topics/03_I2C_Slave_Loopback_c`.

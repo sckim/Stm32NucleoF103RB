@@ -14,6 +14,10 @@ LED 점멸부터 시작해 버튼 입력(폴링/인터럽트)까지 GPIO의 기�
 | 08 | [08_ExternalInt](08_ExternalInt) | HAL, EXTI | 두 EXTI 라인(`EXTI9_5`, `EXTI15_10`)과 공용 콜백 |
 | 09 | [09_BitBandingReg](09_BitBandingReg) | 레지스터 | Cortex-M3 비트 밴딩 |
 | 10 | [10_AD2Test](10_AD2Test) | HAL | Arduino 헤더 14핀 순차 출력 + USART2 송신, AD2로 관찰 |
+| 11 | [11_GPIO_BSRR_Race_Speed_Reg_c](11_GPIO_BSRR_Race_Speed_Reg_c) | 레지스터 | ODR 읽기-수정-쓰기 경쟁 대 BSRR 원자적 쓰기, 출력 속도(MODE)와 에지 |
+| 12 | [12_GPIO_OpenDrain_Lock_Reg_c](12_GPIO_OpenDrain_Lock_Reg_c) | 레지스터 | 오픈드레인 와이어드 AND(출력 모드 풀업 꺼짐), LCKR 설정 잠금 |
+
+11·12는 강의자료 교안 「GPIO·AFIO」 장에 맞춰 추가한 레지스터 수준 보충 예제이다.
 
 ## 이 그룹에서 배우는 것
 
@@ -27,5 +31,7 @@ LED 점멸부터 시작해 버튼 입력(폴링/인터럽트)까지 GPIO의 기�
 LD2 = PA5, B1 = PC13(눌림 = Low). 별도 배선 없이 보드만으로 실행된다(`08_ExternalInt`은 예외, `10_AD2Test`은 관찰에 AD2 필요).
 
 ## 교안
+
+**상위 교안**: [01_GPIO 교안.html](01_GPIO%20교안.html)은 GPIO 하드웨어를 RM0008·데이터시트·PM0056의 원본 블록도로 설명한다. 다루는 내용은 신호 경로, 디지털논리 등가, 클럭과 시간 계산, 이벤트 생성, 설계상 한계, 확인 문제이며, 각 예제가 어느 경로를 쓰는지 연결한다. 그림 원본은 `img/` 폴더에 있다.
 
 각 예제 폴더에 `<예제명> 교안.html`이 있다 (예: `05_ReadPin/05_ReadPin 교안.html`). 브라우저로 열면 개념 설명, 레지스터 대응, 시뮬레이터, 실험, 확인 문제를 볼 수 있다.

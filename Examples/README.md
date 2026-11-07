@@ -12,7 +12,7 @@ Nucleo-F103RB(Cortex-M3, 64MHz, Flash 128KB / SRAM 20KB) 보드로 GPIO부터 �
 | [03_ADC](03_ADC) | 아날로그 입력 | 타이머 트리거, DMA, 아날로그 워치독, Vrefint 보정, 가변저항 PWM |
 | [04_I2C_Communication](04_I2C_Communication) | I2C | PCF8574 출력, 주소 스캔, 문자 LCD, MPU6050, OLED, EEPROM, DS3231 RTC |
 | [05_SPI_Communication](05_SPI_Communication) | SPI | 루프백, 전이중 DMA, OLED, SD 카드, NOR Flash, MAX7219 |
-| [06_Timers_RTC](06_Timers_RTC) | 타이머·RTC | 시간 기준(인터럽트/폴링), PWM, 입력 캡처, 데드타임, RTC, PWM 입력, 엔코더, 원 펄스, 서보, 모터 드라이버 |
+| [06_Timers_RTC](06_Timers_RTC) | 타이머·RTC | 시간 기준(인터럽트/폴링), PWM, 입력 캡처, 데드타임, RTC, PWM 입력, 엔코더, 원 펄스, 서보, 모터 드라이버, 이중 버퍼, 중앙 정렬, 입력 필터 |
 | [07_DMA](07_DMA) | DMA | 메모리↔메모리, 원형 DMA 핑퐁 |
 | [08_Clock_System](08_Clock_System) | 코어·클럭 시스템 | 레지스터/명령어, 메모리 맵, 예외 모델, RCC, SysTick, NVIC, AFIO, 폴트, MCO, DWT, 상태 머신, 칩 정보 |
 | [09_WatchDog_Sleep](09_WatchDog_Sleep) | 워치독·저전력 | WWDG, IWDG, Sleep/Stop/Standby, BKP 탬퍼 |
@@ -55,15 +55,19 @@ Nucleo-F103RB(Cortex-M3, 64MHz, Flash 128KB / SRAM 20KB) 보드로 GPIO부터 �
 
 ## 권장 학습 순서
 
-1. **GPIO** `01_GPIO/01`~`04`: 같은 Blink를 4계층으로 비교 → `05`~`08` 입력/EXTI → `09` 비트 밴딩
-2. **USART** `02_USART/01`~`08`: printf 출력으로 디버깅 수단 확보 → 인터럽트·DMA·링 버퍼·CLI·단선 → `07` 스택과 임계 구역 → `08` AD2로 UART 비트 파형 확인
-3. **코어 기초** `08_Clock_System/01`~`03`: 레지스터 파일·조건 플래그·IT → 메모리 맵 → 벡터 테이블·예외 진입/복귀.
+1. **GPIO** `01_GPIO/01`~`04`: 같은 Blink를 4계층으로 비교 → `05`~`08` 입력/EXTI → `09` 비트 밴딩 → `11` BSRR 원자적 쓰기·출력 속도, `12` 오픈드레인·LCKR
+2. **USART** `02_USART/01`~`09`: printf 출력으로 디버깅 수단 확보 → 인터럽트·DMA·링 버퍼·CLI·단선 → `07` 스택과 임계 구역 → `08` AD2로 UART 비트 파형 확인 → `09` TXE·TC와 오류 플래그(레지스터)
+3. **코어 기초** `08_Clock_System/01`~`03`, `13`: 레지스터 파일·조건 플래그·IT → 메모리 맵(→ `13` 버스별 접근 사이클) → 벡터 테이블·예외 진입/복귀.
    C 코드 뒤에서 실제로 무슨 일이 벌어지는지 먼저 본 뒤, 이어서 클럭·인터럽트 예제로 들어간다.
-4. **Clock/SysTick/NVIC** `08_Clock_System/04`~`06`: 클럭 트리 전환과 인터럽트 우선순위
-5. **Timer** `06_Timers_RTC/01`~`13`, **ADC** `03_ADC/01`~`05`: 주기·PWM·측정
-6. **통신** I2C(`04_I2C_Communication/01`~`08`), SPI(`05_SPI_Communication/01`~`06`), CAN(`11_CAN_Communication/01`~`02`)
-7. **DMA** `07_DMA/01`~`02`, **저전력** `09_WatchDog_Sleep/01`~`07`, **Flash/CRC** `10_Flash_CRC/01`~`02`
+4. **Clock/SysTick/NVIC** `08_Clock_System/04`~`06`, `14`~`16`: 클럭 트리 전환(→ `14` 게이팅·Flash 웨이트)과 인터럽트 우선순위(→ `15` NVIC 대기·테일 체이닝, `16` EXTI 공유 벡터·PR)
+   강의자료 교안 「메모리 맵과 버스」「클럭 트리(RCC)」「인터럽트 체계」가 3~4단계에 대응한다.
+5. **Timer** `06_Timers_RTC/01`~`16`, **ADC** `03_ADC/01`~`09`: 주기·PWM·측정
+   (타이머 보충 예제 14~16은 번호와 달리 각각 03·05·07 다음에 본다: 01→02→03→14→04→05→15→06→07→16→08~13)
+6. **통신** I2C(`04_I2C_Communication/01`~`08`), SPI(`05_SPI_Communication/01`~`07`), CAN(`11_CAN_Communication/01`~`02`)
+7. **DMA** `07_DMA/01`~`03`, **저전력** `09_WatchDog_Sleep/01`~`07`, **Flash/CRC** `10_Flash_CRC/01`~`02`
 8. **코어 심화** `08_Clock_System/07`~`12`: AFIO 리맵, HardFault 진단, MCO, DWT, 상태 머신, 칩 정보
+
+강의자료 폴더(`20_STM32`)의 교안 8장(공통 기반 1~3: 메모리 맵·클럭 트리·인터럽트, 주변장치 1~5: GPIO·AFIO·타이머·ADC·직렬 통신·DMA)이 이 순서에 대응하며, 각 교안의 10절 대응표가 예제 번호를 가리킨다.
 
 이 8단계가 3학년 2학기 진도의 전부다. 여기까지 끝냈다면 **[12_Advanced_Topics](12_Advanced_Topics)**(ADC 주입/듀얼, I2C·SPI
 슬레이브, PendSV 미니 RTOS, HSE 72MHz, ITM/SWO, 스택 워터마크, IAP/XMODEM 부트로더, 옵션 바이트, CAN 실제 버스)를 선택적으로 본다.

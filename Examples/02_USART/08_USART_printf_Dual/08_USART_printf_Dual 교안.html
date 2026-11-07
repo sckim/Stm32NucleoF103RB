@@ -207,7 +207,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · USART · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · USART · 교안 · <a href="../02_USART%20교안.html" style="color:inherit">↑ 02_USART 상위 교안</a></div>
   <h1>두 포트로 printf: USART2와 USART1의 BRR 차이, D8 파형 관찰</h1>
   <p class="lead">터미널에 글자가 보인다고 해서 선 위의 비트를 본 것은 아니다. 그런데 Nucleo의 USART2(PA2)는 ST-LINK 쪽에만 연결되어 있어 Arduino 헤더에서 측정할 수 없다. 이 교안은 같은 문자를 헤더 D8(PA9)에 연결된 USART1로도 내보내, Analog Discovery 2(AD2)로 실제 UART 파형을 관찰하는 <code>08_USART_printf_Dual</code> 예제를 다룬다. 두 USART가 서로 다른 버스(APB1 32 MHz, APB2 64 MHz)에 있어 BRR 값이 달라지는 이유와, 두 포트를 차례로 블로킹 송신할 때의 시간 비용도 계산한다.</p>
   <nav class="toc" aria-label="목차">

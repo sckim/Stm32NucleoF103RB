@@ -164,7 +164,7 @@ footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:v
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · ADC · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · ADC · 교안 · <a href="../03_ADC%20교안.html" style="color:inherit">↑ 03_ADC 상위 교안</a></div>
   <h1>ADC 다채널 읽기: 스캔 모드와 불연속 모드</h1>
   <p class="lead">ADC 한 개로 여러 아날로그 입력을 읽으려면 채널을 차례로 바꿔 가며 변환해야 한다. 그런데 결과 레지스터(DR)는 하나뿐이다. 이 교안은 그 제약에서 출발해 변환 시퀀스(랭크), 스캔 모드, 불연속 모드를 차례로 익히고, DMA 없이 폴링만으로 4채널(A0, A1, A2, Vrefint)을 순서대로 읽는 <code>03_ADC_Multi</code> 예제를 레지스터 수준까지 해석한다.</p>
   <nav class="toc" aria-label="목차">

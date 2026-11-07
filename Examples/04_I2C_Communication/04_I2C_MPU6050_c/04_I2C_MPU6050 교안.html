@@ -181,7 +181,7 @@ footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:v
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · I2C · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · I2C · 교안 · <a href="../04_I2C_Communication%20교안.html" style="color:inherit">↑ 04_I2C 상위 교안</a></div>
   <h1>MPU6050 레지스터 읽기: 주소 한 번, 레지스터 여러 개</h1>
   <p class="lead">I2C 센서 대부분은 "레지스터 번호를 쓰고, 다시 START를 걸어 그 번호부터 읽는" 같은 방식으로 다룬다. 이 교안은 6축 관성 센서 MPU6050(GY-521 모듈)을 예로 그 시퀀스를 비트 단위까지 내려가 본다. <code>04_I2C_MPU6050_c</code> 예제는 <code>WHO_AM_I</code>로 장치를 확인하고, <code>PWR_MGMT_1</code>에 0을 써서 깨운 뒤, 0x3B부터 14바이트를 한 번에 읽어 가속도·온도·자이로를 정수 연산만으로 변환한다.</p>
   <nav class="toc" aria-label="목차">

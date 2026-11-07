@@ -217,7 +217,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 교안 · <a href="../01_GPIO%20교안.html" style="color:inherit">↑ 01_GPIO 상위 교안</a></div>
   <h1>LL 계층의 Blink: 인라인 레지스터 접근, COUNTFLAG 지연, JTAG 해제</h1>
   <p class="lead">LL 드라이버는 HAL의 핸들·상태·콜백을 걷어 내고 레지스터 접근에 이름만 붙인다. 그만큼 코드가 작고 빠르지만, HAL이 대신하던 틱 설정과 클럭 보정을 생성 코드가 직접 호출해야 한다. 이 교안은 <code>LL_GPIO_TogglePin</code>이 컴파일 후 ODR 읽기와 BSRR 쓰기로 펼쳐지는 모습, 인터럽트 없이 <code>COUNTFLAG</code>를 폴링하는 <code>LL_mDelay</code>, <code>AFIO_MAPR</code>로 JTAG을 해제하는 코드를 해석하고 다른 세 계층과 비교한다. 대상 폴더는 <code>03_BlinkLL</code>이다.</p>
   <nav class="toc" aria-label="목차">

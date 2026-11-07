@@ -218,7 +218,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · ADC · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · ADC · 교안 · <a href="../03_ADC%20교안.html" style="color:inherit">↑ 03_ADC 상위 교안</a></div>
   <h1>Vrefint로 VDDA를 역산하고 ADC 값을 보정한다</h1>
   <p class="lead">ADC가 내놓는 12비트 코드는 전압이 아니라 VDDA에 대한 비율이다. <code>mV = code × 3300 / 4095</code>는 VDDA가 정확히 3.3 V일 때만 맞고, 전원이 흔들리면 모든 채널이 같은 비율로 틀어진다. 이 교안은 내부 기준전압 Vrefint(CH17)를 같은 ADC로 재서 실제 VDDA를 계산하고 외부 채널 값을 보정하는 <code>06_ADC_Vrefint_VDDA_c</code> 예제를 해석한다. <code>03_ADC_Multi</code> 교안 6절의 두 식에서 한 걸음 더 들어가, 데이터시트의 Vrefint 편차가 보정 결과에 남기는 오차, 보정이 오히려 손해인 조건, 1점 교정과 해상도 개선까지 다룬다.</p>
   <nav class="toc" aria-label="목차">

@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>01_GPIO 상위 교안</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* 상위 교안(주변장치 개요). 그룹 예제 교안(04_BlinkReg 등)과 같은 토큰·클래스를 쓴다.
+   색 규칙: 신호 경로 = 파랑(--c0), 선택·제어 비트 = 주황(--c1), 플래그·이벤트 = 청록(--c2), 하드웨어 소자 = 보라(--c3). */
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --surface2:#E7ECF0; --fg:#14222C; --muted:#52636F; --line:#CBD5DC;
+  --c0:#1D4ED8; --c0-soft:#DCE6FB; --c1:#C2410C; --c1-soft:#FDE6DA; --c2:#0F766E; --c2-soft:#D5F0EC; --c3:#7E22CE; --c3-soft:#EEDFFB;
+  --warn:#9A3412; --warn-bg:#FFF1E6; --ok:#166534; --ok-bg:#E4F5EA;
+  --font-body:"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.75;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));counter-reset:fig}
+.wrap{max-width:860px;margin:0 auto}
+header{padding-block:40px 8px}
+.kicker{font-family:var(--font-mono);font-size:13px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.kicker a{color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.25;margin:8px 0 12px;text-wrap:balance;font-weight:700}
+.lead{color:var(--muted);margin:0;max-width:66ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0}
+nav.toc a{display:block;padding:6px 12px;border:1px solid var(--line);border-radius:6px;color:var(--fg);text-decoration:none;font-size:14px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--c0);outline:2px solid var(--c0);outline-offset:1px}
+section{margin-top:56px}
+h2{font-size:24px;line-height:1.35;margin:0 0 12px;text-wrap:balance;font-weight:700}
+h3{font-size:18px;margin:28px 0 8px;font-weight:700}
+p{margin:0 0 14px;max-width:68ch}
+ul,ol{margin:0 0 14px;padding-left:22px;max-width:68ch}
+li{margin-bottom:4px}
+a{color:var(--c0)}
+code{font-family:var(--font-mono);font-size:.9em;background:var(--surface2);padding:1px 6px;border-radius:4px;overflow-wrap:anywhere}
+.k0{color:var(--c0);font-weight:700} .k1{color:var(--c1);font-weight:700} .k2{color:var(--c2);font-weight:700} .k3{color:var(--c3);font-weight:700}
+.box{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:16px 18px;margin:16px 0}
+.box.warn{background:var(--warn-bg);border-color:var(--warn)} .box.ok{background:var(--ok-bg);border-color:var(--ok)}
+.box > :last-child{margin-bottom:0}
+.label{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.eqv{display:inline-block;font-family:var(--font-mono);font-size:11.5px;padding:0 6px;border-radius:4px;background:var(--c3-soft);color:var(--c3);vertical-align:1px}
+.tablewrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:15px;background:var(--surface)}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--surface2);font-weight:700;white-space:nowrap}
+td.m,th.m{font-family:var(--font-mono);font-size:13.5px}
+td.on{color:var(--ok);font-weight:700} td.off{color:var(--muted)}
+.eq{font-family:var(--font-mono);font-size:14.5px;background:var(--surface2);border-left:4px solid var(--c0);padding:10px 14px;margin:14px 0;overflow-x:auto;white-space:pre-wrap}
+.flow{list-style:none;padding:0;margin:16px 0;display:grid;max-width:none}
+.flow li{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:0;padding:0 0 14px;position:relative}
+.flow li:not(:last-child)::before{content:"";position:absolute;left:16px;top:34px;bottom:0;width:2px;background:var(--line)}
+.flow .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:14px;font-weight:600;background:var(--surface2);border:2px solid var(--c0);color:var(--c0)}
+.flow .tx{min-width:0} .flow .tx b{display:block} .flow .tx span{color:var(--muted);font-size:14.5px}
+
+/* 원본 그림(PDF에서 잘라 낸 PNG): 다크모드에서도 흰 바탕 카드에 넣는다 */
+figure{margin:18px 0;counter-increment:fig}
+figure.src .img{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px}
+figure.src img{display:block;width:100%;height:auto}
+figure.src.narrow .img{max-width:560px;margin:0 auto}
+figcaption{font-size:14px;color:var(--muted);margin:6px 2px 0}
+figcaption::before{content:"그림 " counter(fig) ". ";font-weight:700;color:var(--fg)}
+.cite{display:block;font-family:var(--font-mono);font-size:12.5px;margin-top:2px}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.figs figure{margin:0}
+
+/* 등가 모델 SVG */
+.diag svg{display:block;width:100%;height:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.diag .bx{fill:var(--surface);stroke:var(--fg);stroke-width:1.4}
+.diag .hw{fill:var(--c3-soft);stroke:var(--c3)} .diag .sel{fill:var(--c1-soft);stroke:var(--c1)} .diag .flg{fill:var(--c2-soft);stroke:var(--c2)}
+.diag .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.diag .tc{font-family:var(--font-body);font-size:13px;fill:var(--fg);text-anchor:middle}
+.diag .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.diag .sc{font-family:var(--font-mono);font-size:11px;fill:var(--muted);text-anchor:middle}
+.diag .o{font-family:var(--font-mono);font-size:11px;fill:var(--c1)}
+.diag .w{stroke:var(--c0);stroke-width:1.8;fill:none}
+.diag .wc{stroke:var(--c1);stroke-width:1.5;fill:none}
+.diag .wm{stroke:var(--muted);stroke-width:1.3;fill:none}
+.diag .dash{stroke:var(--muted);stroke-width:1.2;fill:none;stroke-dasharray:5 4}
+.diag .ah{fill:var(--c0)} .diag .ahc{fill:var(--c1)} .diag .ahm{fill:var(--muted)}
+.diag .sig{stroke:var(--c0);stroke-width:2;fill:none} .diag .sig2{stroke:var(--c2);stroke-width:2;fill:none} .diag .sig3{stroke:var(--c3);stroke-width:2;fill:none}
+.diag .isr{fill:var(--c1-soft);stroke:var(--c1)}
+
+/* 시뮬레이터 */
+.sim{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:18px;margin:16px 0}
+.subhead{font-weight:700;margin:0 0 6px}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px 16px;margin:10px 0}
+.ctl label{display:block;font-size:14px;color:var(--muted)}
+.ctl select,.ctl input{font-family:inherit;font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl select:focus-visible,.ctl input:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+.regs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.stat{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.stat .k{font-size:12px;color:var(--muted);font-family:var(--font-mono)}
+.stat .v{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.35;overflow-wrap:anywhere}
+.note{font-size:14px;color:var(--muted);margin:8px 0 0}
+.verdict{font-weight:700} .verdict.good{color:var(--ok)} .verdict.bad{color:var(--warn)}
+
+details{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0}
+summary{cursor:pointer;padding:12px 16px;font-weight:500;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--c0)} details[open] summary::before{content:"▾ "}
+summary:focus-visible{outline:3px solid var(--fg);outline-offset:-3px;border-radius:8px}
+details .ans{padding:0 16px 14px} details .ans p{margin-bottom:8px}
+.nextprev{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+.nextprev a{border:1px solid var(--line);border-radius:8px;padding:8px 14px;text-decoration:none;color:var(--c0);background:var(--surface)}
+footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+footer ul{max-width:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">STM32F103RB · 01_GPIO · 상위 교안</div>
+  <h1>GPIO: 신호가 핀과 CPU 사이를 어떻게 흐르는가</h1>
+  <p class="lead">GPIO(General-Purpose Input/Output, 범용 입출력)는 디지털논리 시간에 배운 소자, 즉 D 플립플롭, 2:1 선택기, CMOS(Complementary Metal-Oxide-Semiconductor, 상보형 금속산화막 반도체) 출력단, 슈미트 트리거, 엣지 검출기를 핀 하나마다 묶어 둔 회로이다. 이 교안은 STM32F103RB 한 칩을 기준으로, 핀에 들어온 전압이 CPU(Central Processing Unit, 중앙처리장치)가 읽는 비트가 되고 CPU가 쓴 비트가 핀 전압이 되기까지의 경로를 원본 블록도 위에서 따라간다. 레지스터 비트는 그 경로 위의 스위치·선택기·플래그로만 등장한다. 코드와 라이브러리는 하부 예제 교안에서 다룬다.</p>
+  <nav class="toc" aria-label="목차">
+    <a href="#s1">1. 문제 정의</a><a href="#s2">2. 일반 개념</a><a href="#s3">3. F103 블록도</a><a href="#s4">4. 클럭과 시간</a><a href="#s5">5. 제어 요소</a><a href="#s6">6. 이벤트 생성</a><a href="#s7">7. 동작 시나리오</a><a href="#s8">8. 설계상 한계</a><a href="#s9">9. 확인 문제</a><a href="#s10">10. 하부 예제</a>
+  </nav>
+</header>
+
+<div class="box">
+  <div class="label">근거 문서 (저장소 Docs 폴더)</div>
+  <p>이 교안의 사실은 아래 네 문서에서만 가져왔다. 인용마다 문서, 쪽, Figure/Table 번호를 붙였고 링크를 누르면 해당 쪽이 열린다. 문서에 내부 구현이 나오지 않아 디지털논리 소자로 바꿔 그린 부분에는 <span class="eqv">등가 모델</span> 표시를 달았다. 등가 모델은 동작을 설명하기 위한 그림이며 실제 회로도가 아니다.</p>
+  <ul>
+    <li><a href="../../Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a>: 참조 매뉴얼(Reference Manual). 9장 GPIO/AFIO(Alternate-Function I/O, 대체 기능 입출력), 10장 인터럽트·EXTI(External Interrupt/Event Controller, 외부 인터럽트/이벤트 컨트롤러)</li>
+    <li><a href="../../Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a>: STM32F103x8/xB 데이터시트. 블록도, 메모리 맵, 전기적 특성</li>
+    <li><a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a>: Cortex-M3 프로그래밍 매뉴얼. 비트 밴딩, NVIC(Nested Vectored Interrupt Controller, 중첩 벡터 인터럽트 컨트롤러)</li>
+    <li><a href="../../Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a>: F103x8/xB 정오표(Errata sheet). 칩이 매뉴얼과 다르게 동작하는 알려진 결함과 회피 방법을 모은 문서</li>
+  </ul>
+</div>
+
+<details class="gloss"><summary>약어 모음 (본문에서도 처음 나올 때 풀어 썼다)</summary><div class="ans"><div class="tablewrap"><table>
+<tr><th>약어</th><th>풀네임</th><th>뜻</th></tr>
+<tr><td class="m">GPIO</td><td>General-Purpose Input/Output</td><td>범용 입출력 핀과 그 제어 회로</td></tr>
+<tr><td class="m">AF / AFIO</td><td>Alternate Function / Alternate-Function I/O</td><td>핀을 GPIO 대신 다른 주변장치(USART, SPI 등)가 쓰는 기능 / 그 연결을 고르는 블록</td></tr>
+<tr><td class="m">EXTI</td><td>External Interrupt/Event Controller</td><td>핀 엣지를 감지해 인터럽트·이벤트를 만드는 블록</td></tr>
+<tr><td class="m">NVIC</td><td>Nested Vectored Interrupt Controller</td><td>Cortex-M3 안의 인터럽트 접수·우선순위 관리기</td></tr>
+<tr><td class="m">ISR</td><td>Interrupt Service Routine</td><td>인터럽트가 걸리면 실행되는 함수</td></tr>
+<tr><td class="m">RCC</td><td>Reset and Clock Control</td><td>리셋과 클럭 분배·허용을 맡는 블록</td></tr>
+<tr><td class="m">AHB / APB</td><td>Advanced High-performance Bus / Advanced Peripheral Bus</td><td>고속 시스템 버스 / 주변장치용 저속 버스</td></tr>
+<tr><td class="m">SYSCLK · HCLK · PCLK2</td><td>System clock · AHB clock · APB2 peripheral clock</td><td>시스템 클럭 · AHB 버스 클럭 · APB2 주변장치 클럭</td></tr>
+<tr><td class="m">HSI</td><td>High-Speed Internal oscillator</td><td>칩 내부 8 MHz RC 발진기(리셋 직후 기본 클럭)</td></tr>
+<tr><td class="m">CRL / CRH</td><td>Port Configuration Register Low / High</td><td>핀 0~7 / 8~15의 구성 레지스터</td></tr>
+<tr><td class="m">CNF / MODE</td><td>Configuration / Mode bits</td><td>핀당 2비트씩: 입출력 방식 / 입력·출력과 출력 속도</td></tr>
+<tr><td class="m">IDR / ODR</td><td>Input / Output Data Register</td><td>입력 데이터 / 출력 데이터 레지스터</td></tr>
+<tr><td class="m">BSRR / BRR</td><td>Bit Set/Reset Register / Bit Reset Register</td><td>출력 비트를 골라 세트·리셋하는 쓰기 전용 레지스터</td></tr>
+<tr><td class="m">LCKR / LCKK</td><td>Configuration Lock Register / Lock Key</td><td>핀 구성을 리셋 전까지 고정하는 레지스터 / 그 잠금 키 비트</td></tr>
+<tr><td class="m">MAPR / SWJ_CFG</td><td>AF Remap and debug I/O configuration Register / Serial Wire JTAG Configuration</td><td>대체 기능 핀 재배치 / 디버그 핀 사용 여부 선택</td></tr>
+<tr><td class="m">JTAG / SWD</td><td>Joint Test Action Group / Serial Wire Debug</td><td>디버거 연결 방식 두 가지</td></tr>
+<tr><td class="m">EXTICR</td><td>External Interrupt Configuration Register</td><td>EXTI 라인마다 어느 포트 핀을 연결할지 고르는 레지스터</td></tr>
+<tr><td class="m">RTSR / FTSR</td><td>Rising / Falling Trigger Selection Register</td><td>상승 / 하강 엣지 검출 허용</td></tr>
+<tr><td class="m">IMR / EMR</td><td>Interrupt / Event Mask Register</td><td>인터럽트 / 이벤트 출력 허용(1 = 통과)</td></tr>
+<tr><td class="m">SWIER / PR</td><td>Software Interrupt Event Register / Pending Register</td><td>소프트웨어로 엣지를 흉내 냄 / 처리 대기 중 플래그</td></tr>
+<tr><td class="m">EVCR · WFE</td><td>Event Control Register · Wait For Event</td><td>CPU 이벤트 출력 핀 선택 · 이벤트가 올 때까지 잠드는 명령</td></tr>
+<tr><td class="m">DMA · ADC</td><td>Direct Memory Access · Analog-to-Digital Converter</td><td>CPU 없이 데이터 옮기기 · 아날로그-디지털 변환기</td></tr>
+<tr><td class="m">FT · TTL</td><td>Five-volt Tolerant · Transistor-Transistor Logic</td><td>5 V 입력을 견디는 핀 · 입력 문턱 규격의 한 종류</td></tr>
+<tr><td class="m">V<sub>IL</sub> · V<sub>IH</sub> · V<sub>OL</sub></td><td>Input Low · Input High · Output Low voltage</td><td>0으로 인정되는 최대 입력 · 1로 인정되는 최소 입력 · 0 출력 시 최대 전압</td></tr>
+<tr><td class="m">Hi-Z</td><td>High impedance</td><td>선을 어느 쪽으로도 끌지 않고 떼어 놓은 상태</td></tr>
+<tr><td class="m">RMW</td><td>Read-Modify-Write</td><td>읽고-고치고-쓰기 세 단계 연산</td></tr>
+<tr><td class="m">rc_w1</td><td>read / clear by writing 1</td><td>읽을 수 있고, 1을 쓰면 0으로 지워지는 비트</td></tr>
+</table></div></div></details>
+
+<!-- ============================================================ 1 -->
+<section id="s1">
+<h2>1. 문제 정의: GPIO가 없으면 CPU가 무엇을 직접 해야 하는가</h2>
+<p>CPU가 외부 세계와 주고받는 수단은 버스 쓰기와 버스 읽기뿐이다. 쓰기 한 번에 실리는 주소·데이터·쓰기 신호는 버스 사이클 한 번 동안만 유효하고, 다음 사이클에는 다른 값으로 바뀐다. 그러니 핀에 LED를 달고 1초 동안 켜 두려면 다음 문제를 누군가 풀어야 한다.</p>
+<div class="tablewrap"><table>
+<tr><th>풀어야 할 문제</th><th>GPIO가 없다면</th><th>GPIO가 대신하는 소자</th></tr>
+<tr><td>쓴 값을 유지하기</td><td>CPU가 같은 값을 계속 다시 써야 하고, 그동안 다른 일을 못 한다</td><td>핀마다 D 플립플롭 한 개(출력 데이터 레지스터)</td></tr>
+<tr><td>핀에 전류 공급하기</td><td>버스 신호선은 외부 부하를 구동하도록 만들어지지 않았다</td><td>CMOS 출력단(P-MOS/N-MOS: P형·N형 채널 MOSFET)과 그 enable·속도 선택</td></tr>
+<tr><td>외부 전압을 0/1로 바꾸기</td><td>천천히 변하거나 잡음이 낀 전압은 문턱 근처에서 0과 1을 오간다</td><td>슈미트 트리거(히스테리시스 비교기)</td></tr>
+<tr><td>CPU 클럭과 무관한 신호 읽기</td><td>읽는 순간 신호가 바뀌면 값이 불확정이다</td><td>APB2(Advanced Peripheral Bus 2, 2번 주변장치 버스) 클럭마다 핀을 샘플링하는 입력 데이터 레지스터</td></tr>
+<tr><td>변화 놓치지 않기</td><td>CPU가 쉬지 않고 읽어야 하고, 두 번 읽는 사이에 지나간 짧은 펄스는 놓친다</td><td>EXTI: 엣지 검출기 + 펜딩 플립플롭 + 인터럽트 요청</td></tr>
+<tr><td>핀 하나를 여러 주변장치가 쓰기</td><td>보드 배선을 바꿔야 한다</td><td>출력 선택기(GPIO/대체 기능)와 리맵 선택기(AFIO)</td></tr>
+</table></div>
+<p>마지막 두 줄이 이 그룹의 핵심이다. 입력 데이터 레지스터(IDR, Input Data Register)는 그 순간의 핀 상태를 보여 줄 뿐 지나간 사건을 기억하지 않는다. CPU가 읽는 간격보다 짧은 펄스는 흔적 없이 사라진다. 반면 EXTI는 엣지가 오면 플래그를 세우고 CPU가 지울 때까지 그대로 둔다. 이 플래그를 펜딩(pending, "처리 대기 중") 비트라고 부른다. 즉 IDR은 <b>상태</b>를 보여 주고, EXTI의 펜딩 비트는 <b>사건</b>을 저장한다. 디지털논리로 말하면 IDR은 매 클럭 덮어쓰는 레지스터이고, 펜딩 비트는 한 번 세트되면 지울 때까지 유지되는 SR(Set-Reset) 래치이다. 하부 예제의 폴링(05, 07)과 인터럽트(06, 08)가 바로 이 차이를 비교한다.</p>
+</section>
+
+<!-- ============================================================ 2 -->
+<section id="s2">
+<h2>2. 칩과 무관한 일반 개념</h2>
+<p>여기서 다루는 내용은 어느 MCU(Microcontroller Unit, 마이크로컨트롤러)의 GPIO에나 해당한다. 3장부터는 이 개념이 F103의 어느 블록에 들어 있는지 찾아본다.</p>
+
+<h3>메모리 맵 I/O와 주소 디코더</h3>
+<p>CPU 입장에서 GPIO 레지스터는 특정 주소에 있는 32비트 워드이다. 주소 디코더가 버스 주소를 보고 해당 레지스터의 쓰기 enable이나 읽기 선택 신호를 켠다. "레지스터에 쓴다"는 말은 결국 "디코더가 고른 플립플롭 묶음에 클럭 에지를 한 번 준다"는 뜻이다. 레지스터 주소가 왜 그 값인지는 3장 메모리 맵에서 본다.</p>
+
+<h3>출력단: 푸시풀, 오픈드레인, 3상태</h3>
+<figure class="diag"><svg viewBox="0 0 680 230" role="img" aria-label="푸시풀 출력단과 오픈드레인 wired-AND 비교">
+<text class="t" x="20" y="22" font-weight="700">푸시풀</text>
+<line class="wm" x1="125" y1="40" x2="125" y2="52"/><text class="s" x="112" y="34">VDD</text>
+<rect class="bx hw" x="95" y="52" width="60" height="36" rx="4"/><text class="tc" x="125" y="75">P-MOS</text>
+<line class="wm" x1="125" y1="88" x2="125" y2="132"/><circle cx="125" cy="110" r="3.5" class="ah"/>
+<rect class="bx hw" x="95" y="132" width="60" height="36" rx="4"/><text class="tc" x="125" y="155">N-MOS</text>
+<line class="wm" x1="125" y1="168" x2="125" y2="182"/><text class="s" x="113" y="196">VSS</text>
+<line class="w" x1="125" y1="110" x2="262" y2="110"/><rect class="bx" x="262" y="102" width="16" height="16"/><text class="s" x="252" y="96">핀</text>
+<text class="s" x="168" y="66">데이터 1 → P on</text><text class="s" x="168" y="150">데이터 0 → N on</text>
+<text class="s" x="20" y="222">둘 다 off = 3상태(Hi-Z)</text>
+<line class="dash" x1="330" y1="10" x2="330" y2="220"/>
+<text class="t" x="350" y="22" font-weight="700">오픈드레인 두 개 = wired-AND</text>
+<line class="wm" x1="615" y1="40" x2="615" y2="52"/><text class="s" x="602" y="34">VDD</text>
+<rect class="bx" x="603" y="52" width="24" height="44" rx="2"/><text class="s" x="634" y="78">R 풀업</text>
+<line class="wm" x1="615" y1="96" x2="615" y2="112"/>
+<line class="w" x1="420" y1="112" x2="660" y2="112"/><text class="s" x="560" y="106">공유선</text>
+<line class="wm" x1="420" y1="112" x2="420" y2="132"/><rect class="bx hw" x="390" y="132" width="60" height="36" rx="4"/><text class="tc" x="420" y="155">N-MOS A</text>
+<line class="wm" x1="530" y1="112" x2="530" y2="132"/><rect class="bx hw" x="500" y="132" width="60" height="36" rx="4"/><text class="tc" x="530" y="155">N-MOS B</text>
+<line class="wm" x1="420" y1="168" x2="420" y2="182"/><line class="wm" x1="530" y1="168" x2="530" y2="182"/><text class="s" x="460" y="196">VSS</text>
+<text class="s" x="350" y="222">A·B 중 하나라도 0을 내면 선은 0 → 선 = A AND B</text>
+</svg><figcaption><span class="eqv">일반 개념</span> VDD는 전원(+3.3 V), VSS는 접지(0 V)이다. 두 트랜지스터가 모두 꺼지면 선을 어느 쪽으로도 끌지 않는 3상태, 곧 Hi-Z(high impedance, 고임피던스)가 된다. 푸시풀은 두 트랜지스터 중 하나가 항상 선을 끌어당긴다. 오픈드레인은 0만 능동적으로 만들고 1은 외부 풀업이 만든다. 그래서 여러 출력을 한 선에 묶을 수 있다(wired-AND).</figcaption></figure>
+
+<h3>풀업·풀다운과 떠 있는 입력</h3>
+<p>아무것도 연결되지 않은 CMOS 입력은 전압이 정해지지 않아 0과 1 사이를 떠돈다. 약한 저항으로 VDD나 VSS 쪽에 걸어 두면 외부 구동이 없을 때의 기본값이 정해진다. 저항이 클수록 외부 회로가 값을 바꾸기 쉽지만 선을 충전하는 속도는 느려진다(8장).</p>
+
+<h3>슈미트 트리거: 문턱이 두 개인 비교기</h3>
+<p>디지털 입력은 전압을 0과 1 중 하나로 판정해야 한다. 데이터시트는 두 경계를 준다. V<sub>IL</sub>(Input Low voltage)은 "이 전압 이하이면 0으로 인정"하는 상한이고, V<sub>IH</sub>(Input High voltage)는 "이 전압 이상이면 1로 인정"하는 하한이다. 두 값 사이는 판정이 보장되지 않는 구간이다. 슈미트 트리거는 지금 출력이 0이면 V<sub>IH</sub>를 넘어야 1로, 지금 출력이 1이면 V<sub>IL</sub> 아래로 내려가야 0으로 바꾼다. 출력이 자기 상태에 따라 문턱을 바꾸므로 기억이 있는 회로이며, 두 문턱의 차이를 히스테리시스라고 한다.</p>
+<figure class="diag"><svg viewBox="0 0 680 230" role="img" aria-label="슈미트 트리거 전달 특성과 잡음이 낀 입력의 정형">
+<line class="wm" x1="40" y1="190" x2="300" y2="190"/><line class="wm" x1="40" y1="190" x2="40" y2="25"/>
+<text class="s" x="250" y="208">입력 전압</text><text class="s" x="46" y="22">출력</text>
+<line class="dash" x1="140" y1="30" x2="140" y2="190"/><line class="dash" x1="200" y1="30" x2="200" y2="190"/>
+<text class="sc" x="140" y="208">V_IL</text><text class="sc" x="200" y="208">V_IH</text>
+<polyline class="sig" points="40,175 200,175 200,45 290,45"/><polygon class="ah" points="200,95 195,105 205,105"/>
+<polyline class="sig2" points="290,52 140,52 140,182 40,182"/><polygon points="140,125 135,115 145,115" fill="var(--c2)"/>
+<text class="s" x="210" y="120">상승: V_IH에서 1</text><text class="s" x="60" y="120">하강: V_IL에서 0</text>
+<line class="dash" x1="330" y1="10" x2="330" y2="220"/>
+<text class="s" x="345" y="22">잡음이 낀 느린 입력</text>
+<line class="dash" x1="345" y1="70" x2="665" y2="70"/><text class="s" x="630" y="64">V_IH</text>
+<line class="dash" x1="345" y1="110" x2="665" y2="110"/><text class="s" x="630" y="104">V_IL</text>
+<polyline class="sig3" points="345,165 390,150 420,125 440,100 455,78 463,90 471,66 481,82 491,62 515,52 555,47 600,50 640,46 665,45"/>
+<text class="s" x="345" y="188">슈미트 출력</text>
+<polyline class="sig" points="345,215 471,215 471,195 665,195"/>
+<text class="s" x="440" y="228">V_IH를 처음 넘을 때 한 번만 바뀐다</text>
+</svg><figcaption><span class="eqv">일반 개념</span> 출력이 0일 때는 V_IH, 1일 때는 V_IL이 문턱이다. 두 문턱 사이(히스테리시스)에서 흔들리는 잡음으로는 출력이 바뀌지 않는다. 문턱이 하나뿐인 비교기였다면 입력이 문턱 근처에서 흔들리는 구간에서 출력이 여러 번 토글했을 것이다.</figcaption></figure>
+
+<h3>동기화기와 엣지 검출기</h3>
+<p>플립플롭은 클럭 에지 직전·직후의 짧은 구간(셋업·홀드 시간) 동안 입력이 변하지 않아야 정상 동작한다. 외부 신호는 클럭과 무관하게 변하므로 언젠가는 그 구간에 걸린다. 그러면 플립플롭 출력이 0도 1도 아닌 중간 전압에 잠시 머무는데, 이것을 메타안정(metastable) 상태라고 한다. 대부분은 곧 0이나 1로 정착하므로, 플립플롭을 하나 더 두어 한 클럭 동안 정착할 시간을 준다. 이것이 2단 동기화기이다.</p>
+<figure class="diag"><svg viewBox="0 0 680 170" role="img" aria-label="2단 동기화기와 동기식 엣지 검출기">
+<text class="s" x="8" y="66">비동기</text><text class="s" x="8" y="80">입력</text>
+<line class="w" x1="50" y1="72" x2="110" y2="72"/>
+<rect class="bx hw" x="110" y="50" width="70" height="46" rx="4"/><text class="tc" x="145" y="78">FF1</text>
+<line class="w" x1="180" y1="72" x2="220" y2="72"/>
+<rect class="bx hw" x="220" y="50" width="70" height="46" rx="4"/><text class="tc" x="255" y="78">FF2</text>
+<line class="w" x1="290" y1="72" x2="470" y2="72"/><circle cx="350" cy="72" r="3.5" class="ah"/>
+<line class="w" x1="350" y1="72" x2="350" y2="120" /><line class="w" x1="350" y1="120" x2="370" y2="120"/>
+<rect class="bx hw" x="370" y="98" width="70" height="44" rx="4"/><text class="tc" x="405" y="125">FF3</text>
+<line class="w" x1="440" y1="120" x2="456" y2="120"/><circle cx="461" cy="120" r="5" class="bx"/><text class="s" x="452" y="146">NOT</text>
+<line class="w" x1="466" y1="120" x2="476" y2="120"/><line class="w" x1="476" y1="120" x2="476" y2="96"/><line class="w" x1="476" y1="96" x2="490" y2="96"/>
+<line class="w" x1="470" y1="72" x2="490" y2="72"/>
+<rect class="bx sel" x="490" y="58" width="60" height="52" rx="4"/><text class="tc" x="520" y="89">AND</text>
+<line class="w" x1="550" y1="84" x2="600" y2="84"/><polygon class="ah" points="606,84 598,79 598,89"/>
+<text class="s" x="610" y="80">상승 엣지</text><text class="s" x="610" y="94">1클럭 펄스</text>
+<line class="wm" x1="110" y1="160" x2="440" y2="160"/><text class="s" x="40" y="164">클럭</text>
+<line class="wm" x1="145" y1="96" x2="145" y2="160"/><line class="wm" x1="255" y1="96" x2="255" y2="160"/><line class="wm" x1="405" y1="142" x2="405" y2="160"/>
+<text class="s" x="112" y="38">동기화기 (메타안정성 흡수)</text><text class="s" x="380" y="38">엣지 검출기 = 현재 AND NOT 이전</text>
+</svg><figcaption><span class="eqv">일반 개념</span> 클럭과 무관한 입력을 플립플롭 하나로 받으면 준안정(metastable) 상태가 뒤로 전파될 수 있어 두 단을 둔다. 엣지 검출은 "지금 1이고 한 클럭 전에 0"을 AND로 만든다. 이 구조는 클럭 주기보다 짧은 펄스를 놓칠 수 있다. 6장의 EXTI는 그보다 짧은 펄스도 잡는다고 명시되어 있다.</figcaption></figure>
+
+<h3>접점 튐(바운스)</h3>
+<p>기계식 스위치는 닫히는 순간 수 ms 동안 붙었다 떨어지기를 되풀이한다. 슈미트 트리거는 문턱 근처의 작은 잡음은 걸러 내지만, 접점이 실제로 떨어져 전압이 레일까지 다시 올라가는 튐은 거르지 못한다. 그 결과 엣지가 여러 번 생기고, 이것이 7장 시나리오의 핵심이다.</p>
+</section>
+
+<!-- ============================================================ 3 -->
+<section id="s3">
+<h2>3. F103 내부 구현 블록도</h2>
+<p>신호를 입력 → 클럭 → 처리 → 플래그/이벤트 → 출력 순서로 따라간다. 먼저 GPIO가 칩의 어디에 붙어 있는지 확인한다.</p>
+<figure class="src"><div class="img"><a href="img/DS5319_Fig1_p11.png"><img src="img/DS5319_Fig1_p11.png" alt="STM32F103xx performance line 블록도" width="1157" height="1277" loading="lazy"></a></div>
+<figcaption>GPIOA~E, EXTI/WAKEUP은 모두 왼쪽 세로 버스인 APB2(F<sub>max</sub> = 72 MHz)에 붙어 있다. APB2는 AHB2/APB2 브리지를 거쳐 버스 매트릭스로 이어진다. AHB(Advanced High-performance Bus)는 CPU·메모리·DMA(Direct Memory Access, 직접 메모리 접근)가 쓰는 고속 버스이고, APB는 주변장치용 저속 버스이며, 브리지가 둘 사이의 속도와 프로토콜을 맞춘다. 블록 <b>EXTI WAKEUP</b>에서 위로 올라가는 선이 Cortex-M3 안의 <b>NVIC</b>로 들어간다. 이 그림은 x8/xB 전체 패키지를 다루므로 GPIOE도 그려져 있다. 실제로 쓸 수 있는 핀은 패키지에 따라 다르며 DS5319 3장 핀 정의 표를 따른다.
+<span class="cite">출처: <a href="../../Docs/Datasheet_stm32f103.pdf#page=11">DS5319 Rev 19, p.11</a>, Figure 1. STM32F103xx performance line block diagram</span></figcaption></figure>
+
+<figure class="src narrow"><div class="img"><a href="img/DS5319_Fig11_p34.png"><img src="img/DS5319_Fig11_p34.png" alt="STM32F103 메모리 맵" width="1153" height="1550" loading="lazy"></a></div>
+<figcaption>주변장치 영역(0x4000 0000~)을 펼친 메모리 맵이다. AFIO 0x4001 0000, EXTI 0x4001 0400, Port A 0x4001 0800, Port B 0x4001 0C00, Port C 0x4001 1000, Port D 0x4001 1400이다. 포트마다 0x400(1 KB) 칸을 차지하므로 주소 디코더는 상위 비트로 주변장치를, 하위 비트(오프셋 0x00~0x18)로 그 안의 레지스터를 고른다.
+<span class="cite">출처: <a href="../../Docs/Datasheet_stm32f103.pdf#page=34">DS5319 Rev 19, p.34</a>, Figure 11. Memory map</span></figcaption></figure>
+
+<h3>핀 한 개의 내부</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig13_p160.png"><img src="img/RM0008_Fig13_p160.png" alt="표준 I/O 포트 비트의 기본 구조" width="1157" height="699" loading="lazy"></a></div>
+<figcaption>이 교안에서 가장 중요한 그림이다. 오른쪽 I/O 핀에서 시작해 위쪽 Input driver를 지나 왼쪽의 Input data register로 가는 길이 입력 경로이다. 왼쪽 Write에서 Bit set/reset registers와 Output data register를 거쳐 아래쪽 Output driver로 가는 길이 출력 경로이다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=160">RM0008 Rev 21, p.160</a>, Figure 13. Basic structure of a standard I/O port bit</span></figcaption></figure>
+
+<ol class="flow">
+  <li><span class="n">1</span><div class="tx"><b>입력: 핀 → 보호 다이오드 → 풀업/풀다운 스위치</b><span>보호 다이오드는 핀 전압이 VDD보다 높거나 VSS보다 낮아지지 않도록 묶어 둔다. 두 개의 on/off 스위치가 약한 풀 저항을 연결하거나 끊는다. R<sub>PU</sub>(풀업 저항)과 R<sub>PD</sub>(풀다운 저항)은 30~50 kΩ, 전형값 40 kΩ이다(DS5319 Table 36).</span></div></li>
+  <li><span class="n">2</span><div class="tx"><b>처리: TTL 슈미트 트리거</b><span>히스테리시스 비교기이다. TTL(Transistor-Transistor Logic)은 문턱 전압이 TTL 논리 규격과 호환된다는 뜻이다. 히스테리시스 V<sub>hys</sub>는 표준 핀에서 200 mV, 5 V 허용 핀(FT, Five-volt Tolerant)에서 5 % VDD(최소 100 mV)이다(DS5319 Table 36, p.61). 아날로그 입력은 슈미트 트리거 앞에서 갈라져 ADC(Analog-to-Digital Converter, 아날로그-디지털 변환기)로 간다.</span></div></li>
+  <li><span class="n">3</span><div class="tx"><b>클럭: Input data register(IDR)가 APB2 클럭마다 샘플링</b><span>"The Input Data register captures the data present on the I/O pin at every APB2 clock cycle"(RM0008 9.1.1, p.161). 즉 PCLK2(APB2 주변장치 클럭)로 클럭되는 D 플립플롭 16개이다. 슈미트 출력은 대체 기능 입력으로도 갈라져 다른 주변장치와 EXTI로 간다.</span></div></li>
+  <li><span class="n">4</span><div class="tx"><b>플래그/이벤트: EXTI로 가는 갈래</b><span>입력 신호는 포트 선택기(AFIO_EXTICRx, External Interrupt Configuration Register)를 지나 EXTI의 엣지 검출기에 이르고, 펜딩 플래그를 세운 뒤 NVIC로 간다. 6장에서 자세히 본다.</span></div></li>
+  <li><span class="n">5</span><div class="tx"><b>출력: Output data register → 2:1 선택기 → Output control → P-MOS/N-MOS</b><span>CPU가 쓴 값은 Output data register(ODR, D 플립플롭)에 머문다. Bit set/reset registers(BSRR: Bit Set/Reset Register, BRR: Bit Reset Register)는 이 플립플롭을 비트별로 세트·리셋하는 별도 입구이다. 사다리꼴 2:1 선택기가 ODR과 주변장치의 Alternate Function Output 중 하나를 고르고, Output control이 푸시풀, 오픈드레인, 비활성 중 하나로 트랜지스터를 구동한다.</span></div></li>
+</ol>
+
+<div class="tablewrap"><table>
+<tr><th>Figure 13의 블록</th><th>디지털논리 등가</th><th>근거</th></tr>
+<tr><td>Output data register</td><td>D 플립플롭 16개 + 쓰기 enable</td><td>RM0008 9.2.4</td></tr>
+<tr><td>Bit set/reset registers</td><td>비트별 동기 세트/리셋 입력 (5장 그림)</td><td>RM0008 9.1.2, 9.2.5</td></tr>
+<tr><td>Input data register</td><td>PCLK2로 클럭되는 D 플립플롭 16개 (읽기 전용) <span class="eqv">등가 모델</span></td><td>RM0008 9.1.1</td></tr>
+<tr><td>사다리꼴 (Output driver 안)</td><td>2:1 선택기, 선택 입력은 CNF[1] (CNF: Configuration 비트, 5장)</td><td>RM0008 9.1.9</td></tr>
+<tr><td>Output control + P-MOS/N-MOS</td><td>enable과 오픈드레인 선택이 붙은 CMOS 출력단</td><td>RM0008 9.1.8</td></tr>
+<tr><td>TTL Schmitt trigger (on/off)</td><td>enable 단자가 있는 히스테리시스 비교기. off이면 출력 0 고정</td><td>RM0008 9.1.10</td></tr>
+<tr><td>on/off 스위치 + 저항</td><td>전송 게이트로 연결하는 30~50 kΩ 풀 저항</td><td>DS5319 Table 36</td></tr>
+</table></div>
+<p>RM0008은 입력 레지스터가 "APB2 클럭마다 샘플링한다"고만 적고 있다. 그 앞에 동기화 단이 몇 개인지는 밝히지 않는다. 그래서 표에서 이 항목은 등가 모델로 표시했다.</p>
+
+<figure class="src"><div class="img"><a href="img/RM0008_Fig14_p160.png"><img src="img/RM0008_Fig14_p160.png" alt="5 V 허용 I/O 포트 비트의 기본 구조" width="1157" height="698" loading="lazy"></a></div>
+<figcaption>5 V 허용(FT) 핀이다. 문서에 나온 차이는 세 가지이다. 첫째, 위쪽 보호 다이오드가 VDD 대신 VDD_FT에 걸려 있다(그림 주석 1). 둘째, 슈미트 히스테리시스가 5 % VDD(최소 100 mV)이다(DS5319 Table 36). 셋째, VDD + 0.3 V보다 높은 전압을 견디려면 내부 풀업/풀다운을 꺼야 한다(DS5319 Table 36 주석 3). 이 그림에도 Analog Input 선이 그려져 있다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=160">RM0008 Rev 21, p.160</a>, Figure 14. Basic structure of a 5-Volt tolerant I/O port bit</span></figcaption></figure>
+</section>
+
+<!-- ============================================================ 4 -->
+<section id="s4">
+<h2>4. 클럭 경로와 시간 계산</h2>
+<figure class="diag"><svg viewBox="0 0 680 200" role="img" aria-label="PCLK2에서 GPIO, AFIO, EXTI로 가는 클럭 경로와 클럭 게이트">
+<rect class="bx" x="10" y="20" width="70" height="36" rx="4"/><text class="tc" x="45" y="43">SYSCLK</text>
+<line class="w" x1="80" y1="38" x2="100" y2="38"/>
+<rect class="bx sel" x="100" y="20" width="96" height="36" rx="4"/><text class="tc" x="148" y="36">AHB</text><text class="sc" x="148" y="50">프리스케일러</text>
+<line class="w" x1="196" y1="38" x2="226" y2="38"/><text class="s" x="200" y="30">HCLK</text>
+<rect class="bx sel" x="226" y="20" width="96" height="36" rx="4"/><text class="tc" x="274" y="36">APB2</text><text class="sc" x="274" y="50">프리스케일러</text>
+<line class="w" x1="322" y1="38" x2="380" y2="38"/><text class="s" x="326" y="30">PCLK2</text>
+<line class="w" x1="380" y1="38" x2="380" y2="170"/>
+<line class="w" x1="380" y1="38" x2="420" y2="38"/><line class="w" x1="380" y1="100" x2="420" y2="100"/><line class="w" x1="380" y1="164" x2="510" y2="164"/>
+<rect class="bx sel" x="420" y="22" width="56" height="34" rx="4"/><text class="tc" x="448" y="44">AND</text>
+<rect class="bx sel" x="420" y="84" width="56" height="34" rx="4"/><text class="tc" x="448" y="106">AND</text>
+<line class="wc" x1="448" y1="66" x2="448" y2="56"/><text class="o" x="400" y="76">IOPxEN</text>
+<line class="wc" x1="448" y1="128" x2="448" y2="118"/><text class="o" x="404" y="140">AFIOEN</text>
+<line class="w" x1="476" y1="38" x2="510" y2="38"/><line class="w" x1="476" y1="100" x2="510" y2="100"/>
+<rect class="bx hw" x="510" y="20" width="162" height="36" rx="4"/><text class="t" x="518" y="36">GPIOx 레지스터</text><text class="s" x="518" y="50">IDR 샘플링·ODR 갱신</text>
+<rect class="bx hw" x="510" y="82" width="162" height="36" rx="4"/><text class="t" x="518" y="98">AFIO</text><text class="s" x="518" y="112">EXTICR·MAPR·EVCR</text>
+<rect class="bx hw" x="510" y="146" width="162" height="36" rx="4"/><text class="t" x="518" y="162">EXTI 인터페이스</text><text class="s" x="518" y="176">허용 비트 없음</text>
+</svg><figcaption><span class="eqv">등가 모델</span> SYSCLK(시스템 클럭)은 AHB 프리스케일러(분주기)를 거쳐 HCLK(AHB 버스 클럭)이 되고, 다시 APB2 프리스케일러를 거쳐 PCLK2가 된다. RCC(Reset and Clock Control, 리셋·클럭 제어)의 RCC_APB2ENR(APB2 peripheral clock ENable Register)에는 IOPAEN~IOPEEN(I/O Port A~E clock ENable, 비트 2~6)과 AFIOEN(AFIO clock ENable, 비트 0)이 있다. 이 비트들은 PCLK2를 각 블록에 통과시키는 AND 게이트로 볼 수 있다(RM0008 7.3.7, <a href="../../Docs/RM0008_Reference_manual.pdf#page=112">p.112</a>). 쓰지 않는 블록의 클럭을 막아 두면 전력이 절약되므로 리셋값은 모두 0(차단)이다. 클럭이 막힌 블록의 레지스터 플립플롭은 쓰기가 들어와도 바뀌지 않는다. RCC_APB2ENR에는 EXTI 허용 비트가 없다. RM0008 Figure 20은 EXTI 인터페이스에 PCLK2가 직접 들어가는 것으로 그린다. AFIO 레지스터를 읽고 쓰려면 AFIO 클럭을 먼저 켜야 한다(RM0008 9.4, <a href="../../Docs/RM0008_Reference_manual.pdf#page=183">p.183</a>).</figcaption></figure>
+
+<h3>입력 쪽 시간: 샘플링 주기와 놓치는 펄스</h3>
+<div class="eq">IDR 샘플링 주기 = 1 / f_PCLK2         (f_PCLK2 최대 72 MHz, DS5319 Table 9, p.38)
+  72 MHz → 13.9 ns     64 MHz → 15.6 ns     8 MHz(리셋 직후 HSI: 내부 RC 발진기) → 125 ns
+EXTI가 검출하는 최소 펄스 폭 t_EXTIpw = 10 ns   (DS5319 Table 38, p.65)</div>
+<p>72 MHz에서도 EXTI의 최소 검출 폭(10 ns)이 APB2 한 주기(13.9 ns)보다 짧다. RM0008 10.2.1도 EXTI가 "pulse width lower than APB2 clock period"인 신호를 검출한다고 적고 있다. 그러니 EXTI의 엣지 검출기는 2장의 동기식 검출기(클럭마다 비교)일 수 없고, 펄스 자체로 플래그를 세우는 비동기 포착 회로여야 한다(6장).</p>
+<p>폴링은 더 불리하다. IDR은 매 APB2 클럭마다 갱신되지만 지나간 값을 붙잡아 두지 않는다. CPU가 IDR을 읽는 그 순간에 펄스가 핀에 있어야만 보인다. 펄스가 보일 확률은 대략 <code>펄스 폭 / CPU 읽기 간격</code>이다.</p>
+
+<h3>출력 쪽 시간: MODE는 토글 속도가 아니라 슬루율이다</h3>
+<figure class="src"><div class="img"><a href="img/DS5319_Fig30_p66.png"><img src="img/DS5319_Fig30_p66.png" alt="I/O AC 특성 정의" width="1157" height="452" loading="lazy"></a></div>
+<figcaption>t<sub>r</sub>, t<sub>f</sub>는 10 %~90 % 구간의 상승·하강 시간이다. 최대 주파수는 (t<sub>r</sub> + t<sub>f</sub>) ≤ 2/3 T이고 듀티비가 45~55 %일 때 얻어진다. 핀마다 있는 2비트 필드 MODE[1:0](5장)이 이 t<sub>r</sub>, t<sub>f</sub>를 정하는 출력단 구동 세기를 고른다. AC characteristics는 시간에 따라 변하는 신호에 대한 특성(교류 특성)이라는 뜻이다.
+<span class="cite">출처: <a href="../../Docs/Datasheet_stm32f103.pdf#page=66">DS5319 Rev 19, p.66</a>, Figure 30. I/O AC characteristics definition (수치는 p.65 Table 38)</span></figcaption></figure>
+<p>MODE를 50 MHz로 골라도 핀이 50 MHz로 토글하지는 않는다. 토글 주기는 CPU나 다른 버스 마스터가 출력 레지스터에 얼마나 자주 쓰느냐로 정해진다. MODE는 그렇게 정해진 엣지가 얼마나 가파른지만 정한다. 버스 쓰기 한 번이 몇 APB2 사이클에 핀까지 도달하는지는 근거 문서에 나오지 않는다. 이것은 하부 예제 10에서처럼 계측으로 확인한다.</p>
+
+<div class="sim" id="tcalc">
+  <div class="subhead">계산기 ① 입력 펄스를 볼 수 있는가</div>
+  <div class="ctl">
+    <div><label for="pclk">f_PCLK2</label><select id="pclk"><option value="8">8 MHz (리셋 직후 HSI)</option><option value="36">36 MHz</option><option value="64">64 MHz</option><option value="72" selected>72 MHz (최대)</option></select></div>
+    <div><label for="pw">펄스 폭 (ns)</label><input id="pw" type="number" min="1" max="100000000" value="20"></div>
+    <div><label for="poll">CPU가 IDR을 읽는 간격 (ns)</label><input id="poll" type="number" min="1" max="1000000000" value="1000"></div>
+  </div>
+  <div class="regs">
+    <div class="stat"><div class="k">APB2 주기</div><div class="v" id="o_tp">-</div></div>
+    <div class="stat"><div class="k">폴링으로 보일 확률</div><div class="v" id="o_poll">-</div></div>
+    <div class="stat"><div class="k">EXTI 검출 (≥ 10 ns)</div><div class="v" id="o_exti">-</div></div>
+  </div>
+  <div class="subhead" style="margin-top:16px">계산기 ② MODE와 부하가 정하는 엣지 (DS5319 Table 38, C_L = 핀에 달린 부하 용량)</div>
+  <div class="ctl">
+    <div><label for="mrow">MODE · 조건</label><select id="mrow">
+      <option value="0">10 (2 MHz) · C_L 50 pF, VDD 2~3.6 V</option>
+      <option value="1">01 (10 MHz) · C_L 50 pF, VDD 2~3.6 V</option>
+      <option value="2" selected>11 (50 MHz) · C_L 30 pF, VDD 2.7~3.6 V</option>
+      <option value="3">11 (50 MHz) · C_L 50 pF, VDD 2.7~3.6 V</option>
+      <option value="4">11 (50 MHz) · C_L 50 pF, VDD 2~2.7 V</option></select></div>
+  </div>
+  <div class="regs">
+    <div class="stat"><div class="k">t_r = t_f (최대)</div><div class="v" id="o_tr">-</div></div>
+    <div class="stat"><div class="k">표의 f_max</div><div class="v" id="o_fmax">-</div></div>
+    <div class="stat"><div class="k">Figure 30 조건 상한</div><div class="v" id="o_fb">-</div></div>
+  </div>
+  <p class="note" id="o_note"></p>
+</div>
+</section>
+
+<!-- ============================================================ 5 -->
+<section id="s5">
+<h2>5. 제어 요소의 역할: 블록도의 스위치와 레지스터 비트</h2>
+<p>RM0008 9.1.7~9.1.10은 같은 회로를 네 가지 구성으로 다시 그린다. 그림마다 Figure 13의 어떤 스위치가 닫히고 열렸는지만 다르다. 그 스위치를 고르는 것이 핀당 4비트 필드이며, 상위 2비트는 <span class="k1">CNF[1:0]</span>(Configuration: 입출력 방식), 하위 2비트는 <span class="k1">MODE[1:0]</span>(입력인가 출력인가, 출력이면 속도)이다.</p>
+<p>핀이 16개이므로 4비트 × 16 = 64비트가 필요하다. 32비트 레지스터 두 개로 나누어 핀 0~7은 GPIOx_CRL(Port Configuration Register Low), 핀 8~15는 GPIOx_CRH(High)에 넣었다. 핀 y의 필드는 CRL이면 비트 [4y+3 : 4y], CRH이면 비트 [4(y−8)+3 : 4(y−8)]이다. 리셋값 0x4444 4444는 모든 필드가 0100, 즉 CNF = 01, MODE = 00(플로팅 입력)이라는 뜻이다. 전원을 켠 직후 어떤 핀도 출력을 내지 않도록, 외부 회로와 충돌하지 않는 가장 안전한 상태로 시작하는 것이다.</p>
+<div class="figs">
+<figure class="src"><div class="img"><a href="img/RM0008_Fig15_p163.png"><img src="img/RM0008_Fig15_p163.png" alt="입력 구성" width="1157" height="586" loading="lazy"></a></div>
+<figcaption>입력: 출력단이 끊기고(스위치 open), 슈미트 on, 풀 스위치는 선택 사항이다. <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=163">RM0008 Rev 21, p.163</a>, Figure 15</span></figcaption></figure>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig16_p164.png"><img src="img/RM0008_Fig16_p164.png" alt="출력 구성" width="1157" height="554" loading="lazy"></a></div>
+<figcaption>범용 출력: ODR이 Output control로 바로 간다. 풀 저항은 끊긴다. <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=164">RM0008 Rev 21, p.164</a>, Figure 16</span></figcaption></figure>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig17_p165.png"><img src="img/RM0008_Fig17_p165.png" alt="대체 기능 구성" width="1314" height="712" loading="lazy"></a></div>
+<figcaption>대체 기능: 주변장치 출력이 Output control을 구동하고 ODR 경로는 끊긴다. <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=165">RM0008 Rev 21, p.165</a>, Figure 17</span></figcaption></figure>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig18_p166.png"><img src="img/RM0008_Fig18_p166.png" alt="아날로그 구성" width="1157" height="633" loading="lazy"></a></div>
+<figcaption>아날로그: 슈미트 off, 그 출력은 0 고정, 핀은 Analog Input으로만 이어진다. <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=166">RM0008 Rev 21, p.166</a>, Figure 18</span></figcaption></figure>
+</div>
+
+<h3>4비트가 고르는 스위치</h3>
+<div class="tablewrap"><table>
+<tr><th>블록도 위의 요소</th><th>고르는 비트</th><th>동작</th></tr>
+<tr><td>출력단 enable + 슬루율 선택</td><td class="m">MODE[1:0]</td><td>00 = 출력단 off(입력). 01/10/11 = 출력단 on이며 최대 속도 10/2/50 MHz (RM0008 Table 21)</td></tr>
+<tr><td>2:1 출력 선택기</td><td class="m">CNF[1] (출력일 때)</td><td>0 = ODR, 1 = 대체 기능 출력</td></tr>
+<tr><td>P-MOS 차단 스위치</td><td class="m">CNF[0] (출력일 때)</td><td>0 = 푸시풀, 1 = 오픈드레인. P-MOS를 절대 켜지 않는다 (RM0008 9.1.8)</td></tr>
+<tr><td>슈미트 enable과 아날로그 경로</td><td class="m">CNF = 00 (입력일 때)</td><td>아날로그: 슈미트 off, IDR 읽기 = 0 (RM0008 9.1.10)</td></tr>
+<tr><td>풀 스위치 두 개</td><td class="m">CNF = 10 (입력일 때) + ODR 비트</td><td>ODR 비트 1 = 풀업, 0 = 풀다운 (RM0008 Table 20). 입력 모드에서는 출력 레지스터가 풀 방향 선택 비트로 쓰인다</td></tr>
+</table></div>
+
+<div class="sim" id="swpanel">
+  <div class="subhead">스위치 패널: 4비트를 고르면 각 소자가 어떻게 되는가</div>
+  <div class="ctl">
+    <div><label for="pinsel">핀 번호 y</label><select id="pinsel"></select></div>
+    <div><label for="modesel">MODE[1:0]</label><select id="modesel"><option value="0" selected>00 입력</option><option value="1">01 출력 10 MHz</option><option value="2">10 출력 2 MHz</option><option value="3">11 출력 50 MHz</option></select></div>
+    <div><label for="cnfsel">CNF[1:0]</label><select id="cnfsel"><option value="0">00</option><option value="1" selected>01</option><option value="2">10</option><option value="3">11</option></select></div>
+    <div><label for="odrsel">ODRy (출력 데이터 / 풀 방향)</label><select id="odrsel"><option value="0">0</option><option value="1" selected>1</option></select></div>
+  </div>
+  <div class="regs">
+    <div class="stat"><div class="k">구성</div><div class="v" id="p_name">-</div></div>
+    <div class="stat"><div class="k">필드 위치</div><div class="v" id="p_pos">-</div></div>
+    <div class="stat"><div class="k">필드 값</div><div class="v" id="p_val">-</div></div>
+  </div>
+  <div class="tablewrap"><table id="p_tab"></table></div>
+  <p class="note" id="p_note"></p>
+</div>
+
+<h3>출력 플립플롭에 이르는 세 입구</h3>
+<p>핀 5 하나만 1로 바꾸고 싶다고 하자. ODR은 16비트가 한 워드에 묶여 있으므로 CPU는 ① ODR을 읽고, ② 비트 5만 OR로 고치고, ③ 다시 쓴다. 이것을 읽고-고치고-쓰기(RMW, Read-Modify-Write)라고 한다. ①과 ③ 사이에 인터럽트가 들어와 그 서비스 루틴이 핀 6을 바꾸고 돌아오면, ③은 ①에서 읽은 옛 값으로 덮어쓰므로 핀 6의 변경이 사라진다. 세 단계가 하나로 묶여 있지 않아서 생기는 문제이다.</p>
+<p>BSRR(Bit Set/Reset Register)은 이 문제를 하드웨어로 없앤다. 아래 16비트(BS0~BS15)에 1을 쓴 비트는 1로, 위 16비트(BR0~BR15)에 1을 쓴 비트는 0으로 바뀌고, 0을 쓴 비트는 그대로 둔다. CPU는 쓰기 한 번만 하면 되고 읽을 필요가 없다. 중간에 아무것도 끼어들 수 없는 한 번의 동작을 <b>원자적(atomic)</b> 동작이라고 한다. BRR(Bit Reset Register)은 BSRR의 리셋 절반만 따로 떼어 놓은 레지스터이다.</p>
+<figure class="diag"><svg viewBox="0 0 680 200" role="img" aria-label="ODR 한 비트의 세트, 리셋, 쓰기 우선순위 논리">
+<text class="o" x="10" y="44">BSy (BSRR 비트 y)</text><line class="wc" x1="150" y1="40" x2="230" y2="40"/>
+<text class="o" x="10" y="84">BRy (BSRR 비트 16+y, BRR 비트 y)</text><line class="wc" x1="220" y1="80" x2="230" y2="80"/>
+<text class="s" x="10" y="124">ODR 쓰기 데이터 Dy</text><line class="w" x1="150" y1="120" x2="230" y2="120"/>
+<text class="s" x="10" y="164">ODR 쓰기 enable</text><line class="w" x1="150" y1="160" x2="230" y2="160"/>
+<rect class="bx sel" x="230" y="20" width="200" height="160" rx="6"/>
+<text class="t" x="244" y="46" font-weight="700">우선순위 선택</text>
+<text class="s" x="244" y="72">BSy = 1        → 1</text><text class="s" x="244" y="96">BRy = 1        → 0</text>
+<text class="s" x="244" y="120">ODR 쓰기       → Dy</text><text class="s" x="244" y="144">그 밖          → Q 유지</text>
+<line class="w" x1="430" y1="100" x2="490" y2="100"/>
+<rect class="bx hw" x="490" y="70" width="80" height="60" rx="4"/><text class="tc" x="530" y="98">ODRy</text><text class="sc" x="530" y="114">D FF</text>
+<line class="wm" x1="530" y1="130" x2="530" y2="190"/><text class="s" x="538" y="186">PCLK2</text>
+<line class="w" x1="570" y1="100" x2="640" y2="100"/><polygon class="ah" points="646,100 638,95 638,105"/><text class="s" x="580" y="124">출력 선택기로</text>
+<path class="dash" d="M600,100 V10 H330 V20"/><text class="s" x="470" y="30">Q 피드백</text>
+</svg><figcaption><span class="eqv">등가 모델</span> RM0008 9.2.5(<a href="../../Docs/RM0008_Reference_manual.pdf#page=173">p.173</a>) "If both BSx and BRx are set, BSx has priority". BSRR 쓰기 한 번은 0을 쓴 비트를 건드리지 않는다. 그래서 CPU가 ODR을 읽고 고쳐 쓰는 사이에 인터럽트가 끼어들어도 다른 비트의 변경이 사라지지 않는다(RM0008 9.1.2, p.161).</figcaption></figure>
+<div class="eq">ODRy⁺ = BSy + ¬BSy·¬BRy·(WE·Dy + ¬WE·ODRy)      (⁺ = 다음 클럭의 값, WE = ODR 쓰기 enable)
+BSRR ← 0x0020 0040  : 비트 6 세트, 비트 5 리셋, 나머지 유지
+BSRR ← 0x0020 0020  : 비트 5에 BS와 BR이 함께 → BS 우선 → 1</div>
+
+<h3>설정을 얼리는 상태기계: LCKR</h3>
+<p><b>왜 필요한가.</b> 프로그램에 버그가 있어 엉뚱한 주소에 값을 쓰거나 폭주하면 CRL/CRH가 덮어써질 수 있다. 그러면 외부 회로가 신호를 넣고 있는 입력 핀이 출력으로 바뀌어 두 출력이 맞붙거나(단락 전류), 모터 구동 신호 같은 출력이 입력으로 바뀌어 떠 버릴 수 있다. 그래서 한 번 정한 핀 구성을 <b>다음 리셋까지 바꿀 수 없게 얼리는</b> 기능이 있다. 그 레지스터가 GPIOx_LCKR(Port Configuration Lock Register)이다.</p>
+<p><b>구성.</b> 비트 0~15의 LCK0~LCK15는 "어느 핀을 잠글지" 표시하는 비트이고, 비트 16의 LCKK(Lock Key)는 잠금이 걸렸는지를 나타내는 키 비트이다(RM0008 9.2.7). LCKy 비트 하나는 해당 핀의 CRL/CRH 4비트(CNF·MODE)를 얼린다.</p>
+<p><b>왜 순서(키)가 필요한가.</b> LCKK에 1을 한 번 쓰는 것만으로 잠긴다면, 위에서 말한 버그성 쓰기 한 번에도 잠금이 걸리거나 엉뚱한 설정이 얼어 버린다. 그래서 하드웨어는 정해진 쓰기·읽기 순서가 정확히 이어질 때만 잠금을 건다. 우연히 이 순서가 맞아떨어질 가능성은 거의 없다. 비밀번호 자물쇠와 같은 원리이고, 디지털논리의 <b>시퀀스 검출기</b>(예: 입력열에서 "101"을 찾는 상태기계)와 같은 구조이다.</p>
+<div class="tablewrap"><table>
+<tr><th>단계</th><th>CPU 동작</th><th>예: PA5만 잠글 때 LCKR 값</th><th>상태기계</th></tr>
+<tr><td class="m">1</td><td>LCKK = 1과 잠글 핀의 LCKy = 1을 함께 쓴다</td><td class="m">0x0001 0020 쓰기</td><td>대기 → S1</td></tr>
+<tr><td class="m">2</td><td>LCKK = 0, LCKy는 그대로 쓴다</td><td class="m">0x0000 0020 쓰기</td><td>S1 → S2</td></tr>
+<tr><td class="m">3</td><td>LCKK = 1, LCKy는 그대로 쓴다</td><td class="m">0x0001 0020 쓰기</td><td>S2 → S3</td></tr>
+<tr><td class="m">4</td><td>LCKR을 읽는다. LCKK가 0으로 읽힌다</td><td class="m">읽기 → 비트 16 = 0</td><td>S3 → 잠김</td></tr>
+<tr><td class="m">5 (선택)</td><td>다시 읽어 LCKK = 1이면 잠금이 걸린 것이다</td><td class="m">읽기 → 비트 16 = 1</td><td>확인</td></tr>
+</table></div>
+<p>순서 도중에 LCK[15:0] 값이 바뀌거나 순서가 어긋나면 잠금은 걸리지 않는다. 그래서 세 번의 쓰기 모두 아래 16비트를 같은 값(위 예에서는 0x0020)으로 유지한다. 한 번 걸린 잠금은 소프트웨어로 풀 수 없고, 리셋만이 해제 방법이다. 잠기는 것은 CRL/CRH의 구성 비트뿐이다. RM0008은 LCKy가 "the corresponding 4 bits of the control register (CRL, CRH)"를 얼린다고만 적는다. 따라서 잠근 출력 핀이라도 ODR이나 BSRR로 출력 값을 바꾸는 일은 계속할 수 있다.</p>
+<figure class="diag"><svg viewBox="0 0 680 190" role="img" aria-label="GPIOx_LCKR 잠금 키 쓰기 순서 상태기계">
+<circle class="bx" cx="60" cy="80" r="32"/><text class="tc" x="60" y="85">대기</text><text class="sc" x="190" y="40">1 받음</text><text class="sc" x="320" y="40">10 받음</text><text class="sc" x="450" y="40">101 받음</text>
+<circle class="bx" cx="190" cy="80" r="32"/><text class="tc" x="190" y="85">S1</text>
+<circle class="bx" cx="320" cy="80" r="32"/><text class="tc" x="320" y="85">S2</text>
+<circle class="bx" cx="450" cy="80" r="32"/><text class="tc" x="450" y="85">S3</text>
+<circle class="bx flg" cx="600" cy="80" r="36"/><text class="tc" x="600" y="85">잠김</text>
+<line class="wc" x1="92" y1="80" x2="152" y2="80"/><polygon class="ahc" points="158,80 150,75 150,85"/><text class="o" x="92" y="66">LCKK=1 쓰기</text>
+<line class="wc" x1="222" y1="80" x2="282" y2="80"/><polygon class="ahc" points="288,80 280,75 280,85"/><text class="o" x="222" y="66">LCKK=0 쓰기</text>
+<line class="wc" x1="352" y1="80" x2="412" y2="80"/><polygon class="ahc" points="418,80 410,75 410,85"/><text class="o" x="352" y="66">LCKK=1 쓰기</text>
+<line class="wc" x1="482" y1="80" x2="558" y2="80"/><polygon class="ahc" points="564,80 556,75 556,85"/><text class="o" x="488" y="66">읽기 (0)</text>
+<path class="dash" d="M190,112 Q190,150 60,150 L60,118"/><path class="dash" d="M320,112 Q320,160 60,160"/><path class="dash" d="M450,112 Q450,170 60,170 L60,112"/>
+<polygon class="ahm" points="60,112 55,122 65,122"/>
+<text class="s" x="120" y="186">순서 오류 또는 LCK[15:0] 변경 → 중단</text>
+<text class="s" x="540" y="136">다음 리셋까지</text><text class="s" x="540" y="150">CNF/MODE 고정</text>
+</svg><figcaption><span class="eqv">등가 모델</span> RM0008 9.2.7(<a href="../../Docs/RM0008_Reference_manual.pdf#page=175">p.174~175</a>)의 Lock key writing sequence는 Write 1, Write 0, Write 1, Read 0, Read 1(선택, 잠김 확인) 순서이며 "Any error in the lock sequence will abort the lock"이다. 쓰기 순서를 알아보는 시퀀스 검출기로 볼 수 있다. LCKy 비트 하나가 해당 핀의 4비트 설정 필드를 얼린다.</figcaption></figure>
+
+<h3>대체 기능과 리맵 선택기</h3>
+<p><b>대체 기능(AF, Alternate Function)</b>은 핀을 GPIO 대신 USART(Universal Synchronous/Asynchronous Receiver-Transmitter, 직렬 통신), SPI(Serial Peripheral Interface), I2C(Inter-Integrated Circuit), 타이머 같은 다른 주변장치가 구동하게 하는 것이다. 칩에는 주변장치 신호가 핀보다 훨씬 많아서 핀 하나가 여러 주변장치의 후보가 된다. 주변장치 출력은 Figure 13의 2:1 선택기(CNF[1] = 1)를 통해 핀에 이른다.</p>
+<p>그런데 기본 배정 핀이 이미 다른 용도로 쓰이고 있다면 어떻게 할까. F103은 일부 주변장치 신호를 다른 핀으로 옮길 수 있게 해 두었다. 이것을 <b>리맵(remap)</b>이라고 하고, <span class="k1">AFIO_MAPR</span>(AF Remap and debug I/O configuration Register)의 리맵 필드가 고른다(RM0008 9.3, <a href="../../Docs/RM0008_Reference_manual.pdf#page=175">p.175</a>). 예를 들어 I2C1의 SCL(Serial Clock)·SDA(Serial Data)는 I2C1_REMAP = 0이면 PB6·PB7, 1이면 PB8·PB9에 연결된다(RM0008 Table 55, <a href="../../Docs/RM0008_Reference_manual.pdf#page=181">p.181</a>). 디지털논리로 보면 리맵 비트는 "주변장치 신호를 어느 핀의 선택기 입력으로 보낼지" 고르는 다중화기의 select 입력이다.</p>
+<p>같은 레지스터의 SWJ_CFG(Serial Wire JTAG Configuration) 필드는 디버그 포트가 차지한 핀을 범용 I/O로 돌려준다(RM0008 9.3.5, <a href="../../Docs/RM0008_Reference_manual.pdf#page=176">p.176</a>). 디버그 포트는 JTAG(Joint Test Action Group, 5핀 디버그 규격)과 SWD(Serial Wire Debug, 2핀 디버그 규격)를 함께 지원한다. 리셋 직후 PA13~PA15와 PB4가 풀업/풀다운 입력인 까닭은 이 핀들이 디버그 포트에 연결되어 있기 때문이다(RM0008 9.1.1). 디버그 핀을 GPIO로 돌려받으면 그 디버그 방식으로는 더 이상 연결할 수 없다는 대가가 있다.</p>
+</section>
+
+<!-- ============================================================ 6 -->
+<section id="s6">
+<h2>6. 이벤트 생성 기전: 핀의 엣지가 CPU에 닿기까지</h2>
+<h3>① 포트 선택기: 112개 핀을 16개 라인으로</h3>
+<figure class="src narrow"><div class="img"><a href="img/RM0008_Fig21_p210.png"><img src="img/RM0008_Fig21_p210.png" alt="EXTI GPIO 매핑" width="1156" height="1304" loading="lazy"></a></div>
+<figcaption>번호가 같은 핀(PA0, PB0, …)이 선택기 하나로 모여 EXTI 라인 하나가 된다. 선택 입력은 AFIO_EXTICRx의 4비트 필드 EXTIy[3:0]이다. 이 그림은 F10x 전체를 다루므로 PE~PG까지 그려져 있지만 F103RB에서 쓸 수 있는 입력은 패키지에 나온 핀뿐이다. 64핀 패키지에서는 PD0/PD1로 외부 인터럽트를 만들 수 없다(RM0008 9.3.2, <a href="../../Docs/RM0008_Reference_manual.pdf#page=175">p.175</a>). 핀이 아닌 라인 16·17·18은 각각 PVD(Programmable Voltage Detector, 전원 전압 감시기), RTC(Real-Time Clock) 알람, USB(Universal Serial Bus) 웨이크업에 연결된다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=210">RM0008 Rev 21, p.210</a>, Figure 21. External interrupt/event GPIO mapping</span></figcaption></figure>
+<p>디지털논리로 보면 4비트 select가 달린 16개의 다중화기이다. select 값 0000 = 포트 A, 0001 = 포트 B, 0010 = 포트 C … 순서이다. 4비트 필드가 16개 필요하므로 32비트 레지스터 네 개(AFIO_EXTICR1~4)에 4개씩 들어 있다. EXTICR1이 라인 0~3, EXTICR2가 4~7, EXTICR3이 8~11, EXTICR4가 12~15를 맡는다. 출력이 라인당 하나이므로 <b>같은 번호의 두 핀은 동시에 인터럽트 소스가 될 수 없다</b>. 또 RM0008 9.1.3에 따라 외부 인터럽트로 쓰는 핀은 입력 모드여야 한다.</p>
+
+<h3>② EXTI 라인 하나의 내부</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig20_p207.png"><img src="img/RM0008_Fig20_p207.png" alt="EXTI 블록도" width="1157" height="944" loading="lazy"></a></div>
+<figcaption>오른쪽 Input Line에서 시작한다. Edge detect circuit(상승·하강 선택 레지스터가 고름) → OR(Software interrupt event register) → 위쪽 AND(Interrupt mask register) → Pending request register → NVIC로 간다. 아래쪽 AND(Event mask register) → Pulse generator → 이벤트 출력으로 가는 길도 있다. 굵기 표시 19는 F103(커넥티비티 라인 제외)의 라인 수이다. 레지스터 약어는 RTSR(Rising Trigger Selection Register), FTSR(Falling Trigger Selection Register), SWIER(Software Interrupt Event Register), IMR(Interrupt Mask Register), EMR(Event Mask Register), PR(Pending Register)이다. 각 레지스터의 비트 x가 라인 x를 맡는다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=207">RM0008 Rev 21, p.207</a>, Figure 20. External interrupt/event controller block diagram</span></figcaption></figure>
+<figure class="diag"><svg viewBox="0 0 680 250" role="img" aria-label="EXTI 라인 하나의 등가 논리">
+<rect class="bx" x="8" y="104" width="104" height="44" rx="4"/><text class="tc" x="60" y="122">EXTICR</text><text class="sc" x="60" y="138">선택기 출력</text>
+<line class="w" x1="112" y1="126" x2="146" y2="126"/>
+<rect class="bx hw" x="146" y="96" width="120" height="60" rx="4"/><text class="tc" x="206" y="118">엣지 검출</text><text class="sc" x="206" y="134">비동기 포착</text><text class="sc" x="206" y="148">(≥ 10 ns)</text>
+<line class="wc" x1="186" y1="70" x2="186" y2="96"/><line class="wc" x1="226" y1="70" x2="226" y2="96"/><text class="o" x="160" y="64">RTSR</text><text class="o" x="214" y="64">FTSR</text>
+<line class="w" x1="266" y1="126" x2="300" y2="126"/>
+<rect class="bx sel" x="300" y="106" width="50" height="40" rx="4"/><text class="tc" x="325" y="131">OR</text>
+<line class="wc" x1="325" y1="80" x2="325" y2="106"/><text class="o" x="306" y="74">SWIER</text>
+<line class="w" x1="350" y1="126" x2="372" y2="126"/><line class="w" x1="372" y1="66" x2="372" y2="190"/>
+<line class="w" x1="372" y1="66" x2="392" y2="66"/><line class="w" x1="372" y1="190" x2="392" y2="190"/>
+<rect class="bx sel" x="392" y="46" width="50" height="40" rx="4"/><text class="tc" x="417" y="71">AND</text>
+<line class="wc" x1="417" y1="22" x2="417" y2="46"/><text class="o" x="406" y="16">IMR</text>
+<rect class="bx sel" x="392" y="170" width="50" height="40" rx="4"/><text class="tc" x="417" y="195">AND</text>
+<line class="wc" x1="417" y1="210" x2="417" y2="234"/><text class="o" x="406" y="246">EMR</text>
+<line class="w" x1="442" y1="66" x2="470" y2="66"/>
+<rect class="bx flg" x="470" y="40" width="96" height="52" rx="4"/><text class="tc" x="518" y="62">PR (펜딩)</text><text class="sc" x="518" y="78">S=엣지 R=1쓰기</text>
+<line class="sig2" x1="566" y1="66" x2="600" y2="66"/>
+<rect class="bx" x="600" y="46" width="72" height="40" rx="4"/><text class="tc" x="636" y="71">NVIC</text>
+<line class="w" x1="442" y1="190" x2="470" y2="190"/>
+<rect class="bx hw" x="470" y="166" width="96" height="48" rx="4"/><text class="tc" x="518" y="188">펄스 발생기</text><text class="sc" x="518" y="204">PR 세우지 않음</text>
+<line class="sig2" x1="566" y1="190" x2="600" y2="190"/>
+<rect class="bx" x="600" y="170" width="72" height="40" rx="4"/><text class="tc" x="636" y="188">이벤트</text><text class="sc" x="636" y="202">WFE 깨움</text>
+</svg><figcaption><span class="eqv">등가 모델</span> Figure 20의 경로를 소자로 다시 그렸다. 엣지 검출기는 APB2 주기보다 짧은 펄스도 잡아야 하므로(4장) 클럭 비교형이 아니라 비동기 포착으로 표시했다. PR은 엣지로 세트되고 소프트웨어가 1을 써야 리셋되는 SR(Set-Reset) 플립플롭이다. 매뉴얼은 이런 비트를 rc_w1(read / clear by writing 1: 읽을 수 있고 1을 쓰면 0이 됨)로 표기한다(RM0008 10.3.6, <a href="../../Docs/RM0008_Reference_manual.pdf#page=213">p.213</a>). SWIER에 1을 쓰면 핀 없이도 같은 경로를 탈 수 있다(10.3.5).</figcaption></figure>
+<p>"마스크(mask)"라는 이름이 헷갈리기 쉽다. IMR/EMR의 비트가 <b>1이면 통과, 0이면 차단</b>이다(RM0008 10.3.1: "0: … is masked, 1: … is not masked"). 즉 AND 게이트의 다른 쪽 입력이며, 리셋값 0에서는 모든 라인이 막혀 있다. 왜 0을 쓰면 PR이 지워지지 않고 1을 써야 지워질까? 여러 라인의 PR이 한 워드에 들어 있기 때문이다. 지울 비트만 1로 쓰면 0을 쓴 다른 비트는 영향을 받지 않으므로, BSRR과 마찬가지로 다른 라인의 플래그를 건드리지 않고 하나만 지울 수 있다.</p>
+
+<h3>③ NVIC: 16개 라인, 7개 벡터</h3>
+<p>먼저 용어를 정리한다. 인터럽트가 걸리면 CPU는 하던 일을 멈추고 그 인터럽트를 처리하는 함수, 곧 <b>ISR</b>(Interrupt Service Routine, 인터럽트 서비스 루틴)로 뛴다. 어느 ISR로 뛸지는 메모리 앞부분의 <b>벡터 테이블</b>이 정한다. 벡터 테이블은 인터럽트 번호마다 ISR 시작 주소를 하나씩 적어 둔 표이고, 그 칸 하나를 <b>벡터</b>라고 한다. 주변장치의 요청을 받아 "접수됨(펜딩)" 상태로 만들고, 우선순위를 비교해 CPU에 넘기는 하드웨어가 NVIC이다.</p>
+<div class="tablewrap"><table>
+<tr><th>EXTI 라인</th><th>NVIC 위치(IRQ: Interrupt Request 번호)</th><th>벡터 주소</th><th>디지털 등가</th></tr>
+<tr><td class="m">0, 1, 2, 3, 4</td><td class="m">6, 7, 8, 9, 10</td><td class="m">0x58 ~ 0x68</td><td>라인마다 전용 요청선</td></tr>
+<tr><td class="m">5 ~ 9</td><td class="m">23 (EXTI9_5)</td><td class="m">0x9C</td><td>5입력 OR</td></tr>
+<tr><td class="m">10 ~ 15</td><td class="m">40 (EXTI15_10)</td><td class="m">0xE0</td><td>6입력 OR</td></tr>
+</table></div>
+<p>근거는 RM0008 Table 63(F103RB 같은 medium-density에 해당, <a href="../../Docs/RM0008_Reference_manual.pdf#page=204">p.204~205</a>)이다. 라인 0~4는 벡터를 하나씩 가지지만, 라인 5~9와 10~15는 각각 벡터 하나(이름 EXTI9_5, EXTI15_10)를 나누어 쓴다. 공유 벡터는 OR 게이트이므로 벡터에 들어온 것만으로는 어느 라인이 불렀는지 알 수 없다. 서비스 루틴은 PR을 읽어 출처를 가린다.</p>
+<p>PR 출력은 레벨 신호이다. PM0056 4.3.9(<a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf#page=126">p.126</a>)에 따르면 NVIC는 서비스 루틴에 들어갈 때 펜딩을 지우지만, 복귀할 때 요청선이 아직 High이면 다시 펜딩으로 만든다. 그래서 <b>PR을 지우지 않고 복귀하면 같은 서비스 루틴이 끝없이 다시 실행된다</b>.</p>
+
+<h3>④ 인터럽트가 아닌 갈래: 이벤트, 다른 주변장치 트리거, DMA</h3>
+<ul>
+<li><b>이벤트 → WFE 깨움</b>: WFE(Wait For Event)는 CPU를 저전력 대기 상태로 재우고 이벤트가 오면 다음 명령부터 이어 가게 하는 명령이다. 인터럽트와 달리 ISR로 뛰지 않는다. EMR 경로는 PR을 세우지 않고 펄스만 만든다. 따라서 깨어난 뒤 지울 플래그가 없다(RM0008 10.2.3, <a href="../../Docs/RM0008_Reference_manual.pdf#page=208">p.208</a>). ES096 2.1.2(<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=5">p.5</a>)에 따르면 WFE 실행 전에 인터럽트가 먼저 오면 이벤트 레지스터가 세트되지 않아 깨어나지 못한다. 정오표는 그 대책으로 EXTI 라인을 이벤트 모드로 쓰라고 권한다.</li>
+<li><b>CPU 이벤트 → 핀</b>: 반대 방향 경로도 있다. AFIO_EVCR(Event Control Register, RM0008 9.4.1, p.183)은 Cortex-M3 코어의 이벤트 출력 신호 EVENTOUT을 PORT[2:0]·PIN[3:0]으로 고른 핀 하나로 내보낸다. 이것도 선택기이다.</li>
+<li><b>다른 주변장치의 트리거</b>: EXTI 라인 11은 ADC(Analog-to-Digital Converter, 아날로그-디지털 변환기) 정규 채널, 라인 15는 주입 채널(정규 변환 도중 끼어들어 먼저 변환하는 채널)의 외부 트리거로 고를 수 있다(RM0008 Table 67·68, <a href="../../Docs/RM0008_Reference_manual.pdf#page=225">p.225~226</a>). 핀 엣지 하나로 CPU 개입 없이 변환을 시작하는 경로이다.</li>
+<li><b>DMA</b>(Direct Memory Access, CPU를 거치지 않는 메모리 전송): DMA1 요청 표(RM0008 Table 78, <a href="../../Docs/RM0008_Reference_manual.pdf#page=282">p.282</a>)에는 GPIO와 EXTI가 없다. GPIO는 DMA를 부르지 못한다. 다만 DMA가 다른 주변장치(타이머 등)의 요청을 받아 BSRR에 쓰는 반대 방향은 가능하다. 이것은 07_DMA 그룹에서 다룬다.</li>
+</ul>
+</section>
+
+<!-- ============================================================ 7 -->
+<section id="s7">
+<h2>7. 동작 시나리오 추적</h2>
+<h3>시나리오 ① 출력 쓰기 한 번</h3>
+<figure class="diag"><svg viewBox="0 0 680 200" role="img" aria-label="BSRR 쓰기 한 번에 따른 ODR과 핀 전압 변화 타이밍">
+<text class="s" x="8" y="40">PCLK2</text>
+<polyline class="sig3" points="130,46 140,46 140,26 160,26 160,46 180,46 180,26 200,26 200,46 220,46 220,26 240,26 240,46 260,46 260,26 280,26 280,46 300,46 300,26 320,26 320,46 340,46 340,26 360,26 360,46 380,46 380,26 400,26 400,46 420,46 420,26 440,26 440,46 460,46 460,26 480,26 480,46 500,46 500,26 520,26 520,46 540,46 540,26 560,26 560,46 580,46 580,26 600,26 600,46 620,46 620,26 640,26 640,46 660,46"/>
+<text class="s" x="8" y="84">APB2 쓰기</text><text class="s" x="8" y="96">(BSRR, BS5)</text>
+<polyline class="sig" points="130,94 220,94 220,74 260,74 260,94 660,94"/>
+<text class="s" x="8" y="130">ODR5</text>
+<polyline class="sig2" points="130,136 260,136 260,116 660,116"/>
+<text class="s" x="8" y="172">핀 전압</text>
+<polyline class="sig" points="130,182 264,182 330,158 660,158"/>
+<line class="dash" x1="260" y1="20" x2="260" y2="190"/>
+<line class="wm" x1="270" y1="194" x2="324" y2="194"/><text class="s" x="282" y="190">t_r</text>
+<text class="s" x="340" y="148">MODE가 정한 기울기 (Table 38)</text>
+</svg><figcaption><span class="eqv">등가 모델</span> 버스 쓰기가 끝나는 클럭 에지에서 ODR 플립플롭이 바뀌고, 출력단이 t<sub>r</sub> 동안 핀을 끌어올린다. 버스가 몇 사이클 걸리는지는 근거 문서에 없으므로, 이 그림은 순서만 나타낸다. 다른 핀은 BSRR의 0인 비트이므로 그대로이다.</figcaption></figure>
+
+<h3>시나리오 ② 하강 엣지 인터럽트와 접점 튐</h3>
+<figure class="diag"><svg viewBox="0 0 680 250" role="img" aria-label="버튼 바운스가 여러 번의 EXTI 인터럽트로 이어지는 타이밍">
+<text class="s" x="8" y="40">핀 (풀업 입력)</text>
+<polyline class="sig" points="130,24 200,24 200,54 280,54 280,24 300,24 300,54 380,54 380,24 400,24 400,54 610,54 610,24 660,24"/>
+<text class="s" x="8" y="92">하강 엣지 (FTSR)</text>
+<g class="sig2"><line x1="200" y1="96" x2="200" y2="76"/><line x1="300" y1="96" x2="300" y2="76"/><line x1="400" y1="96" x2="400" y2="76"/></g>
+<line class="wm" x1="130" y1="96" x2="660" y2="96"/>
+<text class="s" x="8" y="136">PR</text>
+<polyline class="sig2" points="130,142 200,142 200,122 240,122 240,142 300,142 300,122 340,122 340,142 400,142 400,122 440,122 440,142 660,142"/>
+<g class="wc"><line x1="240" y1="112" x2="240" y2="150"/><line x1="340" y1="112" x2="340" y2="150"/><line x1="440" y1="112" x2="440" y2="150"/></g>
+<text class="o" x="446" y="118">1 쓰기로 클리어</text>
+<text class="s" x="8" y="186">CPU</text>
+<line class="wm" x1="130" y1="180" x2="660" y2="180"/>
+<rect class="isr" x="206" y="168" width="38" height="24" rx="3"/><rect class="isr" x="306" y="168" width="38" height="24" rx="3"/><rect class="isr" x="406" y="168" width="38" height="24" rx="3"/>
+<text class="sc" x="225" y="210">ISR</text><text class="sc" x="325" y="210">ISR</text><text class="sc" x="425" y="210">ISR</text>
+<text class="s" x="470" y="210">나머지 = 주 프로그램</text>
+<text class="s" x="130" y="238">한 번 눌렀는데 PR이 세 번 세워지고 서비스 루틴도 세 번 실행된다</text>
+</svg><figcaption><span class="eqv">등가 모델</span> ⓐ 첫 하강 엣지에서 PR이 세트되고 NVIC가 펜딩된다. ⓑ CPU가 공유 벡터로 진입해 PR을 읽고, 1을 써서 지운다. ⓒ 접점이 튀어 하강 엣지가 다시 오면 PR이 또 세트된다. 슈미트 트리거는 레일 사이를 오가는 튐을 거르지 못한다(2장). 서비스 루틴이 PR을 지우지 않았다면 첫 진입 뒤 복귀하자마자 다시 진입하는 무한 반복이 된다(6장 ③).</figcaption></figure>
+<p>엣지 사이 간격이 서비스 루틴보다 짧으면 PR이 이미 1인 상태에서 엣지가 또 오므로 그 엣지는 따로 세어지지 않는다. PR은 카운터가 아니라 1비트 플래그이다. "몇 번 눌렸는가"를 세려면 소프트웨어 카운터가 필요하고, 튐을 거르려면 시간 필터가 필요하다(하부 예제 06, 08).</p>
+</section>
+
+<!-- ============================================================ 8 -->
+<section id="s8">
+<h2>8. 설계상 한계와 이유</h2>
+<div class="tablewrap"><table>
+<tr><th>설계 선택</th><th>얻은 것</th><th>감수한 것</th><th>근거</th></tr>
+<tr><td>핀당 4비트 설정 필드를 32비트 워드 두 개(CRL/CRH)에 몰아넣음</td><td>레지스터 수 절약</td><td>워드 단위 접근만 허용되어(RM0008 9.1, p.159) 핀 하나의 설정을 바꾸려면 읽고-고치고-쓰기가 필요하다. 설정 쪽은 BSRR 같은 원자 경로가 없다</td><td>RM0008 9.1, 9.2.1~9.2.2</td></tr>
+<tr><td>BSRR/BRR 추가</td><td>출력 비트를 쓰기 한 번에 원자적으로 바꾼다</td><td>쓰기 전용 레지스터가 하나 더 생긴다. 현재 값은 여전히 ODR에서 읽어야 한다</td><td>RM0008 9.1.2</td></tr>
+<tr><td>EXTI 라인 16개를 모든 포트가 공유</td><td>엣지 검출기 16개로 112개 핀을 감당한다</td><td>번호가 같은 핀은 하나만 인터럽트 소스가 될 수 있다</td><td>RM0008 Figure 21</td></tr>
+<tr><td>라인 5~9, 10~15의 벡터 공유</td><td>벡터 테이블 크기 절약</td><td>서비스 루틴이 PR로 출처를 판별해야 한다</td><td>RM0008 Table 63</td></tr>
+<tr><td>PR을 1비트 플래그로 둠</td><td>단순하고 확실한 사건 기억</td><td>플래그가 서 있는 동안의 추가 엣지는 합쳐진다</td><td>RM0008 10.3.6</td></tr>
+<tr><td>출력 슬루율 3단 선택</td><td>필요한 만큼만 빠른 엣지 → 링잉(엣지 뒤의 출렁임)·EMI(Electromagnetic Interference, 전자기 간섭)·순간 전류 감소</td><td>느린 설정에서는 최대 토글 주파수가 낮다(2 MHz에서 t<sub>r</sub> 125 ns)</td><td>DS5319 Table 38</td></tr>
+<tr><td>내부 풀 저항을 30~50 kΩ으로 약하게</td><td>외부 부품 없이 기본 레벨 확정, 외부 구동에 거의 영향 없음</td><td>RC가 커서 느리다. 40 kΩ × 50 pF = 2 µs의 시상수이므로 빠른 버스의 풀업으로는 부족하다</td><td>DS5319 Table 36</td></tr>
+<tr><td>5 V 허용(FT) 핀</td><td>5 V 신호를 직접 받는다</td><td>VDD + 0.3 V를 넘는 전압을 견디려면 내부 풀을 꺼야 하고, 히스테리시스 규격이 다르다</td><td>DS5319 Table 36</td></tr>
+<tr><td>핀당 구동 전류 제한</td><td>작은 다이, 낮은 소비</td><td>V<sub>OL</sub>(Output Low voltage, 0 출력 시 핀 전압) ≤ 0.4 V를 지키는 전류는 ±8 mA, 완화 시 ±20 mA, 절대 최대 ±25 mA/핀, 칩 전체 150 mA. PC13~PC15는 ±3 mA이고 2 MHz 이하로만 쓴다</td><td>DS5319 Table 7(p.37), p.64</td></tr>
+<tr><td>대체 기능 출력이 선택기 하나를 공유</td><td>핀 하나를 여러 주변장치가 번갈아 쓴다</td><td>클럭이 켜진 다른 주변장치의 출력이 같은 핀에 걸려 충돌할 수 있다(예: USART1의 RTS(Request To Send) 출력과 CAN(Controller Area Network)의 TX(송신) 출력이 PA12에서 충돌)</td><td>ES096 2.3.1(<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=10">p.10</a>)</td></tr>
+<tr><td>IDR은 샘플링만 하고 사건을 저장하지 않음</td><td>읽는 순간의 실제 상태를 보여 준다</td><td>짧은 펄스는 폴링으로 놓친다. 사건 기억은 EXTI가 맡는다</td><td>RM0008 9.1.1, 10.2.1</td></tr>
+</table></div>
+</section>
+
+<!-- ============================================================ 9 -->
+<section id="s9">
+<h2>9. 이해 확인 문제</h2>
+<details><summary>Q1. 포트 B 핀 10을 "오픈드레인 범용 출력, 최대 2 MHz"로 쓰려 한다. 어느 레지스터의 몇 번 비트에 어떤 4비트 값을 넣는가? 그때 P-MOS는 언제 켜지는가?</summary><div class="ans">
+<p>핀 8~15는 CRH이고 필드 위치는 4 × (10 − 8) = 8이므로 GPIOB_CRH의 비트 11:8이다. CNF = 01(범용 오픈드레인), MODE = 10(2 MHz)이므로 0b0110 = 0x6이다. 오픈드레인에서 P-MOS는 절대 켜지지 않는다. ODR = 0이면 N-MOS가 켜지고, 1이면 Hi-Z이다(RM0008 9.1.8).</p></div></details>
+<details><summary>Q2. GPIOA_ODR = 0x0000 0020일 때 BSRR에 0x0020 0040을 쓰면 ODR은? 0x0020 0020을 쓰면?</summary><div class="ans">
+<p>첫 번째는 BS6 = 1, BR5 = 1이므로 비트 6은 세트, 비트 5는 리셋되어 ODR = 0x0000 0040이다. 두 번째는 비트 5에 BS와 BR이 함께 1이므로 BS가 우선해(RM0008 9.2.5) ODR = 0x0000 0020이 유지된다.</p></div></details>
+<details><summary>Q3. f_PCLK2 = 36 MHz이다. 폭 20 ns의 Low 펄스가 핀에 들어온다. CPU가 1 µs마다 IDR을 읽으면 이 펄스를 볼 확률은? EXTI는 잡는가?</summary><div class="ans">
+<p>APB2 주기는 27.8 ns로 펄스보다 길다. IDR 샘플 자체가 펄스를 놓칠 수 있고, 잡혀도 다음 샘플에서 사라진다. CPU가 읽는 순간에 펄스가 있어야 하므로 확률은 약 20 ns / 1000 ns = 2 %이다. EXTI의 최소 검출 폭은 10 ns이므로(DS5319 Table 38) 엣지 선택만 맞으면 PR이 세트된다.</p></div></details>
+<details><summary>Q4. 핀에 하강 엣지가 분명히 들어오는데 EXTI_PR이 세워지지 않는다. 블록도의 경로를 따라 원인 후보를 앞에서부터 나열하라.</summary><div class="ans">
+<p>① 핀이 입력 모드가 아니다(RM0008 9.1.3). ② AFIO 클럭(AFIOEN)이 꺼져 있어 EXTICR 쓰기가 무시되었다(RM0008 9.4). ③ EXTICR의 포트 선택이 다른 포트를 가리킨다(Figure 21). ④ FTSR의 해당 비트가 0이다. ⑤ IMR이 0이다(Figure 20에서 PR 앞에 IMR AND 게이트가 있다). 어떤 경우든 SWIER에 1을 써서 PR이 서는지 확인하면 엣지 검출 앞쪽과 뒤쪽 중 어디가 문제인지 나눌 수 있다.</p></div></details>
+<details><summary>Q5. PC13과 PA13을 둘 다 하강 엣지 인터럽트로 쓰려 한다. 가능한가?</summary><div class="ans">
+<p>불가능하다. 둘 다 EXTI 라인 13의 선택기 입력이고 EXTICR4의 EXTI13[3:0]은 포트 하나만 고를 수 있다. 게다가 PA13은 리셋 직후 디버그 포트(JTMS: JTAG Mode Select / SWDIO: Serial Wire Data I/O)에 연결되어 있다(RM0008 9.1.1). 한쪽을 번호가 다른 핀으로 옮겨야 한다.</p></div></details>
+<details><summary>Q6. 오픈드레인 출력에 ODR = 1을 썼는데 IDR이 1과 0을 불규칙하게 오간다. 외부에는 아무것도 연결하지 않았다. 왜 내부 풀업이 도와주지 않는가?</summary><div class="ans">
+<p>ODR = 1이면 N-MOS가 꺼지고 P-MOS는 원래 쓰지 않으므로 핀은 Hi-Z로 떠 있다. 출력 구성에서는 약한 풀업/풀다운이 끊긴다(RM0008 9.1.8, Figure 16). 오픈드레인의 1은 외부 풀업이 만들어야 한다.</p></div></details>
+<details><summary>Q7. MODE = 11, C_L = 50 pF, VDD = 3.3 V이다. Figure 30의 조건 (t_r + t_f) ≤ 2/3 T로 계산한 최대 주파수와 Table 38의 값을 비교하라.</summary><div class="ans">
+<p>Table 38에서 t<sub>r</sub> = t<sub>f</sub> = 8 ns이다. T ≥ 1.5 × 16 = 24 ns이므로 41.7 MHz가 나온다. 표의 f<sub>max</sub>는 30 MHz로 더 보수적이다. 표 값은 듀티 조건 등을 포함한 보증치이므로 설계에는 표 값을 쓴다.</p></div></details>
+<details><summary>Q8. GPIOA_ODR 비트 5의 비트 밴드 별칭 주소를 계산하라.</summary><div class="ans">
+<p>GPIOA_ODR = 0x4001 080C이므로 주변장치 비트 밴드 영역 기준 바이트 오프셋은 0x1080C이다. 별칭 = 0x4200 0000 + 0x1080C × 32 + 5 × 4 = 0x4200 0000 + 0x21 0180 + 0x14 = <b>0x4221 0194</b>(PM0056 2.2.5).</p></div></details>
+<details><summary>Q9. EXTI_PR의 비트 하나를 지우려고 비트 밴드 별칭에 1을 썼더니 다른 라인의 인터럽트가 사라졌다. 왜인가?</summary><div class="ans">
+<p>PM0056 Table 14에 따르면 별칭 쓰기는 하드웨어가 읽고-고치고-쓰기로 수행한다. 그래서 워드 전체를 읽은 뒤 해당 비트만 바꿔 다시 쓴다. PR은 1을 쓰면 지워지는 비트(rc_w1)이므로, 읽을 때 1이었던 다른 펜딩 비트가 그대로 1로 다시 쓰여 함께 지워진다. PR은 지울 비트만 1인 값을 직접 써야 한다.</p></div></details>
+<details><summary>Q10. 라인 7과 라인 8을 함께 쓰는데 하나만 처리하고 복귀했다. 무슨 일이 생기는가?</summary><div class="ans">
+<p>둘 다 EXTI9_5 벡터(OR 게이트)로 들어간다. 처리하지 않은 라인의 PR이 남아 요청선이 High로 유지되므로, 복귀하자마자 NVIC가 다시 펜딩해 같은 벡터로 재진입한다(PM0056 4.3.9). 서비스 루틴은 PR을 읽어 세워진 비트를 모두 처리해야 한다.</p></div></details>
+</section>
+
+<!-- ============================================================ 10 -->
+<section id="s10">
+<h2>10. 하부 예제 연결</h2>
+<h3>비트 밴딩: 주소 디코더로 비트 하나 고르기</h3>
+<p>5장에서 본 RMW 문제는 ODR에만 있는 것이 아니다. 클럭 허용 비트, 소프트웨어 플래그 등 워드 안의 비트 하나를 바꾸는 모든 곳에서 생긴다. BSRR처럼 전용 레지스터를 두는 대신, Cortex-M3는 주소 공간에서 해결한다. 주변장치 영역과 SRAM(Static RAM, 칩 내부 데이터 메모리) 영역의 <b>모든 비트</b>에 각각 32비트짜리 별도 주소, 곧 별칭을 하나씩 붙였다. 별칭 주소에 쓰면 버스가 해당 비트 하나만 바꾼다. 주소 디코더가 "어느 워드의 몇 번 비트인가"까지 해석하는 셈이다.</p>
+<figure class="src"><div class="img"><a href="img/PM0056_Fig10_p29.png"><img src="img/PM0056_Fig10_p29.png" alt="비트 밴드 매핑" width="1159" height="712" loading="lazy"></a></div>
+<figcaption>별칭(alias) 영역의 32비트 워드 하나가 비트 밴드 영역의 비트 하나에 대응한다. 그림은 SRAM 예이며, 주변장치는 0x4000 0000~0x400F FFFF(비트 밴드)와 0x4200 0000~0x43FF FFFF(별칭)의 짝이다(Table 14). 별칭 주소 = 별칭 기준 + 바이트 오프셋 × 32 + 비트 번호 × 4이다. 별칭에 쓰면 하드웨어가 읽고-고치고-쓰기를 대신 수행한다.
+<span class="cite">출처: <a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf#page=29">PM0056 Rev 7, p.29</a>, Figure 10. Bit-band mapping (공식과 Table 14는 p.28)</span></figcaption></figure>
+
+<p>각 예제가 이 교안의 어느 경로를 쓰는지 정리했다. 코드, 라이브러리, 보드 배선은 예제 교안에서 다룬다.</p>
+<div class="tablewrap"><table>
+<tr><th>예제</th><th>지나가는 경로</th><th>이 교안의 장</th></tr>
+<tr><td><a href="01_BlinkArduino/01_BlinkArduino%20교안.html">01_BlinkArduino</a></td><td>클럭 게이트 → 설정 필드(범용 푸시풀 출력) → BSRR/BRR → ODR → 출력단</td><td><a href="#s4">4</a>, <a href="#s5">5</a></td></tr>
+<tr><td><a href="02_BlinkHAL/02_BlinkHAL%20교안.html">02_BlinkHAL</a></td><td>같은 출력 경로. ODR을 읽어 반대 값을 BSRR로 쓰는 토글</td><td><a href="#s5">5</a>, <a href="#s7">7①</a></td></tr>
+<tr><td><a href="03_BlinkLL/03_BlinkLL%20교안.html">03_BlinkLL</a></td><td>같은 출력 경로 + AFIO_MAPR의 SWJ_CFG로 디버그 핀 회수</td><td><a href="#s5">5</a></td></tr>
+<tr><td><a href="04_BlinkReg/04_BlinkReg%20교안.html">04_BlinkReg</a></td><td>클럭 게이트, CRL 필드, BSRR을 직접 쓴다. 리셋 직후 HSI 클럭에서 동작한다</td><td><a href="#s4">4</a>, <a href="#s5">5</a></td></tr>
+<tr><td><a href="05_ReadPin/05_ReadPin%20교안.html">05_ReadPin</a></td><td>입력 경로: 핀 → 슈미트 → IDR 샘플링 → CPU 폴링. 튐 관찰</td><td><a href="#s3">3</a>, <a href="#s4">4</a></td></tr>
+<tr><td><a href="06_ExtInt/06_ExtInt%20교안.html">06_ExtInt</a></td><td>EXTICR 선택기 → 하강 엣지 → PR → 공유 벡터(EXTI15_10) → PR 클리어</td><td><a href="#s6">6</a>, <a href="#s7">7②</a></td></tr>
+<tr><td><a href="07_ReadPinReg/07_ReadPinReg%20교안.html">07_ReadPinReg</a></td><td>입력 경로 + CNF = 10과 ODR 비트로 풀업 선택, IDR 직접 읽기</td><td><a href="#s5">5</a></td></tr>
+<tr><td><a href="08_ExternalInt/08_ExternalInt%20교안.html">08_ExternalInt</a></td><td>라인 두 개, 상승·하강 엣지 각각, 서로 다른 공유 벡터(EXTI9_5, EXTI15_10)</td><td><a href="#s6">6</a></td></tr>
+<tr><td><a href="09_BitBandingReg/09_BitBandingReg%20교안.html">09_BitBandingReg</a></td><td>별칭 주소로 클럭 허용 비트, ODR 비트, IDR 비트, SRAM 비트를 하나씩 접근</td><td><a href="#s10">10</a>, Q8·Q9</td></tr>
+<tr><td><a href="10_AD2Test/10_AD2Test%20교안.html">10_AD2Test</a></td><td>여러 포트의 출력 경로를 차례로 구동하고 로직 분석기로 타이밍을 측정</td><td><a href="#s4">4</a>, <a href="#s7">7①</a></td></tr>
+</table></div>
+
+<div class="box ok">
+  <div class="label">정리</div>
+  <ul>
+    <li>GPIO 핀 하나는 D 플립플롭(ODR, IDR), 세트/리셋 논리(BSRR), 2:1 선택기, CMOS 출력단, 슈미트 트리거, 풀 스위치의 조합이다.</li>
+    <li>CNF·MODE 4비트는 이 소자들의 스위치를 고른다. MODE는 출력단 on/off와 엣지 기울기를 고를 뿐 토글 속도를 정하지 않는다.</li>
+    <li>IDR은 APB2 클럭마다 상태를 샘플링할 뿐 사건을 기억하지 않는다. EXTI의 PR은 엣지로 세트되어 소프트웨어가 지울 때까지 사건을 기억한다.</li>
+    <li>EXTI 경로는 포트 선택기 → 비동기 엣지 검출 → IMR/EMR 게이트 → PR(SR FF) → NVIC(공유 벡터는 OR) 순서이다. PR을 지우지 않으면 레벨 요청이 남아 재진입한다.</li>
+  </ul>
+</div>
+<div class="nextprev"><a href="01_BlinkArduino/01_BlinkArduino%20교안.html">첫 예제: 01_BlinkArduino →</a><a href="../02_USART/02_USART%20교안.html">다음 그룹: 02_USART 상위 교안 →</a></div>
+</section>
+
+<footer>
+  <p>그림 출처: STMicroelectronics RM0008 Rev 21, DS5319 Rev 19, PM0056 Rev 7(저장소 <code>Docs/</code>). 원본 그림은 PDF의 해당 쪽을 잘라 실었고, 등가 모델 그림은 이 교안에서 새로 그렸다.</p>
+</footer>
+</div>
+
+<script>
+(function(){
+  /* ---------- 4장 계산기 ---------- */
+  var $=function(id){return document.getElementById(id)};
+  // DS5319 Table 38 (p.65): [MODE 이름, t_r=t_f 최대 ns, 표의 f_max MHz]
+  var T38=[["10",125,2],["01",25,10],["11",5,50],["11",8,30],["11",12,20]];
+  function fmt(x,d){return (Math.round(x*Math.pow(10,d))/Math.pow(10,d)).toString()}
+  function calcT(){
+    var f=+$("pclk").value, pw=Math.max(0,+$("pw").value||0), poll=Math.max(1,+$("poll").value||1);
+    var tp=1000/f; $("o_tp").textContent=fmt(tp,1)+" ns";
+    var win=Math.max(poll,tp), pr=Math.min(1,pw/win);
+    var e1=$("o_poll"); e1.textContent=(pr>=1?"100 %":fmt(pr*100,1)+" %"); e1.className="v verdict "+(pr>=1?"good":"bad");
+    var e2=$("o_exti"); var ok=pw>=10; e2.textContent=ok?"검출":"규격 밖"; e2.className="v verdict "+(ok?"good":"bad");
+    var r=T38[+$("mrow").value]; $("o_tr").textContent=r[1]+" ns"; $("o_fmax").textContent=r[2]+" MHz";
+    var fb=1000/(1.5*2*r[1]); $("o_fb").textContent=fmt(fb,1)+" MHz";
+    $("o_note").textContent="폴링 확률 = 펄스 폭 ÷ max(CPU 읽기 간격, APB2 주기). Figure 30 상한 = 1 / (1.5 × (t_r + t_f)). 설계에는 표의 보증값 f_max를 쓴다.";
+  }
+  ["pclk","pw","poll","mrow"].forEach(function(id){$(id).addEventListener("input",calcT);$(id).addEventListener("change",calcT)});
+  calcT();
+
+  /* ---------- 5장 스위치 패널 ---------- */
+  var ps=$("pinsel"); for(var i=0;i<16;i++){var o=document.createElement("option");o.value=i;o.textContent=i;if(i===5)o.selected=true;ps.appendChild(o)}
+  function row(k,on,txt){return "<tr><td>"+k+"</td><td class='"+(on?"on":"off")+"'>"+txt+"</td></tr>"}
+  function calcP(){
+    var y=+ps.value, M=+$("modesel").value, C=+$("cnfsel").value, O=+$("odrsel").value;
+    var reg=y<8?"CRL":"CRH", lo=4*(y%8), val=(C<<2)|M;
+    $("p_pos").textContent="GPIOx_"+reg+" ["+(lo+3)+":"+lo+"]";
+    $("p_val").textContent="0b"+val.toString(2).padStart(4,"0")+" = 0x"+val.toString(16).toUpperCase();
+    var name,fig,h="<tr><th>소자</th><th>상태</th></tr>",note="";
+    if(M===0){
+      if(C===3){name="예약";fig="-";h+=row("구성",false,"CNF = 11은 입력에서 예약 값 (RM0008 Table 20)");}
+      else if(C===0){name="아날로그 입력";fig="Figure 18";
+        h+=row("출력단",false,"off")+row("슈미트 트리거",false,"off, 출력 0 고정 → IDR 읽기 = 0")+row("풀업 / 풀다운",false,"둘 다 끊김")+row("아날로그 경로",true,"핀 → ADC 입력");}
+      else if(C===1){name="플로팅 입력";fig="Figure 15";
+        h+=row("출력단",false,"off")+row("슈미트 트리거",true,"on → IDR, 대체 기능 입력, EXTI")+row("풀업 / 풀다운",false,"둘 다 끊김 (외부에서 레벨을 정해야 함)");}
+      else {name=O?"풀업 입력":"풀다운 입력";fig="Figure 15";
+        h+=row("출력단",false,"off")+row("슈미트 트리거",true,"on → IDR, 대체 기능 입력, EXTI")+row("풀업",O===1,O?"연결 (ODR = 1)":"끊김")+row("풀다운",O===0,O?"끊김":"연결 (ODR = 0)");
+        note="입력 모드에서는 ODR 비트가 데이터가 아니라 풀 방향 선택 비트이다.";}
+    } else {
+      var spd={1:"10 MHz",2:"2 MHz",3:"50 MHz"}[M], af=(C&2)!==0, od=(C&1)!==0;
+      name=(af?"대체 기능 ":"범용 ")+(od?"오픈드레인":"푸시풀")+" 출력, "+spd; fig=af?"Figure 17":"Figure 16";
+      var src=af?"주변장치 출력":"ODRy = "+O;
+      var hi=af?"데이터 1":(O===1);
+      h+=row("출력 선택기",true,af?"대체 기능 출력 선택 (ODR 경로 끊김)":"ODR 선택")
+        +row("P-MOS",!od&&(af||O===1),od?"항상 off (오픈드레인)":(af?"데이터 1일 때 on":(O?"on":"off")))
+        +row("N-MOS",af||O===0,af?"데이터 0일 때 on":(O?"off":"on"))
+        +row("핀",true,af?"주변장치가 구동":(O?(od?"Hi-Z (외부 풀업 필요)":"High 구동"):"Low 구동"))
+        +row("슈미트 트리거",true,"on → IDR은 실제 핀 상태")+row("풀업 / 풀다운",false,"끊김 (출력 구성)");
+      note="MODE는 출력단 on/off와 엣지 기울기만 고른다(DS5319 Table 38). 토글 주기는 레지스터에 쓰는 간격이 정한다.";
+    }
+    $("p_name").textContent=name+(fig!=="-"?" · "+fig:"");
+    $("p_tab").innerHTML=h; $("p_note").textContent=note;
+  }
+  ["pinsel","modesel","cnfsel","odrsel"].forEach(function(id){$(id).addEventListener("change",calcP)});
+  calcP();
+})();
+</script>
+</body></html>

@@ -231,7 +231,7 @@ p code,li code{overflow-wrap:anywhere}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · USART · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · USART · 교안 · <a href="../02_USART%20교안.html" style="color:inherit">↑ 02_USART 상위 교안</a></div>
   <h1>DMA 원형 수신과 IDLE 라인: 길이를 모르는 패킷 받기</h1>
   <p class="lead">바이트마다 인터럽트를 받으면 115200 bps에서 초당 최대 11 520번 CPU가 불려 나오고, 패킷이 언제 끝났는지도 따로 판단해야 한다. 이 예제는 DMA1 채널 6이 USART2 수신 바이트를 원형 버퍼에 CPU 개입 없이 쓰게 하고, 라인이 1프레임 이상 조용해지는 IDLE 순간에 한 번만 콜백을 받아 새로 들어온 구간을 패킷으로 잘라 낸다. 폴더는 <code>04_USART_DMA_IdleLine_c</code>이다.</p>
   <nav class="toc" aria-label="목차">

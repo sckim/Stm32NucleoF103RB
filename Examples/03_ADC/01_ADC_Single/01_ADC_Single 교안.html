@@ -208,7 +208,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · ADC · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · ADC · 교안 · <a href="../03_ADC%20교안.html" style="color:inherit">↑ 03_ADC 상위 교안</a></div>
   <h1>ADC 단일 채널: 전압을 12비트 숫자로 바꾸는 과정</h1>
   <p class="lead">마이크로컨트롤러는 전압을 직접 다룰 수 없고 숫자만 다룬다. ADC는 핀의 전압을 잠깐 붙잡아(샘플&amp;홀드) 12번의 비교로 0~4095 사이의 코드로 바꾼다. 이 교안은 ADC1을 교정한 뒤 연속 변환으로 돌려 두고, 200 ms마다 결과를 폴링해 원시 값과 mV를 UART로 출력하는 <code>01_ADC_Single</code> 예제를 블록 구조, 레지스터, 변환 시간, 양자화 오차까지 해석한다.</p>
   <nav class="toc" aria-label="목차">

@@ -210,7 +210,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · USART · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · USART · 교안 · <a href="../02_USART%20교안.html" style="color:inherit">↑ 02_USART 상위 교안</a></div>
   <h1>UART 수신 인터럽트: RXNE에서 콜백, 그리고 재무장까지</h1>
   <p class="lead">PC에서 보낸 글자는 언제 도착할지 모른다. 폴링으로 기다리면 CPU가 묶이고, 다른 일을 하다 보면 글자를 놓친다. 이 교안은 USART2가 1바이트를 받으면 RXNE 인터럽트로 CPU를 부르고, 진짜 ISR인 <code>USART2_IRQHandler</code>에서 HAL을 거쳐 사용자 콜백까지 이어지는 경로를 레지스터 수준으로 추적한다. 콜백은 플래그만 세우고 main 루프가 LED 제어와 에코를 처리한다. 대상 예제는 <code>02_USART_Interrupt</code>이다.</p>
   <nav class="toc" aria-label="목차">

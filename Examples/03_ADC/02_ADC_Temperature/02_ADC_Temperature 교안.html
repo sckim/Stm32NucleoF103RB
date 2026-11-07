@@ -208,7 +208,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · ADC · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · ADC · 교안 · <a href="../03_ADC%20교안.html" style="color:inherit">↑ 03_ADC 상위 교안</a></div>
   <h1>내부 온도 센서: 핀 없는 채널을 읽고 섭씨로 바꾼다</h1>
   <p class="lead">ADC1에는 외부 핀 말고도 칩 안쪽에 연결된 입력이 있다. 채널 16은 다이(die) 온도에 따라 출력 전압이 바뀌는 온도 센서이다. 배선 없이 읽을 수 있지만, 출력 임피던스가 커서 샘플링을 오래 해야 하고 칩마다 오프셋이 커서 절대 온도계로는 믿기 어렵다. 이 교안은 <code>TSVREFE</code>로 센서를 켜고 239.5 사이클 샘플링으로 읽은 값을 정수 연산으로 0.1 °C 단위까지 환산하는 <code>02_ADC_Temperature</code> 예제를 데이터시트 수치와 함께 해석한다.</p>
   <nav class="toc" aria-label="목차">

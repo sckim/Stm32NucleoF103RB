@@ -231,7 +231,7 @@ p code,li code{overflow-wrap:anywhere}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · USART · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · USART · 교안 · <a href="../02_USART%20교안.html" style="color:inherit">↑ 02_USART 상위 교안</a></div>
   <h1>USART 단선 반이중: 한 가닥 선으로 묻고 답하기</h1>
   <p class="lead">스마트 서보, 일부 센서 버스, RS-485는 송신선과 수신선을 따로 두지 않고 한 선을 번갈아 쓴다. 선이 하나이므로 "지금 누가 말하는가"를 하드웨어(오픈드레인 + 풀업)와 프로토콜(질문 → 응답)로 정해야 한다. 이 예제는 USART1을 단선 모드(<code>CR3.HDSEL</code> = 1, PA9)로 두고, 같은 보드의 USART3(PB10/PB11)를 가짜 슬레이브로 한 선에 묶어 PING/PONG을 주고받는다. 수신은 상대가 보내기 전에 인터럽트로 무장한다. 폴더는 <code>06_USART_HalfDuplex_c</code>이다.</p>
   <nav class="toc" aria-label="목차">

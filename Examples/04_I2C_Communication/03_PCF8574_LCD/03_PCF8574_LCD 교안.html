@@ -220,7 +220,7 @@ footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:v
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · I2C · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · I2C · 교안 · <a href="../04_I2C_Communication%20교안.html" style="color:inherit">↑ 04_I2C 상위 교안</a></div>
   <h1>PCF8574: 선 두 개로 문자 LCD를 움직인다</h1>
   <p class="lead">16x2 문자 LCD(HD44780)는 4비트 모드에서도 핀이 6개 이상 필요하다. I2C 확장 IC PCF8574를 붙이면 SCL과 SDA 두 선으로 줄어든다. 대신 글자 하나를 보내려면 I2C 바이트 4개가 필요하다. 이 교안은 I2C 프레임, PCF8574의 핀 배치, HD44780의 4비트 전송을 차례로 연결하고, I2C1을 HAL 폴링 방식으로 쓰는 <code>03_PCF8574_LCD</code> 예제를 해석한다.</p>
   <nav class="toc" aria-label="목차">

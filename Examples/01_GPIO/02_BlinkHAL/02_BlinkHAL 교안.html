@@ -217,7 +217,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 교안 · <a href="../01_GPIO%20교안.html" style="color:inherit">↑ 01_GPIO 상위 교안</a></div>
   <h1>HAL 계층의 Blink: TogglePin 한 줄과 HAL_Delay의 1 ms 틱</h1>
   <p class="lead">CubeMX가 만든 뼈대 위에 두 줄만 쓰면 LED가 깜빡인다. 그러나 그 두 줄이 어떤 레지스터를 몇 번 읽고 쓰는지, 1000 ms 지연이 실제로 몇 틱인지는 생성 코드와 HAL 라이브러리 안에 숨어 있다. 이 교안은 <code>HAL_GPIO_TogglePin</code>의 ODR→BSRR 원자적 토글과 SysTick 기반 <code>HAL_Delay</code>를 레지스터 수준에서 해석하고, Arduino·LL·레지스터 Blink와 비교한다. 대상 폴더는 <code>02_BlinkHAL</code>이다.</p>
   <nav class="toc" aria-label="목차">

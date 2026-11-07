@@ -217,7 +217,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 교안 · <a href="../01_GPIO%20교안.html" style="color:inherit">↑ 01_GPIO 상위 교안</a></div>
   <h1>레지스터 계층의 Blink: RCC·CRL·BSRR과 SysTick을 직접 쓴다</h1>
   <p class="lead">HAL·LL·Arduino가 감추던 일을 모두 걷어 내면, LED 하나를 켜는 데 필요한 것은 클럭 허용 비트 하나, 핀 설정 4비트, 출력 레지스터 한 번의 쓰기, 그리고 1 ms 틱을 만드는 SysTick 세 레지스터이다. 이 교안은 <code>RCC_APB2ENR.IOPAEN</code>, <code>GPIOA_CRL</code>의 <code>MODE5</code>/<code>CNF5</code>, <code>GPIOA_BSRR</code>, <code>STK_LOAD</code>/<code>VAL</code>/<code>CTRL</code>의 값을 RM0008·PM0056으로 계산하고, 같은 Blink를 구현한 세 계층과 비교한다. 대상 폴더는 <code>04_BlinkReg</code>이다.</p>
   <nav class="toc" aria-label="목차">

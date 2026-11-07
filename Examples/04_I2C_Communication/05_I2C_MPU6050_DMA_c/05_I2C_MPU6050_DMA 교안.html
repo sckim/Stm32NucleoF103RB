@@ -181,7 +181,7 @@ footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:v
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · I2C · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · I2C · 교안 · <a href="../04_I2C_Communication%20교안.html" style="color:inherit">↑ 04_I2C 상위 교안</a></div>
   <h1>DMA로 읽는 MPU6050: 버스가 도는 동안 CPU는 다른 일을 한다</h1>
   <p class="lead"><code>04_I2C_MPU6050_c</code>는 <code>HAL_I2C_Mem_Read()</code>로 14바이트를 읽는 약 1.6 ms 동안 CPU를 붙잡았다. 이 교안은 같은 읽기를 <code>HAL_I2C_Mem_Read_DMA()</code>로 바꾼다. 데이터 바이트는 DMA1 채널7이 <code>I2C1-&gt;DR</code>에서 메모리로 옮기고, CPU는 완료 콜백에서 결과만 받는다. 다만 HAL F1의 이 함수는 주소 단계를 여전히 폴링으로 처리한다. 어디까지가 CPU 일이고 어디부터 DMA 일인지 레지스터 수준에서 나눠 본다.</p>
   <nav class="toc" aria-label="목차">

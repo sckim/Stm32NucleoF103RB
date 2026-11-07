@@ -220,7 +220,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 교안 · <a href="../01_GPIO%20교안.html" style="color:inherit">↑ 01_GPIO 상위 교안</a></div>
   <h1>비트 밴딩: 비트 하나를 한 번의 쓰기로 바꾼다</h1>
   <p class="lead"><code>reg |= (1 &lt;&lt; n)</code>은 한 줄이지만 CPU에게는 읽기 → OR → 쓰기의 세 단계이다. 그 사이에 인터럽트가 같은 워드를 바꾸면 그 변경은 사라진다. Cortex-M3는 주변장치와 SRAM의 각 비트를 별칭(alias) 영역의 워드 하나에 대응시켜, 별칭 워드 한 번의 쓰기로 비트 하나만 바꾸게 한다. 이 교안은 RCC 클럭 허용, LD2 토글, B1 읽기, SRAM 플래그 공유를 모두 비트 밴드로 처리하는 <code>09_BitBandingReg</code> 예제의 별칭 주소를 직접 계산해 검증한다.</p>
   <nav class="toc" aria-label="목차">

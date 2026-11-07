@@ -231,7 +231,7 @@ p code,li code{overflow-wrap:anywhere}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · USART · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · USART · 교안 · <a href="../02_USART%20교안.html" style="color:inherit">↑ 02_USART 상위 교안</a></div>
   <h1>UART 명령줄 인터페이스: 줄 편집과 명령 테이블</h1>
   <p class="lead">보드를 디버깅하거나 설정을 바꿀 때마다 코드를 고쳐 다시 굽는 것은 비효율적이다. 터미널에서 <code>led on</code>, <code>peek 0x40010800</code>처럼 명령을 입력해 보드와 대화하면 된다. 이 예제는 인터럽트 링 버퍼로 바이트를 받고, main에서 줄 편집(에코·백스페이스·CR/LF)으로 한 줄을 조립한 뒤, 공백으로 토큰을 나눠 함수 포인터 명령 테이블에서 핸들러를 찾아 호출한다. 폴더는 <code>05_UART_CLI_c</code>이다.</p>
   <nav class="toc" aria-label="목차">

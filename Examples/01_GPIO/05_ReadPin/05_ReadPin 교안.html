@@ -211,7 +211,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 교안 · <a href="../01_GPIO%20교안.html" style="color:inherit">↑ 01_GPIO 상위 교안</a></div>
   <h1>버튼 입력 폴링: HAL_GPIO_ReadPin과 IDR 비트 13</h1>
   <p class="lead">출력은 MCU가 핀을 정하지만 입력은 바깥 세계가 정한다. 버튼이 언제 눌릴지 모르므로 프로그램은 핀 상태를 계속 확인하거나(폴링), 하드웨어가 알려 주기를 기다려야 한다(인터럽트). 이 교안은 첫 번째 방법인 폴링을 다룬다. <code>05_ReadPin</code>은 main 루프에서 <code>HAL_GPIO_ReadPin()</code>으로 B1(PC13)을 읽어 LD2(PA5)를 켜고 끈다. 입력 모드의 <code>CNF13/MODE13</code>, <code>GPIOC_IDR</code> 비트 13, 접점 튐(바운싱), 폴링 주기와 응답 지연의 관계까지 레지스터 수준에서 해석한다.</p>
   <nav class="toc" aria-label="목차">

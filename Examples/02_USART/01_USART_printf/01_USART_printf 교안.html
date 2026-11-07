@@ -207,7 +207,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · USART · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · USART · 교안 · <a href="../02_USART%20교안.html" style="color:inherit">↑ 02_USART 상위 교안</a></div>
   <h1>printf를 UART로: 리다이렉션 경로, 10비트 프레임, 보레이트 레지스터</h1>
   <p class="lead">MCU에는 화면이 없으므로 프로그램 내부 상태를 확인하는 가장 쉬운 창구는 시리얼 출력이다. 그런데 C 표준 라이브러리의 <code>printf</code>는 UART를 모른다. 이 교안은 <code>printf</code> → newlib <code>_write</code> → <code>__io_putchar</code> → <code>HAL_UART_Transmit</code>로 이어지는 경로를 따라가고, 그 끝에서 USART2가 한 바이트를 10비트 프레임으로 내보내는 과정과 <code>USART_BRR</code> 값을 실제 클럭으로 계산한다. 대상 예제는 <code>01_USART_printf</code>이다.</p>
   <nav class="toc" aria-label="목차">

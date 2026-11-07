@@ -159,7 +159,7 @@ footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:v
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · ADC · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · ADC · 교안 · <a href="../03_ADC%20교안.html" style="color:inherit">↑ 03_ADC 상위 교안</a></div>
   <h1>타이머 트리거와 DMA로 정확한 주기 샘플링</h1>
   <p class="lead"><code>03_ADC_Multi</code>는 여러 채널을 읽었지만 샘플 간격을 소프트웨어 대기가 정했고, CPU가 매 변환을 기다렸다. 이 교안은 그 두 일을 하드웨어에 넘긴다. 타이머(TIM3)가 정확히 1ms마다 변환을 시작하고, DMA가 결과를 원형 버퍼에 쌓는다. CPU는 버퍼가 반쯤 찼을 때와 다 찼을 때만 깨어나 평균을 낸다. <code>04_ADC_DMA_TimTrigger</code> 예제를 레지스터 수준까지 해석한다.</p>
   <nav class="toc" aria-label="목차">

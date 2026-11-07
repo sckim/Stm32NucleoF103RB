@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>03_ADC 상위 교안</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* 상위 교안(주변장치 개요). 01_GPIO 상위 교안과 같은 토큰·클래스를 쓴다.
+   색 규칙: 신호 경로 = 파랑(--c0), 선택·제어 비트 = 주황(--c1), 플래그·이벤트 = 청록(--c2), 하드웨어 소자 = 보라(--c3). */
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --surface2:#E7ECF0; --fg:#14222C; --muted:#52636F; --line:#CBD5DC;
+  --c0:#1D4ED8; --c0-soft:#DCE6FB; --c1:#C2410C; --c1-soft:#FDE6DA; --c2:#0F766E; --c2-soft:#D5F0EC; --c3:#7E22CE; --c3-soft:#EEDFFB;
+  --warn:#9A3412; --warn-bg:#FFF1E6; --ok:#166534; --ok-bg:#E4F5EA;
+  --font-body:"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.75;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));counter-reset:fig}
+.wrap{max-width:860px;margin:0 auto}
+header{padding-block:40px 8px}
+.kicker{font-family:var(--font-mono);font-size:13px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.kicker a{color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.25;margin:8px 0 12px;text-wrap:balance;font-weight:700}
+.lead{color:var(--muted);margin:0;max-width:66ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0}
+nav.toc a{display:block;padding:6px 12px;border:1px solid var(--line);border-radius:6px;color:var(--fg);text-decoration:none;font-size:14px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--c0);outline:2px solid var(--c0);outline-offset:1px}
+section{margin-top:56px}
+h2{font-size:24px;line-height:1.35;margin:0 0 12px;text-wrap:balance;font-weight:700}
+h3{font-size:18px;margin:28px 0 8px;font-weight:700}
+p{margin:0 0 14px;max-width:68ch}
+ul,ol{margin:0 0 14px;padding-left:22px;max-width:68ch}
+li{margin-bottom:4px}
+a{color:var(--c0)}
+code{font-family:var(--font-mono);font-size:.9em;background:var(--surface2);padding:1px 6px;border-radius:4px;overflow-wrap:anywhere}
+.k0{color:var(--c0);font-weight:700} .k1{color:var(--c1);font-weight:700} .k2{color:var(--c2);font-weight:700} .k3{color:var(--c3);font-weight:700}
+.box{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:16px 18px;margin:16px 0}
+.box.warn{background:var(--warn-bg);border-color:var(--warn)} .box.ok{background:var(--ok-bg);border-color:var(--ok)}
+.box > :last-child{margin-bottom:0}
+.label{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.eqv{display:inline-block;font-family:var(--font-mono);font-size:11.5px;padding:0 6px;border-radius:4px;background:var(--c3-soft);color:var(--c3);vertical-align:1px}
+.tablewrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:15px;background:var(--surface)}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--surface2);font-weight:700;white-space:nowrap}
+td.m,th.m{font-family:var(--font-mono);font-size:13.5px}
+td.on{color:var(--ok);font-weight:700} td.off{color:var(--muted)}
+.eq{font-family:var(--font-mono);font-size:14.5px;background:var(--surface2);border-left:4px solid var(--c0);padding:10px 14px;margin:14px 0;overflow-x:auto;white-space:pre-wrap}
+.flow{list-style:none;padding:0;margin:16px 0;display:grid;max-width:none}
+.flow li{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:0;padding:0 0 14px;position:relative}
+.flow li:not(:last-child)::before{content:"";position:absolute;left:16px;top:34px;bottom:0;width:2px;background:var(--line)}
+.flow .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:14px;font-weight:600;background:var(--surface2);border:2px solid var(--c0);color:var(--c0)}
+.flow .tx{min-width:0} .flow .tx b{display:block} .flow .tx span{color:var(--muted);font-size:14.5px}
+
+/* 원본 그림(PDF에서 잘라 낸 PNG): 다크모드에서도 흰 바탕 카드에 넣는다 */
+figure{margin:18px 0;counter-increment:fig}
+figure.src .img{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px}
+figure.src img{display:block;width:100%;height:auto}
+figure.src.narrow .img{max-width:560px;margin:0 auto}
+figcaption{font-size:14px;color:var(--muted);margin:6px 2px 0}
+figcaption::before{content:"그림 " counter(fig) ". ";font-weight:700;color:var(--fg)}
+.cite{display:block;font-family:var(--font-mono);font-size:12.5px;margin-top:2px}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.figs figure{margin:0}
+
+/* 등가 모델 SVG */
+.diag svg{display:block;width:100%;height:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.diag .bx{fill:var(--surface);stroke:var(--fg);stroke-width:1.4}
+.diag .hw{fill:var(--c3-soft);stroke:var(--c3)} .diag .sel{fill:var(--c1-soft);stroke:var(--c1)} .diag .flg{fill:var(--c2-soft);stroke:var(--c2)}
+.diag .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.diag .tc{font-family:var(--font-body);font-size:13px;fill:var(--fg);text-anchor:middle}
+.diag .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.diag .sc{font-family:var(--font-mono);font-size:11px;fill:var(--muted);text-anchor:middle}
+.diag .o{font-family:var(--font-mono);font-size:11px;fill:var(--c1)}
+.diag .w{stroke:var(--c0);stroke-width:1.8;fill:none}
+.diag .wc{stroke:var(--c1);stroke-width:1.5;fill:none}
+.diag .wm{stroke:var(--muted);stroke-width:1.3;fill:none}
+.diag .dash{stroke:var(--muted);stroke-width:1.2;fill:none;stroke-dasharray:5 4}
+.diag .ah{fill:var(--c0)} .diag .ahc{fill:var(--c1)} .diag .ahm{fill:var(--muted)}
+.diag .sig{stroke:var(--c0);stroke-width:2;fill:none} .diag .sig2{stroke:var(--c2);stroke-width:2;fill:none} .diag .sig3{stroke:var(--c3);stroke-width:2;fill:none}
+.diag .isr{fill:var(--c1-soft);stroke:var(--c1)}
+
+/* 시뮬레이터 */
+.sim{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:18px;margin:16px 0}
+.subhead{font-weight:700;margin:0 0 6px}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px 16px;margin:10px 0}
+.ctl label{display:block;font-size:14px;color:var(--muted)}
+.ctl select,.ctl input{font-family:inherit;font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl select:focus-visible,.ctl input:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+.regs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.stat{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.stat .k{font-size:12px;color:var(--muted);font-family:var(--font-mono)}
+.stat .v{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.35;overflow-wrap:anywhere}
+.note{font-size:14px;color:var(--muted);margin:8px 0 0}
+.verdict{font-weight:700} .verdict.good{color:var(--ok)} .verdict.bad{color:var(--warn)}
+
+details{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0}
+summary{cursor:pointer;padding:12px 16px;font-weight:500;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--c0)} details[open] summary::before{content:"▾ "}
+summary:focus-visible{outline:3px solid var(--fg);outline-offset:-3px;border-radius:8px}
+details .ans{padding:0 16px 14px} details .ans p{margin-bottom:8px}
+.nextprev{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+.nextprev a{border:1px solid var(--line);border-radius:8px;padding:8px 14px;text-decoration:none;color:var(--c0);background:var(--surface)}
+footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+footer ul{max-width:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">STM32F103RB · 03_ADC · 상위 교안</div>
+  <h1>ADC: 핀의 전압 하나가 12비트 숫자가 되기까지</h1>
+  <p class="lead">ADC(Analog-to-Digital Converter, 아날로그-디지털 변환기)는 디지털논리에서 배운 멀티플렉서, 카운터, 상태기계, 크기 비교기에 아날로그 소자 셋(스위치, 커패시터, 비교기)을 더해 "연속적인 전압"을 "정수"로 바꾸는 주변장치이다. 이 교안은 STM32F103RB를 기준으로, 핀에 걸린 전압이 아날로그 멀티플렉서를 지나 커패시터에 붙잡히고, 축차 비교로 12비트 코드가 되어 데이터 레지스터에 놓이기까지의 경로를 원본 블록도 위에서 따라간다. 그다음 그 결과가 플래그, 인터럽트, DMA 요청으로 바뀌어 칩 안의 다른 장치로 퍼져 나가는 길을 본다. 레지스터 비트는 그 경로 위의 스위치·선택기·플래그로만 등장한다. 코드와 라이브러리는 하부 예제 교안에서 다룬다.</p>
+  <nav class="toc" aria-label="목차">
+    <a href="#s1">1. 문제 정의</a><a href="#s2">2. 일반 개념</a><a href="#s3">3. F103 블록도</a><a href="#s4">4. 클럭과 시간</a><a href="#s5">5. 제어 요소</a><a href="#s6">6. 이벤트 생성</a><a href="#s7">7. 동작 시나리오</a><a href="#s8">8. 설계상 한계</a><a href="#s9">9. 확인 문제</a><a href="#s10">10. 하부 예제</a>
+  </nav>
+</header>
+
+<div class="box">
+  <div class="label">근거 문서 (저장소 Docs 폴더)</div>
+  <p>이 교안의 사실은 아래 네 문서에서만 가져왔다. 인용마다 문서, 쪽, Figure/Table 번호를 붙였고 링크를 누르면 해당 쪽이 열린다. 문서에 내부 구현이 나오지 않아 디지털논리 소자로 바꿔 그린 부분에는 <span class="eqv">등가 모델</span> 표시를 달았다. GPIO·NVIC·클럭 게이트 같은 공통 개념은 <a href="../01_GPIO/01_GPIO%20교안.html">01_GPIO 상위 교안</a>에서 다뤘다.</p>
+  <ul>
+    <li><a href="../../Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a>: 참조 매뉴얼(Reference Manual). 11장 ADC, 7장 RCC(클럭), 13장 DMA</li>
+    <li><a href="../../Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a>: STM32F103x8/xB 데이터시트. ADC 전기적 특성(Table 47~50), 온도 센서(Table 51), 내부 기준전압(Table 12)</li>
+    <li><a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a>: Cortex-M3 프로그래밍 매뉴얼. 예외 번호와 벡터 주소(Table 16)</li>
+    <li><a href="../../Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a>: F103x8/xB 정오표(Errata sheet). 칩이 매뉴얼과 다르게 동작하는 알려진 결함과 회피 방법</li>
+  </ul>
+</div>
+
+<details class="gloss"><summary>약어 모음 (본문에서도 처음 나올 때 풀어 썼다)</summary><div class="ans"><div class="tablewrap"><table>
+<tr><th>약어</th><th>풀네임</th><th>뜻</th></tr>
+<tr><td class="m">ADC / DAC</td><td>Analog-to-Digital / Digital-to-Analog Converter</td><td>전압 → 숫자 변환기 / 숫자 → 전압 변환기</td></tr>
+<tr><td class="m">SAR</td><td>Successive Approximation Register</td><td>축차 비교(이진 탐색)로 비트를 MSB부터 정하는 레지스터, 그 방식의 ADC</td></tr>
+<tr><td class="m">S&amp;H</td><td>Sample-and-Hold</td><td>입력 전압을 잠깐 커패시터에 붙잡아 두는 회로</td></tr>
+<tr><td class="m">LSB / MSB</td><td>Least / Most Significant Bit</td><td>최하위 / 최상위 비트. "1 LSB"는 코드 1칸에 해당하는 전압</td></tr>
+<tr><td class="m">V<sub>DDA</sub> / V<sub>SSA</sub></td><td>analog supply / analog ground</td><td>ADC 아날로그 전원 / 접지</td></tr>
+<tr><td class="m">V<sub>REF+</sub> / V<sub>REF−</sub></td><td>positive / negative reference voltage</td><td>변환 범위의 위 / 아래 끝 기준전압</td></tr>
+<tr><td class="m">V<sub>REFINT</sub> · V<sub>SENSE</sub></td><td>internal reference voltage · sensor voltage</td><td>칩 안의 약 1.2 V 기준전압(채널 17) · 온도 센서 출력(채널 16)</td></tr>
+<tr><td class="m">ADCCLK · PCLK2 · APB2</td><td>ADC clock · APB2 peripheral clock · Advanced Peripheral Bus 2</td><td>ADC 변환 클럭 · 고속 주변장치 버스 클럭 · 고속 주변장치 버스</td></tr>
+<tr><td class="m">ADCPRE · RCC</td><td>ADC prescaler · Reset and Clock Control</td><td>PCLK2 → ADCCLK 분주 선택 · 리셋·클럭 제어기</td></tr>
+<tr><td class="m">SMP · T<sub>conv</sub></td><td>sample time selection · total conversion time</td><td>채널별 샘플링 길이 · 샘플링 + 12.5 클럭</td></tr>
+<tr><td class="m">EOC · JEOC · AWD</td><td>End Of Conversion · Injected End Of Conversion · Analog WatchDog flag</td><td>정규 변환 끝 · 주입 그룹 변환 끝 · 전압 창 이탈</td></tr>
+<tr><td class="m">STRT · JSTRT</td><td>regular / injected channel Start flag</td><td>정규 / 주입 변환이 시작됨 (인터럽트 없음)</td></tr>
+<tr><td class="m">EOCIE · JEOCIE · AWDIE</td><td>… Interrupt Enable</td><td>해당 플래그를 인터럽트로 내보낼지</td></tr>
+<tr><td class="m">ADON · CONT · SCAN</td><td>A/D converter ON · Continuous · Scan mode</td><td>전원·시작 · 연속 변환 · 여러 채널 차례 변환</td></tr>
+<tr><td class="m">DISCEN · DISCNUM</td><td>Discontinuous mode Enable · channel count</td><td>트리거마다 n채널씩 끊어 변환 · 그 n</td></tr>
+<tr><td class="m">SQR · L · JSQR</td><td>regular SeQuence Register · sequence Length · injected sequence register</td><td>정규 그룹의 채널 순서표 · 길이 · 주입 그룹 순서표</td></tr>
+<tr><td class="m">DR · JDR · JOFR</td><td>Data Register · injected data register · injected offset register</td><td>정규 결과(1개) · 주입 결과(4개) · 주입 결과에서 뺄 오프셋</td></tr>
+<tr><td class="m">ALIGN · SEXT</td><td>data alignment · sign extension</td><td>결과를 오른쪽/왼쪽 정렬 · 부호 확장 비트</td></tr>
+<tr><td class="m">EXTTRIG · EXTSEL · SWSTART</td><td>External trigger enable · External event select · Software start</td><td>외부 트리거 허용 · 8개 중 트리거 선택 · 소프트웨어 시작 비트</td></tr>
+<tr><td class="m">TRGO · MMS</td><td>Trigger Output · Master Mode Selection</td><td>타이머가 내보내는 트리거 · 그 트리거로 무엇을 낼지</td></tr>
+<tr><td class="m">TSVREFE</td><td>Temperature Sensor and V<sub>REFINT</sub> Enable</td><td>채널 16·17 내부 소스 켜기</td></tr>
+<tr><td class="m">AWDEN · JAWDEN · AWDSGL · AWDCH</td><td>AWD Enable (regular / injected) · AWD on Single channel · AWD Channel</td><td>워치독 감시 대상 선택 스위치</td></tr>
+<tr><td class="m">HTR · LTR</td><td>High / Low Threshold Register</td><td>워치독 창의 위 / 아래 문턱(12비트)</td></tr>
+<tr><td class="m">CAL · RSTCAL · t<sub>CAL</sub></td><td>Calibration · Reset Calibration · calibration time</td><td>자체 교정 시작 · 교정값 초기화 · 교정 시간</td></tr>
+<tr><td class="m">t<sub>STAB</sub></td><td>power-up (stabilization) time</td><td>ADON 후 정확한 변환이 가능해질 때까지</td></tr>
+<tr><td class="m">R<sub>AIN</sub> · R<sub>ADC</sub> · C<sub>ADC</sub></td><td>external input impedance · sampling switch resistance · sample-and-hold capacitor</td><td>신호원 저항 · 칩 안 스위치 저항 · 칩 안 홀드 커패시터</td></tr>
+<tr><td class="m">E<sub>T</sub> · E<sub>O</sub> · E<sub>G</sub> · E<sub>D</sub> · E<sub>L</sub></td><td>Total unadjusted · Offset · Gain · Differential / Integral linearity error</td><td>총 오차 · 오프셋 · 이득 · 미분 / 적분 비선형 오차</td></tr>
+<tr><td class="m">DMA · HT · TC</td><td>Direct Memory Access · Half Transfer · Transfer Complete</td><td>CPU를 거치지 않는 전송 · 절반 전송 완료 · 전체 전송 완료</td></tr>
+<tr><td class="m">NVIC · IRQ · ISR</td><td>Nested Vectored Interrupt Controller · Interrupt Request · Interrupt Service Routine</td><td>인터럽트 제어기 · 인터럽트 번호 · 인터럽트 처리 루틴</td></tr>
+<tr><td class="m">CNF · MODE</td><td>GPIO port configuration · mode bits</td><td>핀 설정 비트(아날로그 입력 = 둘 다 00)</td></tr>
+<tr><td class="m">rc_w0</td><td>read / clear by writing 0</td><td>읽을 수 있고, 0을 쓰면 지워지는 비트</td></tr>
+</table></div></div></details>
+
+<!-- ============================================================ 1 -->
+<section id="s1">
+<h2>1. 문제 정의: ADC가 없으면 CPU가 무엇을 직접 해야 하는가</h2>
+<p>가변저항이나 센서가 내는 전압을 숫자로 읽고 싶다. 디지털 입력 핀은 전압을 문턱 하나와 비교해 0 또는 1만 알려 준다(01_GPIO의 슈미트 트리거). 12비트 분해능, 즉 4096단계로 읽으려면 "기준전압을 4096칸으로 나눈 눈금 중 어디에 있는가"를 알아내야 한다. ADC가 없다면 CPU가 외부 비교기 하나와 GPIO로 만든 DAC(Digital-to-Analog Converter, 디지털-아날로그 변환기)를 써서 이 일을 직접 한다.</p>
+<div class="tablewrap"><table>
+<tr><th>풀어야 할 문제</th><th>ADC가 없다면 CPU가 하는 일</th><th>ADC가 대신하는 소자</th></tr>
+<tr><td>12비트 값 찾기</td><td>DAC에 시험값을 쓰고 비교기 출력을 읽는 일을 MSB부터 12번 반복한다(이진 탐색)</td><td>SAR 레지스터 + DAC + 비교기(축차 비교 상태기계)</td></tr>
+<tr><td>비교하는 동안 입력이 변함</td><td>12번 비교하는 사이에 입력이 바뀌면 앞 비트와 뒤 비트가 서로 다른 전압을 잰 셈이 된다</td><td>샘플-홀드(S&amp;H): 스위치 + 커패시터</td></tr>
+<tr><td>여러 입력 읽기</td><td>외부 아날로그 스위치를 GPIO로 바꾸고, 바꾼 뒤 안정될 때까지 기다린다</td><td>아날로그 멀티플렉서 + 채널 순서표를 읽는 카운터(시퀀서)</td></tr>
+<tr><td>일정한 간격으로 샘플링</td><td>코드 실행 시간과 인터럽트 때문에 간격이 흔들린다(지터)</td><td>타이머 이벤트를 고르는 트리거 선택기 + 엣지 검출기</td></tr>
+<tr><td>결과 보관과 운반</td><td>변환마다 CPU가 값을 읽어 배열에 넣는다</td><td>데이터 레지스터 + DMA 요청선</td></tr>
+<tr><td>범위 이탈 감시</td><td>값을 읽을 때마다 상한·하한과 비교한다</td><td>12비트 크기 비교기 두 개(아날로그 워치독)</td></tr>
+</table></div>
+<p>F103의 ADC는 이 전부를 하드웨어로 한다. 변환 하나는 샘플링 시간 + 12.5 ADC 클럭이며, ADC 클럭 14 MHz와 최소 샘플링 1.5 클럭이면 14 클럭 = 1 µs이다(RM0008 11.6, <a href="../../Docs/RM0008_Reference_manual.pdf#page=225">p.225</a>). 그동안 CPU는 아무것도 하지 않아도 된다. 이 그룹 예제들이 폴링 → 타이머 트리거 + DMA → 하드웨어 비교(워치독) → 기준전압 보정으로 발전해 가는 것은, 위 표의 오른쪽 열을 하나씩 더 많이 하드웨어에 맡기는 과정이다.</p>
+</section>
+
+<!-- ============================================================ 2 -->
+<section id="s2">
+<h2>2. 칩과 무관한 일반 개념</h2>
+<h3>샘플링과 양자화</h3>
+<p>ADC는 두 가지 "자르기"를 한다. <b>샘플링</b>은 시간을 자른다. 연속 신호에서 특정 순간의 값만 골라낸다. <b>양자화</b>는 크기를 자른다. 골라낸 전압을 2<sup>N</sup>개의 칸 중 하나로 반올림(정확히는 버림)한다. N비트 ADC에서 한 칸의 폭을 1 LSB라고 한다.</p>
+<div class="eq">1 LSB = V_REF+ / 2^N            (DS5319 Figure 37의 정의, N = 12이면 4096칸)
+코드 k  ⇔  k·LSB ≤ V_IN &lt; (k+1)·LSB   (이상적인 변환 곡선)
+V_REF+ = 3.3 V 이면 1 LSB = 0.806 mV, 최대 코드 4095 = 3.299 V</div>
+<p>코드를 전압으로 되돌릴 때 V<sub>REF+</sub>/4096을 곱하는 것이 정의에 맞다. 하부 예제들처럼 /4095를 쓰면 전체 범위에서 차이가 1 LSB보다 작으므로 실용상 문제는 없다. 양자화 때문에 생기는 오차는 최대 1 LSB(버림 기준)이며, 이보다 정밀하게 읽을 수는 없다.</p>
+<figure class="src"><div class="img"><a href="img/DS5319_Fig37_p76.png"><img src="img/DS5319_Fig37_p76.png" alt="ADC 정확도 특성: 이상적 계단과 실제 계단" width="1155" height="605" loading="lazy"></a></div>
+<figcaption>(2)가 이상적인 계단 곡선이다. 입력이 1 LSB 오를 때마다 코드가 1씩 오른다. (1)은 실제 칩의 계단으로, 첫 계단이 밀리는 오프셋 오차 E<sub>O</sub>, 끝 계단이 밀리는 이득 오차 E<sub>G</sub>, 계단 폭이 고르지 않은 미분 비선형 오차 E<sub>D</sub>, 직선에서 휘는 적분 비선형 오차 E<sub>L</sub>가 겹쳐 총 오차 E<sub>T</sub>가 된다(8장에서 수치를 본다). 그림 위쪽 괄호가 1 LSB의 정의이다.
+<span class="cite">출처: <a href="../../Docs/Datasheet_stm32f103.pdf#page=76">DS5319 Rev 19, p.76</a>, Figure 37. ADC accuracy characteristics</span></figcaption></figure>
+
+<h3>샘플-홀드: 왜 붙잡아야 하는가</h3>
+<p>변환에는 시간이 걸린다. 그 사이 입력이 1 LSB(0.8 mV)만 움직여도 결과가 틀어진다. 그래서 변환 전에 스위치를 닫아 작은 커패시터를 입력 전압까지 충전하고(샘플), 스위치를 열어 그 전압을 붙잡은 채(홀드) 변환한다. 디지털논리의 D 래치와 같은 발상이다. 클럭이 High인 동안 입력을 따라가고(투명), Low가 되면 마지막 값을 붙잡는다. 다른 점은 저장하는 것이 비트가 아니라 전하라는 것이다.</p>
+<figure class="src"><div class="img"><a href="img/DS5319_Fig38_p77.png"><img src="img/DS5319_Fig38_p77.png" alt="ADC 입력의 전형적 연결: R_AIN, 스위치, R_ADC, C_ADC" width="1157" height="489" loading="lazy"></a></div>
+<figcaption>왼쪽부터 신호원 V<sub>AIN</sub>과 그 내부 저항 R<sub>AIN</sub>, 기판 기생 용량, 핀, I/O 아날로그 스위치, 채널을 고르는 "Sampling switch with multiplexing", 스위치 저항 R<sub>ADC</sub>, 홀드 커패시터 C<sub>ADC</sub>, 변환기 순서이다. 회색 상자가 샘플-홀드 ADC이다. 샘플링 동안 C<sub>ADC</sub>는 R<sub>AIN</sub> + R<sub>ADC</sub>를 거쳐 충전되므로 RC 회로가 된다. Table 47은 R<sub>ADC</sub> 최대 1 kΩ, C<sub>ADC</sub> 최대 8 pF로 적는다.
+<span class="cite">출처: <a href="../../Docs/Datasheet_stm32f103.pdf#page=77">DS5319 Rev 19, p.77</a>, Figure 38. Typical connection diagram using the ADC (수치: <a href="../../Docs/Datasheet_stm32f103.pdf#page=74">p.74</a>, Table 47)</span></figcaption></figure>
+<p>RC 회로의 커패시터 전압은 목표값과의 차이가 시정수 τ = (R<sub>AIN</sub> + R<sub>ADC</sub>) × C<sub>ADC</sub>마다 1/e로 줄어든다. 남은 차이가 1/4 LSB, 즉 전체의 2<sup>−(N+2)</sup>보다 작아지려면 샘플링 시간 T<sub>S</sub>가 τ × ln(2<sup>N+2</sup>)보다 길어야 한다. 이 식을 R<sub>AIN</sub>에 대해 풀면 데이터시트의 식 1이 된다.</p>
+<div class="eq">R_AIN &lt; T_S / ( f_ADC × C_ADC × ln(2^(N+2)) ) − R_ADC      (DS5319 Equation 1, p.75, N = 12)
+T_S는 ADC 클럭 수(1.5, 7.5, … 239.5),  ln(2^14) ≈ 9.70</div>
+<p>결론은 간단하다. <b>신호원 저항이 클수록 샘플링을 길게</b> 해야 한다. 샘플링을 길게 하면 변환 하나가 길어지므로 초당 샘플 수가 줄어든다. 이 맞교환은 4장 계산기와 8장에서 다시 본다.</p>
+
+<h3>축차 비교(SAR): 12번의 이진 탐색</h3>
+<p>홀드된 전압을 숫자로 바꾸는 방법 중 F103이 쓰는 것은 축차 비교(successive approximation)이다(RM0008 11.1, <a href="../../Docs/RM0008_Reference_manual.pdf#page=215">p.215</a>). 숫자 맞히기 놀이와 같다. "절반보다 큰가?"를 묻고, 답에 따라 범위를 반으로 줄이는 일을 12번 하면 4096칸 중 하나가 정해진다.</p>
+<ol>
+  <li>SAR 레지스터를 1000 0000 0000(가운데 값)으로 놓는다.</li>
+  <li>DAC가 이 코드를 전압 V<sub>DAC</sub>로 바꾼다. 비교기가 홀드 전압과 비교한다.</li>
+  <li>V<sub>hold</sub> ≥ V<sub>DAC</sub>이면 그 비트를 1로 남기고, 아니면 0으로 되돌린다.</li>
+  <li>다음 아래 비트를 1로 놓고 2~3을 반복한다. 비트 0까지 끝나면 SAR 레지스터 값이 결과이다.</li>
+</ol>
+<figure class="diag"><svg viewBox="0 0 680 250" role="img" aria-label="샘플-홀드와 SAR 변환기의 등가 구조">
+<text class="t" x="10" y="64">V_IN</text>
+<line class="w" x1="46" y1="60" x2="60" y2="60"/>
+<rect class="bx sel" x="60" y="36" width="100" height="48" rx="4"/><text class="tc" x="110" y="56">샘플 스위치</text><text class="sc" x="110" y="73">SMP 동안 닫힘</text>
+<line class="w" x1="160" y1="60" x2="190" y2="60"/>
+<rect class="bx hw" x="190" y="36" width="100" height="48" rx="4"/><text class="tc" x="240" y="56">C_ADC</text><text class="sc" x="240" y="73">홀드 커패시터</text>
+<line class="w" x1="290" y1="60" x2="314" y2="60"/><polygon class="ah" points="320,60 312,55 312,65"/>
+<rect class="bx hw" x="320" y="36" width="120" height="48" rx="4"/><text class="tc" x="380" y="56">비교기</text><text class="sc" x="380" y="73">V_hold ≥ V_DAC ?</text>
+<line class="w" x1="440" y1="60" x2="464" y2="60"/><polygon class="ah" points="470,60 462,55 462,65"/>
+<rect class="bx sel" x="470" y="36" width="200" height="48" rx="4"/><text class="tc" x="570" y="56">SAR 레지스터 + 상태기계</text><text class="sc" x="570" y="73">MSB부터 한 비트씩 결정</text>
+<line class="wc" x1="570" y1="14" x2="570" y2="36"/><text class="o" x="578" y="24">ADCCLK</text>
+<path class="wm" d="M540,84 V162 H460"/><polygon class="ahm" points="460,162 468,157 468,167"/><text class="s" x="476" y="128">시험 코드</text>
+<rect class="bx hw" x="300" y="140" width="160" height="46" rx="4"/><text class="tc" x="380" y="160">DAC</text><text class="sc" x="380" y="177">커패시터 뱅크</text>
+<path class="wm" d="M380,140 V90"/><polygon class="ahm" points="380,84 375,92 385,92"/><text class="s" x="388" y="118">V_DAC</text>
+<path class="wm" d="M380,214 V192"/><polygon class="ahm" points="380,186 375,194 385,194"/><text class="s" x="300" y="230">V_REF+ (= V_DDA)</text>
+<path class="w" d="M640,84 V200"/><polygon class="ah" points="640,206 635,198 645,198"/>
+<rect class="bx flg" x="520" y="206" width="150" height="34" rx="4"/><text class="tc" x="595" y="228">12비트 결과</text>
+<text class="s" x="20" y="130">샘플 단계: 스위치 닫힘,</text><text class="s" x="20" y="146">C_ADC가 V_IN까지 충전</text>
+<text class="s" x="20" y="176">변환 단계: 스위치 열림,</text><text class="s" x="20" y="192">비교 12회</text>
+</svg><figcaption><span class="eqv">등가 모델</span> 축차 비교형 ADC의 교과서적 구조이다. RM0008은 F103 ADC가 "successive approximation" 방식이고(11.1), 교정이 "내부 커패시터 뱅크"의 오차를 보정한다고(11.4) 적을 뿐, 비교기와 DAC의 내부 회로는 공개하지 않는다. 변환 12.5 클럭이 12비트 결정에 쓰인다는 것도 "비트당 약 1클럭"이라는 등가 해석이다.</figcaption></figure>
+
+<div class="sim" id="sarsim">
+  <div class="subhead">축차 비교 따라가기: 12번의 질문으로 코드가 정해지는 과정</div>
+  <div class="ctl">
+    <div><label for="svin">입력 전압 V_IN (V)</label><input id="svin" type="number" min="0" max="3.6" step="0.001" value="1.000"></div>
+    <div><label for="svref">기준전압 V_REF+ (V)</label><select id="svref"><option value="3.3" selected>3.3</option><option value="3.0">3.0</option><option value="2.4">2.4 (최소, Table 65)</option><option value="3.6">3.6 (최대)</option></select></div>
+  </div>
+  <div class="diag"><svg id="ssvg" viewBox="0 0 680 230" role="img" aria-label="축차 비교 단계별 DAC 시험 전압"></svg></div>
+  <div class="regs">
+    <div class="stat"><div class="k">결과 코드</div><div class="v" id="s_code">-</div></div>
+    <div class="stat"><div class="k">2진수 (b11 … b0)</div><div class="v" id="s_bin" style="font-size:15px">-</div></div>
+    <div class="stat"><div class="k">1 LSB</div><div class="v" id="s_lsb">-</div></div>
+    <div class="stat"><div class="k">코드 → 전압 (k·LSB)</div><div class="v" id="s_back">-</div></div>
+    <div class="stat"><div class="k">양자화 오차</div><div class="v" id="s_err">-</div></div>
+  </div>
+  <p class="note" id="s_note"></p>
+</div>
+</section>
+
+<!-- ============================================================ 3 -->
+<section id="s3">
+<h2>3. F103 내부 구현 블록도</h2>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig22_p217.png"><img src="img/RM0008_Fig22_p217.png" alt="ADC 단일 블록도" width="1154" height="1521" loading="lazy"></a></div>
+<figcaption>왼쪽 세로줄이 칩 경계(핀)이다. ADCx_IN0~IN15가 GPIO 포트를 거쳐 Analog MUX로 들어가고, 칩 안의 Temp. sensor와 V<sub>REFINT</sub>도 같은 MUX에 붙는다. MUX 출력은 Regular channels(최대 16개)과 Injected channels(최대 4개) 두 줄로 변환기에 들어간다. 변환기는 오른쪽의 ADCCLK(From ADC prescaler)로 돌고, 결과는 Regular data register(16비트 1개)와 Injected data registers(16비트 4개)에 놓인다. 위쪽은 Flags(EOC·JEOC·AWD)와 Interrupt enable bits가 AND된 뒤 OR되어 NVIC로 가는 경로, 그 아래 Analog watchdog(문턱 두 개와 비교 결과)이다. 아래쪽 두 사다리꼴이 시작 트리거 선택기(JEXTSEL·EXTSEL)이고, 출력은 JEXTRIG·EXTRIG 비트와 AND된다. 오른쪽 아래 "Triggers for ADC3" 상자와 TIM8 입력(주석 2)은 고밀도 이상 제품용이라 F103RB(중밀도)에는 없다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=217">RM0008 Rev 21, p.217</a>, Figure 22. Single ADC block diagram</span></figcaption></figure>
+
+<p>신호를 입력 → 클럭 → 처리 → 플래그/이벤트 → 출력 순서로 따라간다.</p>
+<ol class="flow">
+  <li><span class="n">1</span><div class="tx"><b>입력: 핀 → GPIO 아날로그 경로 → Analog MUX</b><span>핀을 아날로그 입력(CNF = 00, MODE = 00, RM0008 Table 20, <a href="../../Docs/RM0008_Reference_manual.pdf#page=161">p.161</a>)으로 두면 출력 버퍼와 풀업·풀다운이 끊기고, 슈미트 트리거가 꺼져 전압이 그대로 "Analog Input" 선으로 간다(9.1.10, 아래 그림). 채널 16은 온도 센서, 17은 V<sub>REFINT</sub>이며 ADC1에만 연결된다(11.3.3 주석, <a href="../../Docs/RM0008_Reference_manual.pdf#page=219">p.219</a>).</span></div></li>
+  <li><span class="n">2</span><div class="tx"><b>클럭: PCLK2 → ÷ADCPRE → ADCCLK(최대 14 MHz)</b><span>ADCCLK는 PCLK2와 동기이고 RCC의 전용 분주기에서 나온다(11.3.2, <a href="../../Docs/RM0008_Reference_manual.pdf#page=218">p.218</a>). 샘플링 길이와 변환 단계가 모두 이 클럭의 개수로 정해진다(4장).</span></div></li>
+  <li><span class="n">3</span><div class="tx"><b>처리: 트리거 → 시퀀서가 채널을 고름 → 샘플 → 축차 비교</b><span>트리거가 오면 순서표(SQR)의 다음 채널 번호가 MUX를 고르고, 그 채널의 SMP 길이만큼 샘플링한 뒤 12.5 클럭 동안 변환한다(11.6).</span></div></li>
+  <li><span class="n">4</span><div class="tx"><b>플래그/이벤트: DR에 결과 → EOC, 워치독 비교 → AWD</b><span>정규 채널 결과는 16비트 ADC_DR에 정렬되어 놓이고 EOC가 1이 된다. 같은 순간 워치독이 결과를 문턱과 비교해 창 밖이면 AWD를 세운다(11.3.4, 11.3.7).</span></div></li>
+  <li><span class="n">5</span><div class="tx"><b>출력: 인터럽트 선 · DMA 요청 · 버스 읽기</b><span>허용된 플래그는 ADC 인터럽트 선으로, 정규 변환의 끝은 DMA 요청선으로 나간다. CPU나 DMA가 버스로 DR을 읽는다(6장).</span></div></li>
+</ol>
+
+<div class="figs">
+<figure class="src"><div class="img"><a href="img/RM0008_Fig18_p166.png"><img src="img/RM0008_Fig18_p166.png" alt="GPIO 고임피던스 아날로그 설정" width="1157" height="633" loading="lazy"></a></div>
+<figcaption>아날로그 설정의 핀. 출력 스위치가 열리고, 슈미트 트리거는 꺼져(off) 입력 데이터 레지스터에는 0이 읽힌다. 핀 전압은 맨 위 "Analog Input" 선으로 ADC에 간다. 보호 다이오드는 남아 있다. <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=166">RM0008 Rev 21, p.166</a>, Figure 18. High impedance-analog configuration</span></figcaption></figure>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig39_p235.png"><img src="img/RM0008_Fig39_p235.png" alt="온도 센서와 VREFINT 채널" width="1157" height="640" loading="lazy"></a></div>
+<figcaption>칩 안의 두 소스. 가운데 사다리꼴은 멀티플렉서처럼 그려졌지만, 본문은 TSVREFE 하나가 두 채널을 <b>함께</b> 켠다고 적는다(11.10 주석). 그러므로 "두 개를 동시에 여닫는 스위치"로 읽어야 한다. 실제 채널 선택은 ADC의 MUX(IN16/IN17)가 한다. <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=235">RM0008 Rev 21, p.235</a>, Figure 39. Temperature sensor and VREFINT channel block diagram</span></figcaption></figure>
+</div>
+
+<figure class="diag"><svg viewBox="0 0 680 335" role="img" aria-label="ADC 제어 경로의 디지털논리 등가">
+<text class="s" x="10" y="22">타이머·EXTI 이벤트 8개</text>
+<rect class="bx sel" x="10" y="30" width="140" height="50" rx="4"/><text class="tc" x="80" y="51">EXTSEL 선택기</text><text class="sc" x="80" y="68">8:1 MUX</text>
+<line class="w" x1="150" y1="55" x2="164" y2="55"/><polygon class="ah" points="170,55 162,50 162,60"/>
+<rect class="bx sel" x="170" y="30" width="80" height="50" rx="4"/><text class="tc" x="210" y="51">AND</text><text class="sc" x="210" y="68">EXTTRIG</text>
+<line class="w" x1="250" y1="55" x2="264" y2="55"/><polygon class="ah" points="270,55 262,50 262,60"/>
+<rect class="bx hw" x="270" y="30" width="110" height="50" rx="4"/><text class="tc" x="325" y="51">상승 엣지</text><text class="sc" x="325" y="68">검출기</text>
+<line class="w" x1="380" y1="55" x2="394" y2="55"/><polygon class="ah" points="400,55 392,50 392,60"/>
+<rect class="bx hw" x="400" y="20" width="270" height="80" rx="4"/><text class="tc" x="535" y="42">시퀀서 (상태기계)</text><text class="sc" x="535" y="62">카운터 i, SQ[i] → 채널, i = L이면 끝</text><text class="sc" x="535" y="80">CONT·SCAN·DISCEN이 다음 동작 결정</text>
+<path class="wc" d="M430,100 V112 H230 V124"/><polygon class="ahc" points="230,130 225,122 235,122"/><text class="o" x="240" y="107">채널 번호</text>
+<path class="wc" d="M600,100 V122 H380 V124"/><polygon class="ahc" points="380,130 375,122 385,122"/><text class="o" x="470" y="118">SMPx 샘플 길이</text>
+<rect class="bx" x="10" y="130" width="140" height="62" rx="4"/><text class="tc" x="80" y="150">IN0~IN15</text><text class="sc" x="80" y="167">IN16 온도센서</text><text class="sc" x="80" y="183">IN17 VREFINT</text>
+<line class="w" x1="150" y1="161" x2="164" y2="161"/><polygon class="ah" points="170,161 162,156 162,166"/>
+<rect class="bx hw" x="170" y="130" width="120" height="62" rx="4"/><text class="tc" x="230" y="158">아날로그 MUX</text><text class="sc" x="230" y="176">18:1</text>
+<line class="w" x1="290" y1="161" x2="304" y2="161"/><polygon class="ah" points="310,161 302,156 302,166"/>
+<rect class="bx hw" x="310" y="130" width="140" height="62" rx="4"/><text class="tc" x="380" y="158">S&amp;H + SAR</text><text class="sc" x="380" y="176">SMP + 12.5 클럭</text>
+<line class="w" x1="450" y1="161" x2="464" y2="161"/><polygon class="ah" points="470,161 462,156 462,166"/>
+<rect class="bx hw" x="470" y="130" width="200" height="62" rx="4"/><text class="tc" x="570" y="158">ADC_DR 래치</text><text class="sc" x="570" y="176">12비트, ALIGN 좌/우 정렬</text>
+<line class="w" x1="517" y1="192" x2="517" y2="219"/><polygon class="ah" points="517,225 512,217 522,217"/>
+<line class="w" x1="622" y1="192" x2="622" y2="219"/><polygon class="ah" points="622,225 617,217 627,217"/>
+<rect class="bx flg" x="470" y="225" width="95" height="38" rx="4"/><text class="tc" x="517" y="249">EOC</text>
+<rect class="bx flg" x="575" y="225" width="95" height="38" rx="4"/><text class="tc" x="622" y="243">AWD</text><text class="sc" x="622" y="257">LT·HT 창 비교</text>
+<line class="w" x1="517" y1="263" x2="517" y2="286"/><polygon class="ah" points="517,292 512,284 522,284"/>
+<line class="w" x1="640" y1="263" x2="640" y2="286"/><polygon class="ah" points="640,292 635,284 645,284"/>
+<path class="w" d="M480,263 V276 H350 V286"/><polygon class="ah" points="350,292 345,284 355,284"/>
+<rect class="bx isr" x="470" y="292" width="200" height="34" rx="4"/><text class="tc" x="570" y="314">OR 트리 → NVIC (ADC1_2)</text>
+<rect class="bx sel" x="250" y="292" width="200" height="34" rx="4"/><text class="tc" x="350" y="314">DMA 요청 (DMA 비트 AND)</text>
+</svg><figcaption><span class="eqv">등가 모델</span> Figure 22를 디지털논리 소자로 다시 그렸다. 위 줄은 "언제 변환하는가"(트리거 → 시퀀서), 가운데 줄은 "무엇을 변환하는가"(채널 → MUX → 변환기 → DR), 아래 두 줄은 "결과를 누구에게 알리는가"이다. 상승 엣지 검출은 "외부 트리거는 상승 엣지만 변환을 시작한다"는 11.7 주석(<a href="../../Docs/RM0008_Reference_manual.pdf#page=225">p.225</a>)을 소자로 옮긴 것이다. 시퀀서 내부, 주입 그룹(JEOC 경로)은 그림을 단순하게 하려고 생략했다.</figcaption></figure>
+
+<div class="tablewrap"><table>
+<tr><th>Figure 22의 블록</th><th>디지털논리 등가</th><th>근거</th></tr>
+<tr><td>Analog MUX</td><td>아날로그 멀티플렉서(18:1). 선택 입력은 시퀀서가 낸 채널 번호</td><td>RM0008 11.3.3, Figure 22</td></tr>
+<tr><td>Regular / Injected channels (ADC_SQRx, ADC_JSQR)</td><td>순서표 메모리 + 위치 카운터 + 길이(L) 비교기 = 시퀀서 <span class="eqv">등가 모델</span></td><td>RM0008 11.3.3</td></tr>
+<tr><td>Analog to digital converter</td><td>샘플-홀드 + SAR 상태기계 + DAC + 비교기 <span class="eqv">등가 모델</span></td><td>RM0008 11.1, 11.4, DS5319 Figure 38</td></tr>
+<tr><td>Regular data register / Injected data registers</td><td>래치(정규 1개, 주입 4개). 쓰기 시 정렬·오프셋 적용</td><td>RM0008 11.5</td></tr>
+<tr><td>Analog watchdog</td><td>12비트 크기 비교기 두 개(&lt; LT, &gt; HT)의 OR</td><td>RM0008 11.3.7</td></tr>
+<tr><td>EXTSEL / JEXTSEL 사다리꼴 + EXTRIG / JEXTRIG AND</td><td>8:1 MUX + AND 게이트 + 상승 엣지 검출기</td><td>RM0008 11.7, Table 67·68</td></tr>
+<tr><td>Flags / Interrupt enable bits / OR</td><td>세트·클리어 조건이 다른 플래그 플립플롭, AND-OR 트리</td><td>RM0008 11.11, Table 71</td></tr>
+</table></div>
+
+<h3>칩 안의 두 ADC와 채널 배치</h3>
+<p>F103x8/xB에는 12비트 ADC가 두 개(ADC1, ADC2) 있다(DS5319 2.3.22, <a href="../../Docs/Datasheet_stm32f103.pdf#page=20">p.20</a>). 둘은 외부 채널 16개를 같은 핀에서 공유하고(핀 이름 ADC12_INx), 둘 다 APB2에 있다. 64핀(R) 패키지(<a href="../../Docs/Datasheet_stm32f103.pdf#page=104">p.104</a> 주문 정보)에서 외부 채널 16개가 모두 핀으로 나온다.</p>
+<div class="tablewrap"><table>
+<tr><th>블록</th><th>베이스 주소</th><th>채널 16 / 17</th><th>DMA 요청</th></tr>
+<tr><td class="m">ADC1</td><td class="m">0x4001 2400</td><td>온도 센서 / V<sub>REFINT</sub></td><td>있음 (DMA1 채널 1)</td></tr>
+<tr><td class="m">ADC2</td><td class="m">0x4001 2800</td><td>내부에서 V<sub>SS</sub>에 연결</td><td>없음 (이중 모드에서 ADC1을 통해서만)</td></tr>
+</table></div>
+<div class="tablewrap"><table>
+<tr><th>채널</th><th>0~7</th><th>8, 9</th><th>10~15</th><th>16</th><th>17</th></tr>
+<tr><td>연결</td><td class="m">PA0~PA7</td><td class="m">PB0, PB1</td><td class="m">PC0~PC5</td><td>온도 센서</td><td>V<sub>REFINT</sub></td></tr>
+</table></div>
+<p>근거: 주소는 RM0008 Table 3(<a href="../../Docs/RM0008_Reference_manual.pdf#page=51">p.51</a>), 채널 16·17은 RM0008 11.12.2의 AWDCH 주석(<a href="../../Docs/RM0008_Reference_manual.pdf#page=240">p.240</a>), DMA는 11.8(<a href="../../Docs/RM0008_Reference_manual.pdf#page=227">p.227</a>), 핀은 DS5319 Table 5(<a href="../../Docs/Datasheet_stm32f103.pdf#page=28">p.28~29</a>)이다. 채널 개수는 RM0008 안에서도 "16 multiplexed channels"(11.3.3), "up to 18 multiplexed channels"(11.1), "Up to 21 analog channels"(Table 65)로 표현이 다르다. 셈 범위(외부만, 내부 포함, 계열 전체)가 달라서이며, F103RB의 ADC1 기준으로는 외부 16 + 내부 2 = 18이다.</p>
+</section>
+
+<!-- ============================================================ 4 -->
+<section id="s4">
+<h2>4. 클럭 경로와 시간 계산</h2>
+<figure class="src narrow"><div class="img"><a href="img/RM0008_Fig8part_p93.png"><img src="img/RM0008_Fig8part_p93.png" alt="클럭 트리 중 APB2와 ADC 분주기 부분" width="661" height="531" loading="lazy"></a></div>
+<figcaption>클럭 트리의 일부이다. AHB 분주기 출력이 APB2 분주기를 지나 PCLK2(최대 72 MHz)가 되고, 같은 줄에서 갈라진 선이 ADC Prescaler(/2, 4, 6, 8)를 거쳐 ADCCLK(최대 14 MHz)가 된다. ADC의 레지스터 접근(버스 쪽)은 PCLK2, 변환 동작은 ADCCLK로 돈다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=93">RM0008 Rev 21, p.93</a>, Figure 8. Clock tree (ADC 관련 부분만 잘라 냄)</span></figcaption></figure>
+<figure class="diag"><svg viewBox="0 0 680 140" role="img" aria-label="ADC 클럭과 변환 시간 경로">
+<rect class="bx" x="8" y="44" width="100" height="48" rx="4"/><text class="tc" x="58" y="64">PCLK2</text><text class="sc" x="58" y="80">APB2, ≤ 72 MHz</text>
+<line class="w" x1="108" y1="68" x2="132" y2="68"/><polygon class="ah" points="138,68 130,63 130,73"/>
+<rect class="bx sel" x="138" y="38" width="130" height="60" rx="4"/><text class="tc" x="203" y="62">÷ ADCPRE</text><text class="sc" x="203" y="80">2 · 4 · 6 · 8</text>
+<line class="wc" x1="203" y1="16" x2="203" y2="38"/><text class="o" x="212" y="26">RCC_CFGR[15:14]</text>
+<line class="w" x1="268" y1="68" x2="292" y2="68"/><polygon class="ah" points="298,68 290,63 290,73"/>
+<rect class="bx hw" x="298" y="44" width="110" height="48" rx="4"/><text class="tc" x="353" y="64">ADCCLK</text><text class="sc" x="353" y="80">0.6 ~ 14 MHz</text>
+<line class="w" x1="408" y1="68" x2="432" y2="68"/><polygon class="ah" points="438,68 430,63 430,73"/>
+<rect class="bx hw" x="438" y="38" width="234" height="60" rx="4"/><text class="tc" x="555" y="60">변환 카운터</text><text class="sc" x="555" y="80">SMPx + 12.5 클럭 뒤 EOC</text>
+<line class="wc" x1="555" y1="98" x2="555" y2="118"/><text class="o" x="470" y="132">ADC_SMPR1/2 (채널별 3비트)</text>
+</svg><figcaption><span class="eqv">등가 모델</span> ADCCLK 하나로 샘플링과 변환이 모두 세어진다. "변환 카운터"는 문서의 시간 식(T<sub>conv</sub> = 샘플링 + 12.5 클럭)을 카운터로 표현한 것이다.</figcaption></figure>
+
+<div class="eq">ADCCLK = PCLK2 / {2, 4, 6, 8}                    (RCC_CFGR.ADCPRE, RM0008 p.102)  ≤ 14 MHz (Figure 8, DS5319 Table 47)
+T_conv = (SMP + 12.5) / ADCCLK                     (RM0008 11.6, p.225)
+SMP ∈ {1.5, 7.5, 13.5, 28.5, 41.5, 55.5, 71.5, 239.5}   (ADC_SMPRx, p.244)</div>
+<p>12.5 클럭은 축차 비교에 쓰이는 고정 시간이고, 샘플링 시간만 채널마다 고를 수 있다. 0.5 클럭 단위가 붙는 이유는 문서에 설명이 없다. 계산만 그대로 따르면 된다.</p>
+
+<h3>계산 예: PCLK2와 분주의 조합</h3>
+<div class="tablewrap"><table>
+<tr><th>PCLK2</th><th>ADCPRE</th><th>ADCCLK</th><th>최단 변환 (1.5)</th><th>55.5 사이클</th><th>239.5 사이클</th></tr>
+<tr><td>72 MHz (최대)</td><td class="m">÷6</td><td class="m">12 MHz</td><td class="m">1.17 µs</td><td class="m">5.67 µs</td><td class="m">21.0 µs</td></tr>
+<tr><td>72 MHz</td><td class="m">÷4</td><td class="m">18 MHz</td><td colspan="3">14 MHz 초과. 쓸 수 없다</td></tr>
+<tr><td>64 MHz</td><td class="m">÷6</td><td class="m">10.67 MHz</td><td class="m">1.31 µs</td><td class="m">6.38 µs</td><td class="m">23.6 µs</td></tr>
+<tr><td>64 MHz</td><td class="m">÷8</td><td class="m">8 MHz</td><td class="m">1.75 µs</td><td class="m">8.5 µs</td><td class="m">31.5 µs</td></tr>
+<tr><td>56 MHz</td><td class="m">÷4</td><td class="m">14 MHz</td><td class="m">1.00 µs</td><td class="m">4.86 µs</td><td class="m">18.0 µs</td></tr>
+</table></div>
+<p>RM0008 11.2(<a href="../../Docs/RM0008_Reference_manual.pdf#page=216">p.216</a>)가 F103의 변환 시간을 "1 µs at 56 MHz (1.17 µs at 72 MHz)"라고 적는 이유가 이 표에 있다. 72 MHz에서는 ÷4가 14 MHz를 넘으므로 ÷6을 써야 하고, ADCCLK가 12 MHz로 떨어진다. 최단 1 µs 변환을 원하면 PCLK2를 56 MHz로 맞춰야 한다.</p>
+
+<h3>샘플링 시간과 신호원 저항</h3>
+<p>2장의 식 1을 f<sub>ADC</sub> = 14 MHz에 적용한 결과가 DS5319 Table 48(<a href="../../Docs/Datasheet_stm32f103.pdf#page=75">p.75</a>)이다. 신호원 저항이 이 값보다 작아야 오차가 1/4 LSB 아래로 들어온다.</p>
+<div class="tablewrap"><table>
+<tr><th>SMP (클럭)</th><th class="m">1.5</th><th class="m">7.5</th><th class="m">13.5</th><th class="m">28.5</th><th class="m">41.5</th><th class="m">55.5</th><th class="m">71.5</th><th class="m">239.5</th></tr>
+<tr><td>t<sub>S</sub> (µs)</td><td class="m">0.11</td><td class="m">0.54</td><td class="m">0.96</td><td class="m">2.04</td><td class="m">2.96</td><td class="m">3.96</td><td class="m">5.11</td><td class="m">17.1</td></tr>
+<tr><td>R<sub>AIN</sub> 최대 (kΩ)</td><td class="m">0.4</td><td class="m">5.9</td><td class="m">11.4</td><td class="m">25.2</td><td class="m">37.2</td><td class="m">50</td><td class="m">NA</td><td class="m">NA</td></tr>
+</table></div>
+<p>71.5와 239.5가 "NA"인 것은 식의 값이 Table 47의 R<sub>AIN</sub> 상한 50 kΩ을 넘기 때문이다. 즉 50 kΩ보다 큰 신호원은 샘플링을 아무리 길게 해도 보장하지 않는다. 239.5 클럭 / 14 MHz = 17.1 µs는 온도 센서의 권장 샘플링 시간(17.1 µs, RM0008 11.10, DS5319 Table 51), V<sub>REFINT</sub> 샘플링 시간의 최대값(전형 5.1 µs, 최대 17.1 µs, Table 12)과 같은 숫자이다. 내부 소스는 출력 임피던스가 커서 긴 샘플링을 요구한다고 해석할 수 있다(내부 소스의 임피던스 값 자체는 문서에 없다). 두 표 모두 "가장 짧은 샘플링 시간은 응용에서 반복 시험으로 정하라"는 주석을 단다.</p>
+
+<h3>트리거 쪽 시간 제약</h3>
+<div class="eq">외부 트리거 최대 주파수 f_TRIG = ADCCLK / 17      (14 MHz에서 823 kHz, DS5319 Table 47)
+정규 트리거 지연 t_latr = 2 ADCCLK + 1 PCLK2       (14 MHz에서 0.143 µs + 외부 트리거 보정, Table 47 주석 4)
+샘플링 속도 f_S 범위 0.05 ~ 1 MHz                   (Table 47)</div>
+<p>Table 47의 f<sub>S</sub> 범위 아래쪽(0.05 MHz)보다 느린 설정, 예를 들어 239.5 클럭 연속 변환에서 무엇이 달라지는지는 문서에 설명이 없다. 트리거 간격을 이 표보다 짧게 했을 때 트리거가 무시되는지 쌓이는지도 문서에 적혀 있지 않다.</p>
+
+<div class="sim" id="tcalc">
+  <div class="subhead">계산기: ADCCLK, 변환 시간, 시퀀스 시간, 신호원 저항 한계</div>
+  <div class="ctl">
+    <div><label for="tp">PCLK2</label><select id="tp"><option value="8">8 MHz (리셋 직후 HSI)</option><option value="56">56 MHz</option><option value="64" selected>64 MHz</option><option value="72">72 MHz (최대)</option></select></div>
+    <div><label for="tpre">ADCPRE 분주</label><select id="tpre"><option value="2">÷2 (00)</option><option value="4">÷4 (01)</option><option value="6" selected>÷6 (10)</option><option value="8">÷8 (11)</option></select></div>
+    <div><label for="tsmp">샘플링 SMP</label><select id="tsmp"><option>1.5</option><option>7.5</option><option>13.5</option><option>28.5</option><option>41.5</option><option selected>55.5</option><option>71.5</option><option>239.5</option></select></div>
+    <div><label for="tn">한 시퀀스의 채널 수 (L+1)</label><input id="tn" type="number" min="1" max="16" value="2"></div>
+    <div><label for="ttrig">트리거 주기 (µs, 0 = 연속 변환)</label><input id="ttrig" type="number" min="0" step="1" value="1000"></div>
+  </div>
+  <div class="regs">
+    <div class="stat"><div class="k">ADCCLK</div><div class="v" id="t_clk">-</div></div>
+    <div class="stat"><div class="k">변환 1회 T_conv</div><div class="v" id="t_conv">-</div></div>
+    <div class="stat"><div class="k">시퀀스 1회</div><div class="v" id="t_seq">-</div></div>
+    <div class="stat"><div class="k">채널당 샘플 속도</div><div class="v" id="t_rate">-</div></div>
+    <div class="stat"><div class="k">R_AIN 최대 (식 1)</div><div class="v" id="t_rain">-</div></div>
+    <div class="stat"><div class="k">샘플링 ≥ 17.1 µs?</div><div class="v" id="t_int">-</div></div>
+    <div class="stat"><div class="k">ADC 점유율</div><div class="v" id="t_busy">-</div></div>
+    <div class="stat"><div class="k">f_TRIG 최대 / 트리거 지연</div><div class="v" id="t_trig" style="font-size:15px">-</div></div>
+  </div>
+  <p class="note" id="t_note"></p>
+</div>
+</section>
+
+<!-- ============================================================ 5 -->
+<section id="s5">
+<h2>5. 제어 요소의 역할: 블록도의 스위치와 레지스터 비트</h2>
+<p>Figure 22의 경로 위에 놓인 스위치와 선택기를 블록도 위치와 함께 정리한다(비트 정의는 RM0008 11.12, <a href="../../Docs/RM0008_Reference_manual.pdf#page=237">p.237~252</a>).</p>
+<div class="tablewrap"><table>
+<tr><th>블록도 위의 요소</th><th>고르는 비트</th><th>동작</th></tr>
+<tr><td>클럭 게이트 · 분주기</td><td class="m">RCC_APB2ENR.ADC1EN · RCC_CFGR.ADCPRE</td><td>ADC1 레지스터 접근 클럭(비트 9, <a href="../../Docs/RM0008_Reference_manual.pdf#page=114">p.114</a>)과 ADCCLK 분주(4장)</td></tr>
+<tr><td>핀의 아날로그 경로</td><td class="m">GPIOx_CRL/CRH: CNF = 00, MODE = 00</td><td>디지털 입력·출력을 끊고 핀 전압을 MUX로 보낸다(3장)</td></tr>
+<tr><td>변환기 전원 스위치 + 시작 단추</td><td class="m">CR2.ADON</td><td>0에서 1로 쓰면 절전 상태에서 깨어난다. t<sub>STAB</sub> 뒤 이미 1인 ADON에 다시 1을 쓰면 변환이 시작된다. 0을 쓰면 수 µA만 쓰는 절전 상태가 된다(11.3.1)</td></tr>
+<tr><td>자체 교정</td><td class="m">CR2.CAL · RSTCAL</td><td>CAL = 1로 교정 시작, 끝나면 하드웨어가 0으로 내린다. RSTCAL은 교정 레지스터 초기화(11.4, 7장 ①)</td></tr>
+<tr><td>시퀀서의 순서표와 길이</td><td class="m">SQR1~3: SQ1~SQ16, L[3:0] · JSQR: JSQ1~4, JL[1:0]</td><td>정규 그룹 최대 16번, 주입 그룹 최대 4번 변환할 채널을 순서대로 적는다. 같은 채널을 여러 번 넣어도 된다(11.3.3)</td></tr>
+<tr><td>채널별 샘플 길이</td><td class="m">SMPR1/2: SMPx[2:0]</td><td>8가지 중 하나. 샘플링 동안 바꾸면 안 된다(p.244)</td></tr>
+<tr><td>시퀀서 동작 방식</td><td class="m">CR2.CONT · CR1.SCAN · CR1.DISCEN, DISCNUM[2:0]</td><td>한 번 / 반복, 한 채널 / 순서표 전체, 한꺼번에 / n개씩(아래 표)</td></tr>
+<tr><td>정규 트리거 선택기</td><td class="m">CR2.EXTSEL[2:0] · EXTTRIG · SWSTART</td><td>8개 중 하나를 고른다. 111이면 SWSTART 비트가 트리거이다(Table 67, p.225)</td></tr>
+<tr><td>주입 트리거 선택기 · 자동 주입</td><td class="m">CR2.JEXTSEL[2:0] · JEXTTRIG · JSWSTART · CR1.JAUTO</td><td>주입 그룹의 시작 조건. JAUTO = 1이면 정규 그룹 뒤에 자동으로 주입 그룹을 변환한다(11.3.9)</td></tr>
+<tr><td>결과 정렬기</td><td class="m">CR2.ALIGN · JOFRx</td><td>오른쪽/왼쪽 정렬. 주입 그룹은 JOFRx 오프셋을 빼므로 음수가 될 수 있다(11.5, 아래 그림)</td></tr>
+<tr><td>내부 소스 스위치</td><td class="m">CR2.TSVREFE</td><td>온도 센서와 V<sub>REFINT</sub>를 함께 켠다(ADC1에만 있음)</td></tr>
+<tr><td>DMA 요청 게이트</td><td class="m">CR2.DMA</td><td>정규 변환 끝(EOC)을 DMA 요청선으로 내보낸다. ADC1에서만 의미가 있다(p.242)</td></tr>
+<tr><td>워치독 감시 대상 · 문턱</td><td class="m">CR1.AWDEN · JAWDEN · AWDSGL · AWDCH[4:0] · HTR · LTR</td><td>정규/주입 그룹, 한 채널/전체 채널을 고르고(Table 66), 12비트 문턱 두 개를 둔다</td></tr>
+<tr><td>인터럽트 AND 게이트</td><td class="m">CR1.EOCIE · JEOCIE · AWDIE</td><td>세 플래그 각각을 인터럽트로 내보낼지(Table 71)</td></tr>
+<tr><td>이중 ADC 모드</td><td class="m">ADC1_CR1.DUALMOD[3:0]</td><td>0000 = 독립. ADC1과 ADC2를 동시·교대로 돌리는 6가지 방식(11.9). 이 그룹 예제는 쓰지 않는다</td></tr>
+</table></div>
+<p>CR2에 대한 주석 하나가 실수를 자주 부른다. "ADON 말고 다른 비트를 같은 쓰기에서 함께 바꾸면 변환이 시작되지 않는다"(RM0008 p.243). 잘못된 변환을 막으려는 장치이다. 설정 비트를 먼저 쓰고, ADON만 따로 쓰는 순서가 필요하다.</p>
+
+<h3>시퀀서의 동작 방식</h3>
+<figure class="diag"><svg viewBox="0 0 680 270" role="img" aria-label="정규 그룹 시퀀서의 상태기계">
+<text class="s" x="80" y="16">DISCEN = 1이고 n개를 마침 → 대기 (다음 트리거에서 이어서)</text>
+<path class="wm" d="M645,110 V24 H70 V104"/><polygon class="ahm" points="70,110 65,102 75,102"/>
+<text class="s" x="290" y="54">SCAN = 1, 남은 채널 있음 → i = i + 1</text>
+<path class="wc" d="M615,110 V60 H260 V104"/><polygon class="ahc" points="260,110 255,102 265,102"/>
+<rect class="bx" x="10" y="110" width="120" height="50" rx="10"/><text class="tc" x="70" y="132">대기</text><text class="sc" x="70" y="149">트리거 기다림</text>
+<text class="o" x="134" y="104">트리거, i=0</text>
+<line class="w" x1="130" y1="135" x2="184" y2="135"/><polygon class="ah" points="190,135 182,130 182,140"/>
+<rect class="bx hw" x="190" y="110" width="140" height="50" rx="10"/><text class="tc" x="260" y="132">샘플링</text><text class="sc" x="260" y="149">SMP[SQ[i]] 클럭</text>
+<line class="w" x1="330" y1="135" x2="384" y2="135"/><polygon class="ah" points="390,135 382,130 382,140"/>
+<rect class="bx hw" x="390" y="110" width="120" height="50" rx="10"/><text class="tc" x="450" y="132">SAR 변환</text><text class="sc" x="450" y="149">12.5 클럭</text>
+<line class="w" x1="510" y1="135" x2="554" y2="135"/><polygon class="ah" points="560,135 552,130 552,140"/>
+<rect class="bx flg" x="560" y="110" width="110" height="50" rx="10"/><text class="tc" x="615" y="132">DR 저장</text><text class="sc" x="615" y="149">EOC = 1</text>
+<path class="wc" d="M590,160 V200 H260 V166"/><polygon class="ahc" points="260,160 255,168 265,168"/>
+<text class="s" x="290" y="216">마지막 채널, CONT = 1 → i = 0부터 다시</text>
+<path class="wm" d="M640,160 V240 H70 V166"/><polygon class="ahm" points="70,160 65,168 75,168"/>
+<text class="s" x="150" y="257">마지막 채널, CONT = 0 → 대기</text>
+</svg><figcaption><span class="eqv">등가 모델</span> 정규 그룹 시퀀서를 상태기계로 그렸다. SCAN = 0이면 순서표의 첫 칸(SQ1)만 쓰므로 한 번 변환하면 곧 "마지막 채널"이다. RM0008 11.3.4~11.3.10의 문장을 상태 전이로 옮긴 것이며, 실제 상태 수와 인코딩은 문서에 없다. 주입 그룹이 끼어드는 경로(11.3.9)는 생략했다.</figcaption></figure>
+<div class="tablewrap"><table>
+<tr><th>CONT</th><th>SCAN</th><th>DISCEN</th><th>트리거 한 번에 일어나는 일</th><th>근거</th></tr>
+<tr><td class="m">0</td><td class="m">0</td><td class="m">0</td><td>SQ1 채널을 한 번 변환하고 멈춘다(단일 변환)</td><td>11.3.4</td></tr>
+<tr><td class="m">1</td><td class="m">0</td><td class="m">0</td><td>SQ1 채널을 끝없이 반복 변환한다(연속 변환)</td><td>11.3.5</td></tr>
+<tr><td class="m">0</td><td class="m">1</td><td class="m">0</td><td>SQ1 → … → SQ(L+1)을 한 번 변환하고 멈춘다(스캔). DMA를 켜야 한다</td><td>11.3.8</td></tr>
+<tr><td class="m">1</td><td class="m">1</td><td class="m">0</td><td>순서표 전체를 끝없이 돌린다</td><td>11.3.8</td></tr>
+<tr><td class="m">-</td><td class="m">-</td><td class="m">1</td><td>순서표에서 다음 n개(n = DISCNUM + 1, 최대 8)만 변환한다. 끝까지 가면 다음 트리거는 처음부터</td><td>11.3.10</td></tr>
+</table></div>
+<p>RM0008 11.3.10의 예: n = 3, 순서표 0, 1, 2, 3, 6, 7, 9, 10이면 첫 트리거에 0·1·2, 둘째에 3·6·7, 셋째에 9·10, 넷째에 다시 0·1·2를 변환한다. DISCEN과 CONT를 함께 켰을 때의 동작은 문서에 적혀 있지 않다. 불연속 모드는 정규·주입 그룹 중 한쪽에만, 그리고 자동 주입과 함께 쓰지 말라고 적혀 있다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=223">p.223</a>).</p>
+
+<div class="box warn">
+  <div class="label">문서 안의 엇갈림: EOC는 언제 서는가</div>
+  <p>RM0008은 스캔 중의 EOC를 세 곳에서 다르게 적는다. ① ADC_SR의 EOC 설명: "end of a group channel conversion (regular or injected)"(<a href="../../Docs/RM0008_Reference_manual.pdf#page=237">p.237</a>). ② CR1.SCAN 주석: "EOC 또는 JEOC <b>인터럽트</b>는 마지막 채널의 변환 끝에서만 생긴다"(<a href="../../Docs/RM0008_Reference_manual.pdf#page=239">p.239</a>). ③ 불연속 모드 예: "An EOC event is generated at each conversion"(<a href="../../Docs/RM0008_Reference_manual.pdf#page=222">p.222</a>). 한편 11.8은 "정규 채널의 변환 끝마다" DMA 요청이 나간다고 한다. 따라서 이 교안은 "DMA 요청은 변환마다, 스캔 중 EOC 인터럽트는 시퀀스 끝에"로 읽는다. 어느 경우든 결과 레지스터 DR이 하나뿐이라 스캔에서 CPU가 변환마다 DR을 읽는 방식은 문서가 보장하지 않는다. 그래서 RM0008은 스캔에 DMA를 요구하고(11.3.8), DMA를 쓰지 않는 예제는 불연속 모드로 트리거 한 번에 한 채널씩 끊어 읽는다(10장 03_ADC_Multi).</p>
+</div>
+
+<h3>결과 정렬과 워치독 창</h3>
+<div class="figs">
+<figure class="src"><div class="img"><a href="img/RM0008_Fig27_p224.png"><img src="img/RM0008_Fig27_p224.png" alt="오른쪽 정렬" width="1157" height="286" loading="lazy"></a></div>
+<figcaption>ALIGN = 0(오른쪽 정렬). 정규 그룹은 위 4비트가 0, 주입 그룹은 부호 확장(SEXT)이다. <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=224">RM0008 Rev 21, p.224</a>, Figure 27. Right alignment of data</span></figcaption></figure>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig28_p224.png"><img src="img/RM0008_Fig28_p224.png" alt="왼쪽 정렬" width="1157" height="286" loading="lazy"></a></div>
+<figcaption>ALIGN = 1(왼쪽 정렬). 정규 그룹은 D11이 비트 15에 오고 아래 4비트가 0이다. 주입 그룹은 부호 비트 때문에 한 칸 덜 밀린다. <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=224">RM0008 Rev 21, p.224</a>, Figure 28. Left alignment of data</span></figcaption></figure>
+</div>
+<p>정렬기는 결과를 DR에 쓸 때 4칸 시프트하느냐 마느냐를 고르는 2:1 MUX와 같다. 워치독의 비교는 정렬 <b>전</b>의 12비트 값으로 한다(11.3.7). 그래서 HTR·LTR에는 정렬과 무관하게 0~4095를 쓴다.</p>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig24_p220.png"><img src="img/RM0008_Fig24_p220.png" alt="아날로그 워치독 감시 영역" width="1157" height="255" loading="lazy"></a></div>
+<figcaption>"Guarded area"는 <b>정상 범위</b>(LTR ~ HTR)이다. 변환 결과가 이 영역 밖, 즉 LTR보다 작거나 HTR보다 크면 AWD가 선다(11.3.7). 디지털논리로는 (x &lt; LT) OR (x &gt; HT), 12비트 크기 비교기 두 개와 OR 게이트이다. HTR의 리셋값은 0xFFF, LTR은 0이라 켜기만 하고 문턱을 안 쓰면 절대 서지 않는다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=246">p.246</a>).
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=220">RM0008 Rev 21, p.220</a>, Figure 24. Analog watchdog guarded area</span></figcaption></figure>
+<div class="tablewrap"><table>
+<tr><th>감시 대상</th><th class="m">AWDSGL</th><th class="m">AWDEN</th><th class="m">JAWDEN</th></tr>
+<tr><td>없음</td><td class="m">x</td><td class="m">0</td><td class="m">0</td></tr>
+<tr><td>모든 정규 채널 / 모든 주입 채널 / 둘 다</td><td class="m">0</td><td class="m">1 / 0 / 1</td><td class="m">0 / 1 / 1</td></tr>
+<tr><td>AWDCH로 고른 한 채널(정규 / 주입 / 둘 다)</td><td class="m">1</td><td class="m">1 / 0 / 1</td><td class="m">0 / 1 / 1</td></tr>
+</table></div>
+<p>RM0008 Table 66(<a href="../../Docs/RM0008_Reference_manual.pdf#page=220">p.220~221</a>)을 묶었다. 창은 한 벌뿐이다. 여러 채널을 감시하면 모두 같은 문턱으로 비교된다. HTR·LTR은 변환 중에도 쓸 수 있으나 새 값은 다음 변환이 끝날 때 적용되고, 정확한 적용 시점은 불확실하다고 적혀 있다(p.246).</p>
+
+<h3>플래그는 어떻게 서고 지워지는가</h3>
+<p>ADC_SR의 다섯 비트는 모두 rc_w0(읽기 가능, 0을 쓰면 지워짐)이다. USART와 달리 "읽기 순서"로 지우는 플래그는 EOC 하나뿐이다.</p>
+<div class="tablewrap"><table>
+<tr><th>플래그</th><th>세트 조건</th><th>지우는 방법</th><th>인터럽트</th></tr>
+<tr><td class="m">EOC</td><td>그룹 채널 변환 끝(위 상자 참고)</td><td>0 쓰기, 또는 ADC_DR 읽기</td><td>EOCIE</td></tr>
+<tr><td class="m">JEOC</td><td>주입 그룹 전체 변환 끝</td><td>0 쓰기</td><td>JEOCIE</td></tr>
+<tr><td class="m">AWD</td><td>결과가 LTR 미만 또는 HTR 초과</td><td>0 쓰기</td><td>AWDIE</td></tr>
+<tr><td class="m">STRT · JSTRT</td><td>정규 / 주입 변환 시작</td><td>0 쓰기</td><td>없음</td></tr>
+</table></div>
+<p>근거: RM0008 11.12.1(<a href="../../Docs/RM0008_Reference_manual.pdf#page=237">p.237</a>), Table 71(<a href="../../Docs/RM0008_Reference_manual.pdf#page=236">p.236</a>). DMA가 DR을 읽는 것도 DR 읽기이므로 EOC가 지워진다고 해석한다. 문서가 이 경우를 따로 적지는 않는다. AWD의 세트 조건은 11.3.7이 "임계값 아래 또는 위이면"(수준), 11.12.1이 "crosses"(넘어감)로 달리 적는다. 이 교안은 11.3.7에 따라 "창 밖 결과가 나올 때마다 다시 선다"로 읽는다(7장 ③).</p>
+</section>
+
+<!-- ============================================================ 6 -->
+<section id="s6">
+<h2>6. 이벤트 생성 기전: 플래그 → 인터럽트 → DMA → 다른 장치</h2>
+<figure class="diag"><svg viewBox="0 0 680 245" role="img" aria-label="타이머에서 ADC, DMA, NVIC로 이어지는 이벤트 사슬">
+<rect class="bx hw" x="10" y="28" width="110" height="56" rx="4"/><text class="tc" x="65" y="48">TIM3</text><text class="sc" x="65" y="64">갱신 → TRGO</text><text class="sc" x="65" y="78">MMS = 010</text>
+<line class="w" x1="120" y1="56" x2="139" y2="56"/><polygon class="ah" points="145,56 137,51 137,61"/>
+<rect class="bx sel" x="145" y="28" width="120" height="56" rx="4"/><text class="tc" x="205" y="50">EXTSEL = 100</text><text class="sc" x="205" y="66">EXTTRIG = 1</text><text class="sc" x="205" y="79">상승 엣지</text>
+<line class="w" x1="265" y1="56" x2="284" y2="56"/><polygon class="ah" points="290,56 282,51 282,61"/>
+<rect class="bx hw" x="290" y="28" width="120" height="56" rx="4"/><text class="tc" x="350" y="48">ADC1</text><text class="sc" x="350" y="64">2채널 스캔</text><text class="sc" x="350" y="78">변환마다 EOC</text>
+<line class="w" x1="410" y1="56" x2="429" y2="56"/><polygon class="ah" points="435,56 427,51 427,61"/>
+<rect class="bx sel" x="435" y="28" width="80" height="56" rx="4"/><text class="tc" x="475" y="52">AND</text><text class="sc" x="475" y="70">CR2.DMA</text>
+<line class="w" x1="515" y1="56" x2="534" y2="56"/><polygon class="ah" points="540,56 532,51 532,61"/>
+<rect class="bx hw" x="540" y="28" width="130" height="56" rx="4"/><text class="tc" x="605" y="48">DMA1 채널 1</text><text class="sc" x="605" y="64">원형 모드</text><text class="sc" x="605" y="78">DR → SRAM</text>
+<path class="w" d="M580,84 V136 H546"/><polygon class="ah" points="540,136 548,131 548,141"/>
+<rect class="bx" x="420" y="118" width="120" height="36" rx="4"/><text class="tc" x="480" y="141">SRAM 버퍼</text>
+<line class="wm" x1="350" y1="84" x2="350" y2="184"/><polygon class="ahm" points="350,190 345,182 355,182"/><text class="o" x="358" y="176">EOCIE·AWDIE·JEOCIE</text>
+<line class="wm" x1="640" y1="84" x2="640" y2="184"/><polygon class="ahm" points="640,190 635,182 645,182"/><text class="o" x="590" y="112">HT·TC</text>
+<rect class="bx isr" x="230" y="190" width="210" height="44" rx="4"/><text class="tc" x="335" y="209">NVIC 18: ADC1_2</text><text class="sc" x="335" y="226">벡터 0x0000_0088</text>
+<rect class="bx isr" x="470" y="190" width="200" height="44" rx="4"/><text class="tc" x="570" y="209">NVIC 11: DMA1_Channel1</text><text class="sc" x="570" y="226">벡터 0x0000_006C</text>
+</svg><figcaption><span class="eqv">등가 모델</span> 타이머 → ADC → DMA → 메모리로 이어지는 하드웨어 사슬과, 그 사슬이 CPU를 부르는 두 지점(인터럽트 18과 11)이다. 예로 TIM3 TRGO를 골랐다. 이런 연결을 한 장에 담은 원본 그림은 없어서 새로 그렸다. 각 연결의 근거는 아래 본문에 있다.</figcaption></figure>
+
+<h3>① 들어오는 사건: 다른 주변장치가 변환을 시작시킨다</h3>
+<p>정규 그룹의 트리거 선택기에는 TIM1_CC1, TIM1_CC2, TIM1_CC3, TIM2_CC2, TIM3_TRGO, TIM4_CC4, EXTI 11번 선, SWSTART의 여덟 입력이 있다(RM0008 Table 67, <a href="../../Docs/RM0008_Reference_manual.pdf#page=225">p.225</a>). 주입 그룹은 TIM1_TRGO, TIM1_CC4, TIM2_TRGO, TIM2_CC1, TIM3_CC4, TIM4_TRGO, EXTI 15번 선, JSWSTART이다(Table 68, <a href="../../Docs/RM0008_Reference_manual.pdf#page=226">p.226</a>). 타이머의 TRGO에 무엇을 실을지는 타이머 쪽 MMS가 정한다. MMS = 010이면 갱신(update) 이벤트가 TRGO가 된다(RM0008 15.4.2, <a href="../../Docs/RM0008_Reference_manual.pdf#page=406">p.406</a>). 타이머 주기가 곧 샘플링 주기가 되므로, 샘플 간격이 소프트웨어 실행 시간과 무관해진다. 외부 트리거는 <b>상승 엣지</b>에서만 변환을 시작한다(11.7).</p>
+<p>정오표 ES096 2.6.2(<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=14">p.14</a>): TRGO는 펄스로 전달되므로, 받는 주변장치(여기서는 ADC)의 클럭을 켜기 <b>전에</b> 타이머가 TRGO를 내면 트리거가 실패할 수 있다. 트리거를 받는 동안 받는 쪽 클럭 분주(ADCPRE)를 바꿔도 실패할 수 있다. ADC 클럭을 먼저 켜고, 타이머는 마지막에 출발시키는 순서가 필요하다. 문서는 "documentation issue"로 분류하고 이 순서를 지키면 회피책이 필요 없다고 적는다.</p>
+
+<h3>② 인터럽트: 세 사건, 하나의 벡터, 두 개의 ADC</h3>
+<p>EOC·JEOC·AWD 셋이 각자의 허용 비트와 AND된 뒤 OR되어 ADC 인터럽트 선 하나가 된다(Figure 22 위쪽, Table 71). 게다가 RM0008 11.11은 "ADC1 and ADC2 interrupts are mapped onto the same interrupt vector"라고 적는다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=236">p.236</a>). 벡터 테이블에서는 위치 18, 이름 ADC1_2, 주소 0x0000_0088이다(RM0008 Table 63, <a href="../../Docs/RM0008_Reference_manual.pdf#page=205">p.205</a>). Cortex-M3에서 IRQ n의 벡터는 0x40 + 4n이므로 0x40 + 4 × 18 = 0x88로 맞는다(PM0056 Table 16, <a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf#page=34">p.34</a>). 따라서 ISR(Interrupt Service Routine)은 두 ADC의 SR을 모두 읽어 어느 ADC의 어느 사건인지 가려야 한다.</p>
+<p>STRT·JSTRT는 SR에 서지만 인터럽트로 이어지지 않는다(11.11). AWD 인터럽트는 "상태"를 알리는 성격이라 7장 ③처럼 창 밖에 머무는 동안 반복될 수 있다.</p>
+
+<h3>③ DMA 요청: 결과를 CPU 없이 메모리로</h3>
+<p>"Only the end of conversion of a regular channel generates a DMA request"(RM0008 11.8, <a href="../../Docs/RM0008_Reference_manual.pdf#page=227">p.227</a>). CR2.DMA = 1이면 정규 변환이 끝날 때마다 요청선이 서고, DMA1 채널 1이 ADC_DR을 읽어 메모리에 쓴다(Table 78, <a href="../../Docs/RM0008_Reference_manual.pdf#page=282">p.282</a>). DMA1 채널 1에는 TIM2_CH3, TIM4_CH1 요청도 OR로 묶여 있어 동시에 하나만 켜야 한다(13.3.7, <a href="../../Docs/RM0008_Reference_manual.pdf#page=281">p.281</a>).</p>
+<p>DMA를 원형(circular) 모드로 두면 전송 개수가 0이 될 때 자동으로 처음 값과 처음 주소로 돌아간다. 절반을 옮기면 HTIF(Half Transfer), 전부 옮기면 TCIF(Transfer Complete)가 서고, 허용하면 각각 인터럽트가 된다(RM0008 13.3.3, <a href="../../Docs/RM0008_Reference_manual.pdf#page=278">p.278</a>). DMA1 채널 1의 벡터는 위치 11, 0x0000_006C이다(Table 63, <a href="../../Docs/RM0008_Reference_manual.pdf#page=204">p.204</a>). 이렇게 하면 CPU는 변환마다가 아니라 "버퍼 절반마다" 한 번 깨어난다. HT 시점에 앞 절반을 처리하는 동안 DMA는 뒤 절반을 채우므로, 처리 중인 데이터가 덮어써지지 않는다(이중 버퍼링). DMA 내부 구조는 07_DMA 그룹에서 다룬다.</p>
+
+<h3>④ 나가는 사건</h3>
+<p>Figure 22에서 ADC가 바깥으로 내보내는 선은 인터럽트 선과 DMA 요청선뿐이다. 워치독 사건(AWD)을 타이머 등 다른 주변장치의 입력으로 직접 연결하는 경로는 이 문서들에 나오지 않는다. 이중 모드에서는 ADC1이 ADC2에 시작 신호를 넘긴다(11.9, Figure 29).</p>
+</section>
+
+<!-- ============================================================ 7 -->
+<section id="s7">
+<h2>7. 동작 시나리오 추적</h2>
+<h3>시나리오 ① 깨우기, 교정, 첫 변환</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig23_p220.png"><img src="img/RM0008_Fig23_p220.png" alt="ADC 타이밍도" width="1314" height="717" loading="lazy"></a></div>
+<figcaption>ADON이 1이 된 뒤 t<sub>STAB</sub>(데이터시트 최대 1 µs) 동안은 정확한 변환을 못 한다. 그 뒤 SWSTART(또는 다른 트리거)가 오면 변환이 시작되고, 변환 시간(샘플링 + 12.5 클럭) 뒤 EOC가 선다. 이 그림에서 EOC는 소프트웨어가 지울 때까지 1로 남는다. 다음 트리거가 다음 변환을 시작한다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=220">RM0008 Rev 21, p.220</a>, Figure 23. Timing diagram (t<sub>STAB</sub> 값: DS5319 Table 47, <a href="../../Docs/Datasheet_stm32f103.pdf#page=74">p.74</a>)</span></figcaption></figure>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig26_p224.png"><img src="img/RM0008_Fig26_p224.png" alt="교정 타이밍도" width="1162" height="353" loading="lazy"></a></div>
+<figcaption>CAL = 1을 쓰면 t<sub>CAL</sub> 동안 교정이 진행되고, 끝나면 하드웨어가 CAL을 0으로 내린다. 그다음부터 정상 변환이 가능하다. t<sub>CAL</sub>은 83 ADC 클럭(14 MHz에서 5.9 µs)이다. 교정 전에 ADON = 1 상태로 최소 2 ADC 클럭이 지나 있어야 하고, 교정 코드는 끝나는 순간 ADC_DR에 놓인다(11.4).
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=224">RM0008 Rev 21, p.224</a>, Figure 26. Calibration timing diagram (t<sub>CAL</sub>: DS5319 Table 47)</span></figcaption></figure>
+<ol class="flow">
+  <li><span class="n">1</span><div class="tx"><b>클럭과 핀</b><span>RCC_APB2ENR.ADC1EN = 1, ADCPRE로 ADCCLK ≤ 14 MHz, 입력 핀은 아날로그 모드.</span></div></li>
+  <li><span class="n">2</span><div class="tx"><b>ADON 0 → 1: 절전에서 깨어남</b><span>t<sub>STAB</sub>(≤ 1 µs)를 기다린다. 이 쓰기로는 변환이 시작되지 않는다.</span></div></li>
+  <li><span class="n">3</span><div class="tx"><b>CAL = 1 → t<sub>CAL</sub> = 83 클럭 → CAL = 0</b><span>각 커패시터의 오차 보정 코드가 계산되어 이후 모든 변환에 적용된다. 전원을 켤 때마다 한 번 하라고 권장한다(RM0008 11.4, DS5319 p.74).</span></div></li>
+  <li><span class="n">4</span><div class="tx"><b>트리거 → 샘플링 → 12.5 클럭 → DR, EOC</b><span>ADON을 한 번 더 쓰거나(정규만), 외부 트리거, SWSTART로 시작한다.</span></div></li>
+</ol>
+
+<h3>시나리오 ② 1 kHz 타이머 트리거, 2채널 스캔, DMA</h3>
+<p>조건: ADCCLK = 10.67 MHz(PCLK2 64 MHz ÷ 6), 채널 0과 1, 각각 55.5 클럭, SCAN = 1, CONT = 0, 트리거 = TIM3_TRGO(1 ms마다), DMA 원형 모드. 한 트리거 뒤에 일어나는 일을 시간 순으로 본다.</p>
+<figure class="diag"><svg viewBox="0 0 680 260" role="img" aria-label="타이머 트리거 2채널 스캔과 DMA 타이밍">
+<text class="s" x="8" y="44">TRGO</text>
+<polyline class="sig" points="100,48 110,48 110,30 116,30 116,48 660,48"/>
+<text class="s" x="8" y="78">ADC</text>
+<rect class="bx hw" x="117.7" y="62" width="197.7" height="24" rx="3"/><text class="tc" x="216.5" y="79">CH0 샘플 55.5</text>
+<rect class="bx sel" x="315.4" y="62" width="44.6" height="24" rx="3"/><text class="tc" x="337.7" y="79">변환</text>
+<rect class="bx hw" x="360" y="62" width="197.7" height="24" rx="3"/><text class="tc" x="458.8" y="79">CH1 샘플 55.5</text>
+<rect class="bx sel" x="557.7" y="62" width="44.5" height="24" rx="3"/><text class="tc" x="580" y="79">변환</text>
+<text class="o" x="608" y="79">12.95 µs</text>
+<g class="dash"><line x1="360" y1="30" x2="360" y2="170"/><line x1="602.2" y1="30" x2="602.2" y2="170"/></g>
+<text class="s" x="8" y="120">EOC</text>
+<polyline class="sig2" points="100,124 360,124 360,108 372,108 372,124 602,124 602,108 614,108 614,124 660,124"/>
+<text class="s" x="8" y="162">DMA</text>
+<rect class="bx flg" x="361" y="150" width="14" height="16" rx="2"/><rect class="bx flg" x="603" y="150" width="14" height="16" rx="2"/>
+<text class="s" x="382" y="162">DR → SRAM (EOC 내려감)</text>
+<text class="s" x="8" y="204">CPU</text>
+<text class="s" x="110" y="204">CPU는 관여하지 않는다. 버퍼 절반·전체가 차면 HT·TC 인터럽트만 받는다</text>
+<line class="wm" x1="110" y1="226" x2="660" y2="226"/>
+<g class="wm"><line x1="110" y1="222" x2="110" y2="230"/><line x1="300" y1="222" x2="300" y2="230"/><line x1="490" y1="222" x2="490" y2="230"/></g>
+<text class="sc" x="110" y="246">0</text><text class="sc" x="300" y="246">5 µs</text><text class="sc" x="490" y="246">10 µs</text>
+<text class="s" x="530" y="246">다음 TRGO: 1000 µs</text>
+</svg><figcaption><span class="eqv">등가 모델</span> 가로축은 실제 비율이다(38 px = 1 µs). 트리거 지연은 2 ADCCLK + 1 PCLK2 ≈ 0.2 µs(DS5319 Table 47 주석 4), 채널당 (55.5 + 12.5) / 10.67 MHz = 6.375 µs이다. 스캔에서 두 채널 사이에 추가 지연이 있다는 말은 문서에 없으므로 바로 이어 그렸다. EOC 펄스 폭(DMA가 DR을 읽기까지의 시간)은 문서에 없어서 임의로 그렸다.</figcaption></figure>
+<ol class="flow">
+  <li><span class="n">1</span><div class="tx"><b>t = 0: TIM3 갱신 → TRGO 상승 엣지</b><span>EXTSEL = 100이 고른 입력이 EXTTRIG AND를 지나 시퀀서를 깨운다.</span></div></li>
+  <li><span class="n">2</span><div class="tx"><b>≈ 0.2 µs: CH0 샘플링 시작(5.2 µs) → 변환(1.17 µs)</b><span>MUX가 SQ1 = 0번 채널을 고르고, C<sub>ADC</sub>가 핀 전압까지 충전된 뒤 홀드되어 12비트로 바뀐다.</span></div></li>
+  <li><span class="n">3</span><div class="tx"><b>≈ 6.6 µs: DR ← CH0 결과, EOC, DMA 요청</b><span>DMA1 채널 1이 DR을 읽어 버퍼[k]에 쓴다. 그 사이 시퀀서는 SQ2 = 1번 채널로 넘어간다.</span></div></li>
+  <li><span class="n">4</span><div class="tx"><b>≈ 13.0 µs: DR ← CH1 결과, DMA 요청 → 시퀀스 끝, 대기</b><span>CONT = 0이므로 다음 TRGO까지 멈춘다. 1 ms 중 ADC가 일한 시간은 약 1.3 %이다.</span></div></li>
+  <li><span class="n">5</span><div class="tx"><b>버퍼가 절반·전부 차면 DMA HT·TC → NVIC 11</b><span>버퍼 길이가 2채널 × M이면 M ms마다 한 번씩 CPU가 깨어나 반쪽 버퍼를 처리한다.</span></div></li>
+</ol>
+
+<h3>시나리오 ③ 연속 변환 중 워치독 창을 벗어난다</h3>
+<figure class="diag"><svg viewBox="0 0 680 215" role="img" aria-label="연속 변환 중 아날로그 워치독 동작">
+<text class="s" x="8" y="50">HTR 3000</text><line class="dash" x1="120" y1="46.7" x2="650" y2="46.7"/>
+<text class="s" x="8" y="99">LTR 1000</text><line class="dash" x1="120" y1="95.6" x2="650" y2="95.6"/>
+<text class="s" x="8" y="20">변환 결과</text>
+<polyline id="awdline" class="sig" points=""/>
+<g id="awddots"></g>
+<text class="s" x="8" y="154">AWDIE 유지</text>
+<polyline id="awdl1" class="sig2" points=""/>
+<text class="s" x="8" y="194">끄고 재무장</text>
+<polyline id="awdl2" class="sig2" points=""/>
+<text class="o" x="470" y="186">창 안 복귀 → AWDIE 다시 1</text>
+</svg><figcaption><span class="eqv">등가 모델</span> 연속 변환 결과(점)가 HTR을 넘는 구간에서 AWD가 변환마다 다시 선다(11.3.7을 수준 조건으로 읽은 결과). 가운데 줄처럼 AWDIE를 켜 둔 채 플래그만 지우면 변환 하나마다 인터럽트가 한 번씩 걸린다. 239.5 클럭, 10.67 MHz라면 23.6 µs마다, 초당 약 4만 번이다. 아래 줄은 첫 인터럽트에서 AWDIE를 끄고, 값이 창 안으로 돌아온 것을 확인한 뒤 다시 켜는 방식이다.</figcaption></figure>
+
+<h3>시나리오 ④ 내부 채널: 온도와 V<sub>DDA</sub></h3>
+<p>TSVREFE = 1이면 채널 16·17이 살아난다. 온도 센서는 켠 뒤 t<sub>START</sub> 4~10 µs가 지나야 올바른 전압을 낸다. ADON과 TSVREFE를 같이 켜면 두 기동 시간이 겹쳐 기다림이 줄어든다(RM0008 11.10 주석, <a href="../../Docs/RM0008_Reference_manual.pdf#page=236">p.236</a>; DS5319 Table 51, <a href="../../Docs/Datasheet_stm32f103.pdf#page=78">p.78</a>). 샘플링 시간은 온도 센서 17.1 µs(권장), V<sub>REFINT</sub> 전형 5.1 µs·최대 17.1 µs이다(Table 51·12).</p>
+<div class="eq">온도(°C) = (V25 − V_SENSE) / Avg_Slope + 25                 (RM0008 p.236)
+          V25 = 1.43 V (1.34~1.52),  Avg_Slope = 4.3 mV/°C (4.0~4.6)   (DS5319 Table 51)
+V_DDA = V_REFINT × 4096 / code_REFINT                           (code = V_REFINT / V_DDA × 4096 에서)
+          V_REFINT = 1.20 V (1.16~1.24, −40~105 °C)               (DS5319 Table 12, p.40)</div>
+<p>식의 부호를 보면 온도가 오를수록 V<sub>SENSE</sub>가 내려간다. 64핀 LQFP에서는 V<sub>REF+</sub>가 칩 안에서 V<sub>DDA</sub>에 묶여 있다(Table 47 주석 3). 그래서 모든 변환 결과는 "V<sub>DDA</sub>에 대한 비율"이다. V<sub>DDA</sub>가 3.3 V에서 3.2 V로 내려가면 같은 입력 전압의 코드가 약 3 % 커진다. V<sub>REFINT</sub>는 전원과 무관한 고정 전압이므로, 그 코드를 재면 V<sub>DDA</sub>를 거꾸로 알 수 있다. 다만 V<sub>REFINT</sub> 자체가 칩마다 1.16~1.24 V로 퍼져 있고, 이 문서들에는 칩별 공장 교정값이 나오지 않는다. 그래서 이 방법으로 얻는 V<sub>DDA</sub>는 ±3 % 남짓의 불확실성을 가진다.</p>
+</section>
+
+<!-- ============================================================ 8 -->
+<section id="s8">
+<h2>8. 설계상 한계와 이유</h2>
+<div class="tablewrap"><table>
+<tr><th>설계 선택</th><th>얻은 것</th><th>감수한 것</th><th>근거</th></tr>
+<tr><td>축차 비교 12비트, 12.5 클럭</td><td>작은 면적으로 12비트, 최단 1 µs</td><td>초당 최대 1 M샘플. 더 빠른 신호는 놓친다</td><td>RM0008 11.6, DS5319 Table 47</td></tr>
+<tr><td>채널별 샘플링 시간 선택</td><td>신호원 저항이 큰 채널만 길게</td><td>샘플링이 길수록 변환이 느려진다. 50 kΩ을 넘는 신호원은 보장하지 않는다</td><td>DS5319 Equation 1, Table 48</td></tr>
+<tr><td>ADCCLK = PCLK2 ÷ 짝수, 최대 14 MHz</td><td>버스 클럭과 동기라 단순하다</td><td>PCLK2 72 MHz에서는 12 MHz가 한계(1.17 µs). 1 µs를 얻으려면 PCLK2를 56 MHz로 맞춰야 한다</td><td>RM0008 11.2, Figure 8</td></tr>
+<tr><td>정규 결과 레지스터 한 개</td><td>레지스터 수 절약</td><td>스캔에는 DMA가 필수. ADC_SR에 오버런 플래그가 없어, DMA나 CPU가 늦으면 이전 결과가 아무 표시 없이 덮어써진다</td><td>RM0008 11.3.8, 11.8, 11.12.1</td></tr>
+<tr><td>DMA는 ADC1만, 채널 고정</td><td>배선 단순</td><td>ADC2 결과는 이중 모드에서만 DMA로 옮길 수 있다. DMA1 채널 1을 TIM2_CH3·TIM4_CH1과 나눠 쓴다</td><td>RM0008 11.8, Table 78</td></tr>
+<tr><td>내부 채널(온도·V<sub>REFINT</sub>)은 ADC1에만</td><td>내부 배선 하나</td><td>ADC2의 채널 16·17은 V<sub>SS</sub>이다</td><td>RM0008 p.240</td></tr>
+<tr><td>온도 센서는 간단한 내부 소자</td><td>배선 없이 다이 온도 측정</td><td>칩마다 오프셋이 최대 45 °C 다르다. 절대 온도보다 변화량 감지에 쓰라고 문서가 권한다</td><td>RM0008 11.10</td></tr>
+<tr><td>V<sub>REF+</sub>를 V<sub>DDA</sub>에 묶음(64핀 LQFP)</td><td>핀 절약</td><td>결과가 전원 전압의 비율이 된다. V<sub>REFINT</sub>로 보정할 수 있지만 V<sub>REFINT</sub> 편차(1.16~1.24 V)가 남는다</td><td>DS5319 Table 47 주석 3, Table 12</td></tr>
+<tr><td>정확도</td><td>교정 후 총 오차 전형 ±2 LSB</td><td>최대 ±5 LSB(V<sub>DDA</sub> 2.4~3.6 V). 조건을 좁히면(3~3.6 V, 25 °C) 최대 ±2 LSB. 12비트의 마지막 1~2비트는 잡음과 오차에 묻힌다</td><td>DS5319 Table 49·50, <a href="../../Docs/Datasheet_stm32f103.pdf#page=75">p.75~76</a></td></tr>
+<tr><td>워치독 창 한 벌, 수준 조건</td><td>비교기 두 개로 끝난다</td><td>채널마다 다른 창을 줄 수 없다. 창 밖에 머무는 동안 인터럽트가 반복된다</td><td>RM0008 11.3.7, Table 66</td></tr>
+<tr><td>트리거는 상승 엣지만</td><td>트리거 펄스 하나에 변환 한 번</td><td>하강 엣지로 시작하려면 타이머 쪽 극성을 바꿔야 한다. 최대 f<sub>TRIG</sub> = ADCCLK/17</td><td>RM0008 11.7, DS5319 Table 47</td></tr>
+<tr><td>주입 그룹이 정규 그룹을 끊고 들어감</td><td>급한 측정을 바로 할 수 있다</td><td>끊긴 정규 변환은 리셋되었다가 다시 이어지므로 정규 샘플 간격이 흔들린다</td><td>RM0008 11.3.9</td></tr>
+<tr><td>ADC1·ADC2 인터럽트 벡터 공유</td><td>벡터 절약</td><td>ISR이 두 ADC의 SR을 모두 확인해야 한다</td><td>RM0008 11.11, Table 63</td></tr>
+<tr><td>PA0 핀이 채널 0</td><td>-</td><td>주입 트리거로 변환할 때 PA0에 150 mV 미만, 약 10 ns의 글리치가 생길 수 있다(어느 채널을 변환하든). 단일 ADC에서는 변환 결과에 영향이 없고, 이중 모드 + 주입 트리거라면 채널 0을 주입 채널로 두라고 권한다. 회피책 없음</td><td>ES096 2.5.1, <a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=13">p.13~14</a></td></tr>
+</table></div>
+<p>정오표 ES096에서 ADC 항목은 2.5.1 하나뿐이다. 트리거 사슬과 관련된 2.6.2(TRGO 출력 실패)는 6장 ①에서 다뤘다.</p>
+</section>
+
+<!-- ============================================================ 9 -->
+<section id="s9">
+<h2>9. 이해 확인 문제</h2>
+<details><summary>Q1. PCLK2 = 72 MHz이다. 쓸 수 있는 가장 빠른 ADCCLK와 최단 변환 시간은?</summary><div class="ans">
+<p>÷4는 18 MHz로 14 MHz를 넘으므로 ÷6 = 12 MHz가 최대이다. 최단 변환은 (1.5 + 12.5) / 12 MHz = 1.17 µs이다. RM0008 11.2의 "1.17 µs at 72 MHz"와 같다.</p></div></details>
+<details><summary>Q2. ADCCLK 10.67 MHz, 두 채널을 각각 55.5 클럭으로 스캔한다. 1 kHz 트리거라면 1 ms 중 ADC가 일하는 비율은?</summary><div class="ans">
+<p>채널당 68 클럭 = 6.375 µs, 두 채널 12.75 µs, 트리거 지연 약 0.2 µs를 더해 약 12.95 µs이다. 1000 µs 중 약 1.3 %이다. 나머지 시간에 다른 채널을 더 넣거나 샘플링을 늘릴 여유가 충분하다.</p></div></details>
+<details><summary>Q3. 신호원 저항이 30 kΩ인 센서를 ADCCLK 14 MHz로 읽는다. 고를 수 있는 가장 짧은 SMP와 변환 시간은?</summary><div class="ans">
+<p>Table 48에서 28.5 클럭은 25.2 kΩ까지라 부족하고, 41.5 클럭이 37.2 kΩ까지이므로 41.5를 고른다. 변환 시간은 (41.5 + 12.5) / 14 MHz = 3.86 µs이다. 4장 계산기에서 확인할 수 있다.</p></div></details>
+<details><summary>Q4. ADCCLK 12 MHz에서 온도 센서를 읽는다. 샘플링 17.1 µs를 만족하는 SMP는?</summary><div class="ans">
+<p>17.1 µs × 12 MHz = 205.2 클럭이 필요하다. 71.5는 모자라므로 239.5를 고른다. 이때 샘플링은 20.0 µs, 변환 전체는 252 / 12 MHz = 21.0 µs이다.</p></div></details>
+<details><summary>Q5. V<sub>DDA</sub> = 3.3 V일 때 1 LSB는? 입력 1.000 V의 이상적인 코드는?</summary><div class="ans">
+<p>1 LSB = 3.3 / 4096 = 0.806 mV이다. 1.000 / 0.806 mV = 1241.2이므로 코드는 1241이다(k·LSB ≤ V<sub>IN</sub> &lt; (k+1)·LSB). 2장의 축차 비교 따라가기 기본값이 이 경우이다. 실제 칩은 Table 50의 오차(전형 ±2 LSB)만큼 흔들린다.</p></div></details>
+<details><summary>Q6. V<sub>REFINT</sub> 채널의 코드가 1490이다. V<sub>DDA</sub>는? V<sub>REFINT</sub> 편차를 고려하면 범위는?</summary><div class="ans">
+<p>전형값 1.20 V로 V<sub>DDA</sub> = 1.20 × 4096 / 1490 = 3.30 V이다. V<sub>REFINT</sub>가 1.16 V이면 3.19 V, 1.24 V이면 3.41 V이다. 칩별 교정값이 없으므로 약 ±3.3 %의 불확실성이 남는다.</p></div></details>
+<details><summary>Q7. 네 채널을 SCAN = 1, DMA 없이 돌리고 EOC 인터럽트에서 DR을 읽었더니 늘 마지막 채널 값만 보인다. 왜이며, 해결책 두 가지는?</summary><div class="ans">
+<p>정규 결과 레지스터는 하나이고, 스캔 중 EOC 인터럽트는 마지막 채널 끝에서만 생긴다(CR1.SCAN 주석). 앞 채널 결과는 이미 덮어써졌고, 오버런 플래그도 없어 알 수 없다. 해결책은 ① DMA로 변환마다 메모리에 옮기기(RM0008이 요구하는 방식), ② 불연속 모드 n = 1로 트리거 한 번에 한 채널만 변환하고 그때마다 읽기이다.</p></div></details>
+<details><summary>Q8. LTR = 1000, HTR = 3000, V<sub>DDA</sub> = 3.3 V. 입력이 3.0 V에 머문다. 무슨 일이 일어나는가?</summary><div class="ans">
+<p>코드는 3.0 / 3.3 × 4096 ≈ 3723으로 HTR보다 크다. 연속 변환이면 변환마다 AWD가 다시 선다. AWDIE를 켜 둔 채 플래그만 지우면 변환마다 인터럽트가 걸려(239.5 클럭, 10.67 MHz라면 초당 약 4만 번) CPU가 다른 일을 못 한다. 첫 인터럽트에서 AWDIE를 끄고 복귀를 확인한 뒤 다시 켜야 한다(7장 ③).</p></div></details>
+<details><summary>Q9. V<sub>SENSE</sub> = 1.38 V이다. 전형값으로 계산한 온도는? V25 편차만 고려하면 범위는?</summary><div class="ans">
+<p>(1.43 − 1.38) / 0.0043 + 25 = 36.6 °C이다. V25가 1.34 V이면 15.7 °C, 1.52 V이면 57.6 °C로 약 ±21 °C이다. 그래서 RM0008은 온도 "변화" 감지에 쓰고, 정확한 온도는 외부 센서를 쓰라고 한다.</p></div></details>
+<details><summary>Q10. ALIGN = 1(왼쪽 정렬)에서 정규 채널 결과 0xABC는 DR에 어떻게 보이는가? 워치독 HTR에는 어떤 값을 써야 하는가?</summary><div class="ans">
+<p>D11이 비트 15에 오므로 DR = 0xABC0이다(Figure 28). 워치독은 정렬 전 12비트 값과 비교하므로 HTR에는 정렬과 무관하게 0xABC 같은 12비트 값을 쓴다(11.3.7).</p></div></details>
+<details><summary>Q11. CR2에 CONT = 1과 ADON = 1을 한 번에 썼더니(ADON은 이미 1이었다) 변환이 시작되지 않았다. 왜인가?</summary><div class="ans">
+<p>ADON 외의 비트를 같은 쓰기에서 함께 바꾸면 변환이 시작되지 않는다(RM0008 p.243 주석). 잘못된 설정 변경이 곧바로 변환을 일으키지 않게 하려는 장치이다. CONT를 먼저 쓰고, ADON만 따로 다시 써야 한다.</p></div></details>
+</section>
+
+<!-- ============================================================ 10 -->
+<section id="s10">
+<h2>10. 하부 예제 연결</h2>
+<p>각 예제가 이 교안의 어느 경로를 쓰는지 정리했다. 코드, 라이브러리, 보드 배선은 예제 교안에서 다룬다.</p>
+<div class="tablewrap"><table>
+<tr><th>예제</th><th>지나가는 경로</th><th>이 교안의 장</th></tr>
+<tr><td><a href="01_ADC_Single/01_ADC_Single%20교안.html">01_ADC_Single</a></td><td>PA0(채널 0) → MUX → 239.5 클럭 샘플 → SAR → DR. 교정 후 CONT = 1, 소프트웨어 시작. CPU가 DR을 주기적으로 읽는다. ADCCLK 8 MHz, 변환 31.5 µs</td><td><a href="#s3">3</a>, <a href="#s4">4</a>, <a href="#s7">7①</a></td></tr>
+<tr><td><a href="02_ADC_Temperature/02_ADC_Temperature%20교안.html">02_ADC_Temperature</a></td><td>TSVREFE → 채널 16(온도 센서) → 239.5 클럭(8 MHz에서 29.9 µs ≥ 17.1 µs) → 온도 식</td><td><a href="#s4">4</a>, <a href="#s7">7④</a>, <a href="#s8">8</a></td></tr>
+<tr><td><a href="03_ADC_Multi/ADC%20다채널%20교안.html">03_ADC_Multi</a></td><td>SCAN + DISCEN(n = 1), 순서표 채널 0·1·4·17. 소프트웨어 트리거 한 번에 한 채널씩 변환하고 그때마다 DR을 읽는다(DMA 없음)</td><td><a href="#s5">5</a>, <a href="#s8">8</a>, Q7</td></tr>
+<tr><td><a href="04_ADC_DMA_TimTrigger/ADC%20타이머%20트리거%20DMA%20교안.html">04_ADC_DMA_TimTrigger</a></td><td>TIM3 갱신 → TRGO → EXTSEL = 100 → 채널 0·1 스캔 → 변환마다 DMA1 채널 1(원형) → HT·TC → NVIC 11</td><td><a href="#s6">6①③</a>, <a href="#s7">7②</a></td></tr>
+<tr><td><a href="05_ADC_AnalogWatchdog_c/05_ADC_AnalogWatchdog%20교안.html">05_ADC_AnalogWatchdog_c</a></td><td>채널 0 연속 변환 + DMA 1워드 원형. 워치독 한 채널(AWDSGL), 창 1000~3000, AWDIE → NVIC 18. ISR에서 AWDIE를 끄고 주 프로그램이 복귀 후 다시 켠다</td><td><a href="#s5">5</a>, <a href="#s6">6②</a>, <a href="#s7">7③</a>, Q8</td></tr>
+<tr><td><a href="06_ADC_Vrefint_VDDA_c/06_ADC_Vrefint_VDDA%20교안.html">06_ADC_Vrefint_VDDA_c</a></td><td>채널 17(V<sub>REFINT</sub>)과 채널 0을 번갈아 239.5 클럭으로 읽어 V<sub>DDA</sub>를 역산하고 외부 채널 값을 보정한다</td><td><a href="#s7">7④</a>, <a href="#s8">8</a>, Q6</td></tr>
+<tr><td><a href="07_ADC_Potentiometer_PWM_c/07_ADC_Potentiometer_PWM%20교안.html">07_ADC_Potentiometer_PWM_c</a></td><td>채널 1 연속 변환(71.5 클럭) + DMA 1워드 원형 → CPU가 메모리에서 읽어 평균·감마 계산 → 타이머 비교 레지스터. ADC와 PWM 사이는 하드웨어 사슬이 아니라 CPU가 잇는다</td><td><a href="#s4">4</a>, <a href="#s6">6③</a></td></tr>
+</table></div>
+
+<div class="box ok">
+  <div class="label">정리</div>
+  <ul>
+    <li>ADC는 아날로그 MUX + 샘플-홀드(스위치·커패시터) + SAR(이진 탐색 상태기계, DAC, 비교기) + 결과 래치 + 플래그 + 시퀀서(순서표와 카운터)이다.</li>
+    <li>ADCCLK = PCLK2 ÷ {2, 4, 6, 8} ≤ 14 MHz, T<sub>conv</sub> = (SMP + 12.5) / ADCCLK. 신호원 저항이 크면 샘플링을 늘려야 하고, 그만큼 느려진다.</li>
+    <li>CONT·SCAN·DISCEN이 시퀀서의 반복 방식을 고르고, EXTSEL·EXTTRIG가 시작 시점을 고른다. 타이머 TRGO로 시작하면 샘플 간격이 하드웨어로 정해진다.</li>
+    <li>정규 결과 레지스터는 하나뿐이고 오버런 표시가 없다. 여러 채널은 DMA(DMA1 채널 1)로 옮긴다.</li>
+    <li>EOC·JEOC·AWD는 ADC1·ADC2가 공유하는 벡터 18로 모인다. 워치독은 창 밖에 있는 동안 반복해서 선다.</li>
+    <li>결과는 V<sub>DDA</sub>에 대한 비율이다. V<sub>REFINT</sub>로 V<sub>DDA</sub>를 역산할 수 있지만 V<sub>REFINT</sub> 자체의 편차가 남는다.</li>
+  </ul>
+</div>
+<div class="nextprev"><a href="../02_USART/02_USART%20교안.html">← 02_USART 상위 교안</a><a href="01_ADC_Single/01_ADC_Single%20교안.html">첫 예제: 01_ADC_Single →</a><a href="../04_I2C_Communication/04_I2C_Communication%20교안.html">다음 그룹: 04_I2C_Communication 상위 교안 →</a></div>
+</section>
+
+<footer>
+  <p>그림 출처: STMicroelectronics RM0008 Rev 21, DS5319 Rev 19(저장소 <code>Docs/</code>). 원본 그림은 PDF의 해당 쪽을 잘라 실었고(그림 8 클럭 트리는 ADC 관련 부분만), 등가 모델 그림은 이 교안에서 새로 그렸다.</p>
+</footer>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  function fmt(x,d){return (Math.round(x*Math.pow(10,d))/Math.pow(10,d)).toLocaleString('ko-KR',{maximumFractionDigits:d})}
+  function ftime(us){return us>=1000?fmt(us/1000,3)+" ms":fmt(us,3)+" µs"}
+  function frate(hz){return hz>=1e6?fmt(hz/1e6,3)+" MHz":(hz>=1e3?fmt(hz/1e3,2)+" kHz":fmt(hz,1)+" Hz")}
+
+  /* ---------- 2장 축차 비교 따라가기 ---------- */
+  function drawSar(){
+    var vref=+$("svref").value, vin=parseFloat($("svin").value); if(!isFinite(vin)) vin=0;
+    var v=Math.min(Math.max(vin,0),vref), lsb=vref/4096, code=0, steps=[];
+    for(var b=11;b>=0;b--){var trial=code|(1<<b), vd=trial*lsb, keep=v>=vd; steps.push({b:b,vd:vd,keep:keep}); if(keep) code=trial;}
+    function y(u){return 190-u/vref*170}
+    var s='<text class="s" x="8" y="24">V_REF+</text><text class="s" x="8" y="194">0 V</text>';
+    s+='<line class="wm" x1="100" y1="190" x2="650" y2="190"/>';
+    steps.forEach(function(o,k){
+      var x=110+k*45, yy=y(o.vd);
+      s+='<rect class="bx '+(o.keep?'flg':'sel')+'" x="'+x+'" y="'+yy.toFixed(1)+'" width="30" height="'+(190-yy).toFixed(1)+'"/>';
+      s+='<text class="sc" x="'+(x+15)+'" y="206">b'+o.b+'</text><text class="tc" x="'+(x+15)+'" y="223">'+(o.keep?1:0)+'</text>';
+    });
+    var yv=y(v); s+='<line class="sig" x1="100" y1="'+yv.toFixed(1)+'" x2="650" y2="'+yv.toFixed(1)+'" stroke-dasharray="6 4"/>';
+    var ly=Math.min(Math.max(yv+4,40),176); s+='<text class="o" x="8" y="'+ly.toFixed(1)+'">V_IN</text>';
+    $("ssvg").innerHTML=s;
+    $("s_code").textContent=code+" (0x"+code.toString(16).toUpperCase().padStart(3,"0")+")";
+    $("s_bin").textContent=code.toString(2).padStart(12,"0").replace(/(\d{4})(?=\d)/g,"$1 ");
+    $("s_lsb").textContent=fmt(lsb*1000,3)+" mV";
+    $("s_back").textContent=fmt(code*lsb,4)+" V";
+    $("s_err").textContent=fmt((v-code*lsb)*1000,3)+" mV";
+    $("s_note").textContent="막대는 각 단계에서 DAC가 낸 시험 전압이다. 청록 막대는 V_IN 이하라 그 비트를 1로 남긴 단계, 주황 막대는 V_IN보다 커서 0으로 되돌린 단계이다."+(vin>vref?" 입력이 V_REF+ 이상이면 모든 비트가 1(4095)로 포화된다.":"")+(vin<0?" 음수 입력은 0으로 본다.":"");
+  }
+  ["svin","svref"].forEach(function(id){$(id).addEventListener("input",drawSar);$(id).addEventListener("change",drawSar)});
+  drawSar();
+
+  /* ---------- 4장 시간 계산기 ---------- */
+  var LN=Math.log(16384), CADC=8e-12, RADC=1000;
+  function calcT(){
+    var p=+$("tp").value, pre=+$("tpre").value, smp=+$("tsmp").value;
+    var n=Math.min(16,Math.max(1,Math.round(+$("tn").value||1))), trig=Math.max(0,+$("ttrig").value||0);
+    var clk=p/pre, ok=clk<=14&&clk>=0.6, notes=[];
+    var c=$("t_clk"); c.textContent=fmt(clk,3)+" MHz"; c.className="v verdict "+(ok?"good":"bad");
+    if(clk>14) notes.push("ADCCLK가 14 MHz를 넘는다. 이 분주는 쓸 수 없다(Figure 8, Table 47).");
+    if(clk<0.6) notes.push("ADCCLK가 Table 47의 최소 0.6 MHz보다 낮다.");
+    var tconv=(smp+12.5)/clk, lat=2/clk+1/p, tseq=n*tconv+(trig>0?lat:0);
+    $("t_conv").textContent=ftime(tconv)+" ("+(smp+12.5)+" 클럭)";
+    $("t_seq").textContent=ftime(tseq)+(trig>0?" (지연 포함)":"");
+    var rate=trig>0?1e6/trig:1e6/(n*tconv);
+    $("t_rate").textContent=frate(rate);
+    var rain=smp/(clk*1e6*CADC*LN)-RADC, r=$("t_rain");
+    if(rain>50000){r.textContent="50 kΩ (상한)";} else if(rain<=0){r.textContent="불가";} else {r.textContent=fmt(rain/1000,1)+" kΩ";}
+    var ts=smp/clk, ti=$("t_int"); ti.textContent=(ts>=17.1?"충족":"부족")+" ("+fmt(ts,2)+" µs)"; ti.className="v verdict "+(ts>=17.1?"good":"bad");
+    var busy=$("t_busy");
+    if(trig>0){var pc=tseq/trig*100; busy.textContent=fmt(pc,2)+" %"; busy.className="v verdict "+(pc<100?"good":"bad");
+      if(pc>=100) notes.push("트리거 간격이 시퀀스 시간보다 짧다. 앞 시퀀스가 끝나기 전에 트리거가 온다.");}
+    else {busy.textContent="100 % (연속)"; busy.className="v";}
+    var ftr=clk/17;
+    $("t_trig").textContent=fmt(ftr*1000,0)+" kHz / "+fmt(lat*1000,0)+" ns";
+    if(trig>0&&1/trig>ftr) notes.push("트리거 주파수가 f_TRIG 최대(ADCCLK/17)를 넘는다.");
+    var fs=1/tconv; if(fs>1||fs<0.05) notes.push("변환 1회 기준 샘플 속도 "+fmt(fs*1000,1)+" kHz는 Table 47의 f_S 범위(0.05~1 MHz) 밖이다. 이 범위를 벗어날 때의 영향은 문서에 설명이 없다.");
+    notes.push("R_AIN 최대는 DS5319 식 1(C_ADC 8 pF, R_ADC 1 kΩ, N = 12)을 현재 ADCCLK에 적용한 값이다. 14 MHz에서 Table 48과 같다.");
+    $("t_note").textContent=notes.join(" ");
+  }
+  ["tp","tpre","tsmp","tn","ttrig"].forEach(function(id){$(id).addEventListener("input",calcT);$(id).addEventListener("change",calcT)});
+  calcT();
+
+  /* ---------- 7장 워치독 그림 ---------- */
+  var vals=[2000,2200,2500,2800,3100,3300,3400,3400,3300,3100,2900,2700,2500,2300,2100,2000];
+  function yc(v){return 120-v/4095*100}
+  var pts=[],dots="",l1=["120,158"],l2=["120,198"],first=true;
+  vals.forEach(function(v,i){var x=130+i*33, out=v>3000||v<1000; pts.push(x+","+yc(v).toFixed(1));
+    dots+='<circle class="'+(out?'ahc':'ah')+'" cx="'+x+'" cy="'+yc(v).toFixed(1)+'" r="3.2"/>';
+    if(out){l1.push(x+",158",x+",142",(x+8)+",142",(x+8)+",158");
+      if(first){l2.push(x+",198",x+",182",(x+8)+",182",(x+8)+",198"); first=false;}}});
+  l1.push("650,158"); l2.push("650,198");
+  $("awdline").setAttribute("points",pts.join(" ")); $("awddots").innerHTML=dots;
+  $("awdl1").setAttribute("points",l1.join(" ")); $("awdl2").setAttribute("points",l2.join(" "));
+})();
+</script>
+</body></html>

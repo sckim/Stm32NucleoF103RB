@@ -214,7 +214,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · ADC · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · ADC · 교안 · <a href="../03_ADC%20교안.html" style="color:inherit">↑ 03_ADC 상위 교안</a></div>
   <h1>가변저항으로 LED 밝기 조절: 이동평균과 감마 보정</h1>
   <p class="lead">센서 값을 읽어 그대로 액추에이터에 넘기면 두 가지 문제가 생긴다. 잡음 때문에 출력이 떨리고, 사람 눈이 밝기를 선형으로 느끼지 않아 손잡이의 앞쪽 조금만 돌려도 LED가 거의 다 밝아진다. 이 교안은 PA1(A1)의 가변저항 전압을 ADC 연속 변환 + DMA로 받아, 8샘플 이동평균과 감마(제곱) 보정을 거쳐 TIM2_CH1(PA0) PWM의 CCR1로 내보내는 <code>07_ADC_Potentiometer_PWM_c</code> 예제를 해석한다. &lsquo;입력 → 처리 → 출력&rsquo;이 한 루프에 모두 들어 있는 가장 작은 계측·제어 예제이다.</p>
   <nav class="toc" aria-label="목차">

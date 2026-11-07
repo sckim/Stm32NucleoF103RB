@@ -216,7 +216,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 교안 · <a href="../01_GPIO%20교안.html" style="color:inherit">↑ 01_GPIO 상위 교안</a></div>
   <h1>외부 인터럽트 두 개: 서로 다른 EXTI 벡터, 하나의 콜백</h1>
   <p class="lead">버튼이 하나일 때는 인터럽트가 오면 그 버튼이라고 단정할 수 있다. 버튼이 둘이고 EXTI 라인 번호대가 다르면 NVIC 벡터도 달라지고, HAL은 두 ISR을 결국 같은 콜백 하나로 모은다. 이 교안은 B1(PC13, 하강 에지)과 외부 버튼 B2(PA6, 상승 에지)를 각각 <code>EXTI15_10</code>, <code>EXTI9_5</code> 벡터에 걸고 <code>HAL_GPIO_EXTI_Callback</code>에서 <code>GPIO_Pin</code>으로 구분하는 <code>08_ExternalInt</code> 예제를 AFIO·EXTI·NVIC 레지스터 수준까지 해석한다.</p>
   <nav class="toc" aria-label="목차">

@@ -200,7 +200,7 @@ footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:v
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · I2C · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · I2C · 교안 · <a href="../04_I2C_Communication%20교안.html" style="color:inherit">↑ 04_I2C 상위 교안</a></div>
   <h1>DS3231 외장 RTC: 레지스터 7바이트로 시각을 읽는다</h1>
   <p class="lead">DS3231은 I2C로 연결하는 시계 칩이다. 시각은 BCD 형식으로 레지스터 0x00~0x06에 들어 있고, 마스터는 그 7바이트를 한 번에 읽는다. 이 교안은 <code>HAL_I2C_Mem_Read</code>가 버스에 내보내는 바이트 순서를 하나씩 따라가고, BCD 변환, 온도 레지스터의 2의 보수 형식, 전원이 끊겼음을 알리는 OSF 플래그를 <code>08_I2C_DS3231_RTC_c</code> 예제 코드로 확인한다.</p>
   <nav class="toc" aria-label="목차">

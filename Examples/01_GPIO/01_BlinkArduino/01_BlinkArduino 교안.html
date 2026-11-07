@@ -217,7 +217,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 교안 · <a href="../01_GPIO%20교안.html" style="color:inherit">↑ 01_GPIO 상위 교안</a></div>
   <h1>Arduino 계층의 Blink: pinMode · digitalWrite · delay 뒤의 레지스터</h1>
   <p class="lead">Arduino API는 칩을 몰라도 LED를 깜빡이게 해 주지만, 그 대가로 어떤 레지스터가 언제 바뀌는지가 보이지 않는다. 이 교안은 STM32duino 코어가 <code>pinMode</code>를 <code>RCC_APB2ENR</code>·<code>GPIOA_CRL</code> 설정으로, <code>digitalWrite</code>를 <code>BSRR</code>/<code>BRR</code> 쓰기로 바꾸는 과정을 빌드 산출물로 확인하고, 같은 Blink를 HAL·LL·레지스터로 구현한 세 예제와 비교한다. 대상 폴더는 <code>01_BlinkArduino</code>이다.</p>
   <nav class="toc" aria-label="목차">

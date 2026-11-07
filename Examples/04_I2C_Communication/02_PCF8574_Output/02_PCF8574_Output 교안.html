@@ -209,7 +209,7 @@ footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:v
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · I2C · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · I2C · 교안 · <a href="../04_I2C_Communication%20교안.html" style="color:inherit">↑ 04_I2C 상위 교안</a></div>
   <h1>PCF8574: 바이트 하나로 핀 여덟 개를 바꾼다</h1>
   <p class="lead">PCF8574는 I2C로 받은 1바이트를 핀 P7~P0에 그대로 내보내는 8비트 입출력 확장 IC이다. MCU는 SCL, SDA 두 선만 쓰고도 출력 핀 8개를 얻는다. 이 교안은 쓰기·읽기 프레임, PCF8574의 준양방향 핀 구조, LED를 액티브 Low로 다는 이유를 차례로 보고, I2C1을 HAL 폴링 방식으로 쓰는 <code>02_PCF8574_Output</code> 예제를 해석한다.</p>
   <nav class="toc" aria-label="목차">

@@ -243,7 +243,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · I2C · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · I2C · 교안 · <a href="../04_I2C_Communication%20교안.html" style="color:inherit">↑ 04_I2C 상위 교안</a></div>
   <h1>I2C 버스 스캔: 주소마다 "있으면 ACK 하라"고 묻는다</h1>
   <p class="lead">I2C 장치가 응답하지 않을 때 가장 먼저 할 일은 버스에 누가 있는지 확인하는 것이다. 이 교안은 주소 바이트 하나와 ACK 비트 하나로 장치의 존재를 확인하는 원리를 다룬다. 그 원리로 I2C1(PB6/PB7)에서 7비트 주소 0x08~0x77을 차례로 호출하는 <code>01_I2C_Scan</code> 예제를 해석한다. HAL 주소 인자를 1비트 시프트해야 하는 이유와, 버스가 Low에 묶였을 때 나오는 <code>HAL_BUSY</code>도 함께 본다.</p>
   <nav class="toc" aria-label="목차">

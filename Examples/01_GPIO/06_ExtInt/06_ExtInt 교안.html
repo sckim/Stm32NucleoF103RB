@@ -211,7 +211,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 교안 · <a href="../01_GPIO%20교안.html" style="color:inherit">↑ 01_GPIO 상위 교안</a></div>
   <h1>버튼 외부 인터럽트: EXTI13 → EXTI15_10_IRQHandler → 콜백</h1>
   <p class="lead">폴링은 CPU가 버튼을 계속 지켜봐야 한다. 외부 인터럽트(EXTI)는 핀의 에지를 하드웨어가 감시하고, 에지가 오면 CPU를 불러낸다. 이 교안은 B1(PC13)을 <code>GPIO_MODE_IT_FALLING</code>으로 설정해 눌릴 때마다 LD2를 토글하는 <code>06_ExtInt</code> 예제를 해석한다. <code>AFIO_EXTICR4</code>의 핀 선택, <code>EXTI_IMR/FTSR/RTSR/PR</code>, NVIC <code>EXTI15_10_IRQn</code>, 진짜 ISR과 HAL 콜백의 구분, 그리고 디바운스가 없을 때 바운싱이 다중 인터럽트로 이어지는 현상을 다룬다.</p>
   <nav class="toc" aria-label="목차">

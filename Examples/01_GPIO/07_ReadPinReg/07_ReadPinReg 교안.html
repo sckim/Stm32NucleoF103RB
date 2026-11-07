@@ -211,7 +211,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 교안 · <a href="../01_GPIO%20교안.html" style="color:inherit">↑ 01_GPIO 상위 교안</a></div>
   <h1>레지스터로 버튼 읽기: CRH 입력 설정과 GPIOC-&gt;IDR 폴링</h1>
   <p class="lead">05_ReadPin의 <code>HAL_GPIO_ReadPin()</code>은 결국 레지스터 하나를 읽는 일이다. 이 교안은 같은 동작을 HAL 없이 CMSIS 헤더만으로 구현한 <code>07_ReadPinReg</code>를 해석한다. <code>RCC_APB2ENR</code>로 클럭을 열고, <code>GPIOC_CRH</code>의 <code>CNF13/MODE13</code>과 <code>ODR13</code>으로 풀업 입력을 만들고, main 루프에서 <code>GPIOC-&gt;IDR &amp; (1&lt;&lt;13)</code>을 검사해 <code>BSRR</code>로 LD2를 제어한다. 컴파일된 루프의 명령 수로 폴링 주기를 추정하고, 바운싱과 폴링 주기의 관계를 시뮬레이터로 확인한다.</p>
   <nav class="toc" aria-label="목차">

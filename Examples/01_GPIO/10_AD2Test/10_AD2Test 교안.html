@@ -215,7 +215,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 교안 · <a href="../01_GPIO%20교안.html" style="color:inherit">↑ 01_GPIO 상위 교안</a></div>
   <h1>헤더 핀 14개 순차 점등과 UART 프레임: AD2로 배선 검증하기</h1>
   <p class="lead">보드의 Arduino 헤더 라벨(D2, D3 …)은 MCU 핀 순서와 무관하게 포트 A, B, C에 흩어져 있다. 라벨을 믿고 배선했다가 핀이 어긋나면 펌웨어를 아무리 고쳐도 동작하지 않는다. 이 교안은 D2~D13, A4, A5 열네 핀을 1초씩 차례로 High로 만들고 한 바퀴마다 USART2로 <code>Hello, AD2</code>를 보내는 <code>10_AD2Test</code> 예제를 해석하고, Analog Discovery 2 로직 분석기로 펄스 순서와 UART 프레임을 관찰하는 방법을 다룬다.</p>
   <nav class="toc" aria-label="목차">

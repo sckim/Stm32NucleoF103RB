@@ -218,7 +218,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · ADC · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · ADC · 교안 · <a href="../03_ADC%20교안.html" style="color:inherit">↑ 03_ADC 상위 교안</a></div>
   <h1>아날로그 워치독: 전압 창 이탈을 하드웨어가 감시한다</h1>
   <p class="lead">과전압·저전압 보호처럼 &lsquo;값이 범위를 벗어났는가&rsquo;만 알면 되는 일에 CPU가 변환값을 계속 읽어 비교하는 것은 낭비이고, 200 ms 주기로 확인하면 짧은 이탈을 놓친다. STM32F1의 ADC에는 변환이 끝날 때마다 결과를 상한(<code>ADC_HTR</code>)·하한(<code>ADC_LTR</code>)과 비교하는 아날로그 워치독(AWD)이 들어 있다. 이 교안은 PA0를 연속 변환하며 DMA로 최신값을 받고, 창을 벗어나면 AWD 인터럽트로 LD2를 켜는 <code>05_ADC_AnalogWatchdog_c</code> 예제를 레지스터 수준까지 해석한다. 특히 창 밖에 머무는 동안 인터럽트가 변환마다 반복되는 문제와 이 예제의 &lsquo;해제 후 재무장&rsquo; 처리를 자세히 본다.</p>
   <nav class="toc" aria-label="목차">

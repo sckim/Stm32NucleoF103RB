@@ -197,7 +197,7 @@ footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:v
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · I2C · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · I2C · 교안 · <a href="../04_I2C_Communication%20교안.html" style="color:inherit">↑ 04_I2C 상위 교안</a></div>
   <h1>SSD1306 OLED: 1 KB 프레임버퍼를 I2C로 밀어 넣는다</h1>
   <p class="lead">128×64 OLED 한 화면은 1024바이트이다. MCU RAM에 같은 크기의 프레임버퍼를 두고 그림을 그린 뒤, I2C 한 번의 쓰기로 통째로 보낸다. 이 교안은 SSD1306의 I2C 프레임(주소 → 제어 바이트 → 데이터), 페이지 단위 메모리 구조, 초기화 명령을 설명하고, <code>HAL_I2C_Mem_Write</code>의 "메모리 주소" 자리에 제어 바이트를 넣는 <code>06_I2C_OLED_SSD1306_c</code> 예제를 해석한다.</p>
   <nav class="toc" aria-label="목차">

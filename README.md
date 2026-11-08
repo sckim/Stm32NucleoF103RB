@@ -7,7 +7,7 @@
 * IDE: [VS Code](https://code.visualstudio.com/) + [PlatformIO](https://platformio.org/) (예제 대부분), 일부는 STM32CubeIDE 프로젝트 파일(`.project`, `.cproject`, `.ioc`)을 함께 포함함
 * 보드 설정: [STM32CubeMX](https://www.st.com/en/development-tools/stm32cubemx.html)로 생성한 `.ioc` 파일 기준
 * 드라이버: STM32 HAL 및 LL(Low-Layer) 라이브러리, 일부 예제는 레지스터 직접 제어 방식
-* 회로 시뮬레이션: [Proteus](https://www.labcenter.com/) (프로젝트 파일 `STM32F103R_ArduinoPinmap.pdsprj`는 각 예제 폴더에 있다)
+* 회로 시뮬레이션: [Proteus](https://www.labcenter.com/) (프로젝트 파일 `STM32F103R_ArduinoPinmap.pdsprj`는 각 예제 폴더에 있다). 파일이름은 같지만 내부 회로도가 조금씩 다를 수 있다.
 
 ## 폴더 구조
 
@@ -164,6 +164,30 @@
 
 ## 회로 시뮬레이션
 Proteus 프로젝트는 각 예제 폴더에 있다. 파일 이름은 `STM32F103R_ArduinoPinmap.pdsprj`이다(`01_GPIO/07_ReadPinReg`만 `STM32F103R.pdsprj`). Proteus에서 열 때 MCU의 펌웨어 경로(`firmware.elf`)를 해당 예제의 빌드 결과로 지정한다.
+
+### Proteus의 MCU 모델: F103RB 대신 F103C8
+
+Proteus(8.17 기준) 라이브러리에는 **STM32F103RB 모델이 없다**. 제공되는 STM32F103 부품은 C4, C6, C8, R4, R6, T4, T6뿐이다. 그래서 프로젝트의 MCU는 그중 F103RB와 같은 medium-density 칩인 **STM32F103C8**(48핀)을 쓴다. 파일 이름에 `R`이 들어 있지만 실제 MCU는 C8이다.
+
+| 항목 | STM32F103C8 (Proteus) | STM32F103RB (Nucleo) |
+|---|---|---|
+| 계열 | medium-density | medium-density |
+| SRAM | 20 KB | 20 KB |
+| 주변장치 | TIM1~4, SPI1~2, I2C1~2, USART1~3, USB, CAN | 같음 |
+| Flash | **64 KB** | 128 KB |
+| 패키지 / GPIO | **48핀 / 37개** | 64핀 / 51개 |
+
+같은 계열이라 레지스터 주소, 주변장치 구성, 인터럽트 벡터, DMA 채널 배정은 같다(DS5319 Table 2). 차이는 Flash 크기와 핀 수이다.
+
+- **포트 C가 거의 없다**: 48핀 패키지에는 **PC0~PC12와 PD2가 없고, 포트 C는 PC13~PC15만 있다**. Nucleo Arduino 헤더 가운데 포트 C에 연결된 핀(D9 = PC7, A4 = PC1, A5 = PC0 등)을 쓰는 예제는 Proteus에서 그 핀을 시뮬레이션할 수 없다(예: `01_GPIO/10_AD2Test`). PA·PB 핀과 PC13(사용자 버튼 B1)만 쓰는 예제는 문제없다.
+- **Flash 64 KB**: 펌웨어가 64 KB를 넘으면 C8 모델에 올라가지 않는다. 현재 예제들은 대부분 이보다 훨씬 작다.
+- 64핀 R6 모델은 핀은 맞지만 low-density 칩이다. Flash가 작고 TIM4·USART3·I2C2·SPI2 같은 medium-density 주변장치가 없어 RB용 펌웨어와 맞지 않는다.
+
+Proteus의 STM32 모델 파일에는 DMA, RTC, IWDG, WWDG, ADC, USB 등의 모델이 들어 있다. 반면 **저전력 모드(PWR의 Sleep/Stop/Standby), 백업 레지스터·탬퍼(BKP), CAN은 모델링되어 있지 않은 것으로 보인다**. 이 판단은 설치된 모델 파일을 분석한 결과이다(Labcenter의 공식 목록은 없다). `09_WatchDog_Sleep`의 저전력·BKP 예제와 `11_CAN_Communication`은 실제 보드로 확인한다.
+
+### Wokwi
+
+`01_GPIO/02_BlinkHAL`에는 [Wokwi](https://wokwi.com) 시뮬레이터 설정(`wokwi.toml`, `diagram.json`)도 있다. Wokwi 역시 F103RB가 없어 Blue Pill(STM32F103C8)을 쓰며, DMA·RTC·PWR·IWDG는 지원하지 않는다. 사용법은 그 예제의 README를 참고한다.
 
 ## 관련 교과목
 - 디지털논리회로, 디지털시스템, 마이크로컨트롤러

@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "author": "Soochan Kim",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-stm32-bluepill", "id": "bp", "top": 0, "left": 0, "attrs": {} },
+    { "type": "wokwi-resistor", "id": "r1", "top": -72, "left": 180, "rotate": 0, "attrs": { "value": "220" } },
+    { "type": "wokwi-led", "id": "led1", "top": -130, "left": 270, "attrs": { "color": "green", "label": "LD2 (PA5)" } }
+  ],
+  "connections": [
+    [ "bp:A5", "r1:1", "green", [] ],
+    [ "r1:2", "led1:A", "green", [] ],
+    [ "led1:C", "bp:GND.1", "black", [] ]
+  ],
+  "dependencies": {}
+}

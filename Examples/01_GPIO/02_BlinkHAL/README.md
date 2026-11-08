@@ -141,6 +141,33 @@ monitor_speed = 115200
 3. USER CODE 영역 안의 코드는 그대로 보존되고, `MX_GPIO_Init()`/`SystemClock_Config()` 등만 새 설정으로 갱신된다.
 4. PlatformIO로 다시 빌드·업로드한다. (`platformio.ini`는 CubeMX가 건드리지 않는다.)
 
+## Wokwi로 시뮬레이션하기 (보드 없이)
+
+보드가 없을 때는 [Wokwi](https://wokwi.com) 시뮬레이터로 같은 펌웨어를 돌려 LED 점멸을 확인할 수 있다. 이 폴더의 `wokwi.toml`과 `diagram.json`이 그 설정이다.
+
+| 파일 | 내용 |
+|---|---|
+| `wokwi.toml` | 시뮬레이터에 넣을 펌웨어 경로(`.pio/build/nucleo_f103rb/firmware.elf`) |
+| `diagram.json` | 가상 회로: Blue Pill 보드의 **PA5 → 220Ω → LED → GND** |
+
+### 실행 순서
+
+1. VS Code에 **Wokwi Simulator** 확장을 설치하고, 안내에 따라 Wokwi 계정으로 라이선스를 활성화한다.
+2. 이 폴더(`02_BlinkHAL`)를 VS Code 작업 폴더로 연다. `wokwi.toml`이 작업 폴더 최상위에 있어야 한다.
+3. PlatformIO **Build**(✓) 또는 `pio run`으로 `firmware.elf`를 만든다. Wokwi는 직접 컴파일하지 않으므로 코드를 고칠 때마다 다시 빌드한다.
+4. `F1` → **Wokwi: Start Simulator**. 회로도의 초록 LED가 1초 간격으로 켜졌다 꺼지면 성공이다.
+5. `diagram.json`을 열면 회로 편집기가 뜬다. 부품을 추가하거나 배선을 바꿀 수 있다.
+
+### Nucleo-F103RB와 다른 점
+
+Wokwi에는 Nucleo-F103RB 보드가 없어서 같은 STM32F103 계열의 **Blue Pill(STM32F103C8)** 을 대신 쓴다.
+
+- **칩**: F103C8은 Flash 64KB, SRAM 20KB로 F103RB(Flash 128KB)보다 Flash가 작다. 이 예제의 펌웨어는 약 2.7KB라 그대로 들어간다. 같은 medium-density 계열이라 GPIOA·RCC·SysTick 레지스터 구성이 같다.
+- **LED**: Blue Pill 보드의 내장 LED는 PC13에 있다. 이 예제는 Nucleo의 LD2와 같은 **PA5**를 쓰므로, 회로도에 PA5용 외부 LED를 따로 달았다. PA5가 High일 때 LED가 켜진다(LD2와 같은 극성).
+- **클럭**: 이 예제는 외부 크리스털(HSE)을 쓰지 않고 **HSI 8MHz/2 × PLL16 = 64MHz**를 쓴다. 그래서 보드의 크리스털 유무와 상관없이 같은 클럭 설정이 적용된다.
+- **시뮬레이터 범위**: Wokwi의 Blue Pill은 GPIO, RCC, SysTick, EXTI, USART, TIM1~4 등을 시뮬레이션한다. 그러나 DMA, RTC, PWR, IWDG는 지원하지 않는다([Wokwi 문서](https://docs.wokwi.com/parts/board-stm32-bluepill)). 같은 방식을 다른 예제에 쓰려면 먼저 이 범위를 확인한다.
+- 실제 보드의 전기적 특성(출력 전류, 엣지 속도, 타이밍 오차)은 시뮬레이션되지 않는다. 최종 확인은 실제 보드로 한다.
+
 ## 관련 예제
 
 같은 동작의 [01_BlinkArduino](../01_BlinkArduino/README.md)(더 추상적), [03_BlinkLL](../03_BlinkLL/README.md), [04_BlinkReg](../04_BlinkReg/README.md)(더 낮은 수준)와 비교한다.

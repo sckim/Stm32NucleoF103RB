@@ -1,0 +1,7 @@
+# Wokwi 시뮬레이터 설정 (VS Code "Wokwi Simulator" 확장)
+# 먼저 PlatformIO로 빌드(pio run)해서 아래 펌웨어 파일을 만든 뒤, F1 → "Wokwi: Start Simulator"를 실행한다.
+# 회로는 같은 폴더의 diagram.json (Blue Pill STM32F103C8 + PA5에 외부 LED).
+[wokwi]
+version = 1
+firmware = '.pio/build/nucleo_f103rb/firmware.elf'
+elf = '.pio/build/nucleo_f103rb/firmware.elf'

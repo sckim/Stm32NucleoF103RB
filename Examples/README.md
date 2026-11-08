@@ -27,7 +27,7 @@ Nucleo-F103RB(Cortex-M3, 64MHz, Flash 128KB / SRAM 20KB) 보드로 GPIO부터 �
 ## 명명 규칙
 
 - 그룹 폴더는 `01_GPIO`, `02_USART`… 처럼 번호를 붙이고, **예제 폴더 번호는 그룹 안에서 항상 `01`부터 순서대로** 붙인다 (예: `08_Clock_System/04_Clock_Config_Reg_c`). 예제를 추가하거나 다른 그룹으로 옮기면 남은 예제 번호를 다시 채워 넣는다.
-- 폴더명 끝의 **`_c`**는 Claude가 작성한 예제(사용자 검토 전)이다. 이름의 계층 표기(`_HAL`, `_LL`, `_Reg`)가 그 예제의 추상화 수준이다.
+- 폴더명 끝의 **`_c`**는 사용자 검토 전이다. 이름의 계층 표기(`_HAL`, `_LL`, `_Reg`)가 그 예제의 추상화 수준이다.
 - 모든 예제는 소스 상단 주석에 계층, 사용 레지스터·비트, ISR과 HAL 콜백의 역할 구분을 적어 두었다. README는 그 요약이며 세부 내용은 `main.c` 주석을 참고한다.
 
 ## 추상화 계층
@@ -65,11 +65,11 @@ Nucleo-F103RB(Cortex-M3, 64MHz, Flash 128KB / SRAM 20KB) 보드로 GPIO부터 �
    C 코드 뒤에서 실제로 무슨 일이 벌어지는지 먼저 본 뒤, 이어서 클럭·인터럽트 예제로 들어간다.
 4. **Clock/SysTick/NVIC** `08_Clock_System/04`~`06`, `14`~`16`: 클럭 트리 전환(→ `14` 게이팅·Flash 웨이트)과 인터럽트 우선순위(→ `15` NVIC 대기·테일 체이닝, `16` EXTI 공유 벡터·PR)
    강의자료 교안 「메모리 맵과 버스」「클럭 트리(RCC)」「인터럽트 체계」가 3~4단계에 대응한다.
-5. **Timer** `06_Timers_RTC/01`~`16`, **ADC** `03_ADC/01`~`09`: 주기·PWM·측정
-   (타이머 보충 예제 14~16은 번호와 달리 각각 03·05·07 다음에 본다: 01→02→03→14→04→05→15→06→07→16→08~13)
-6. **통신** I2C(`04_I2C_Communication/01`~`08`), SPI(`05_SPI_Communication/01`~`07`), CAN(`11_CAN_Communication/01`~`02`)
-7. **DMA** `07_DMA/01`~`03`, **저전력** `09_WatchDog_Sleep/01`~`07`, **Flash/CRC** `10_Flash_CRC/01`~`02`
-8. **코어 심화** `08_Clock_System/07`~`12`: AFIO 리맵, HardFault 진단, MCO, DWT, 상태 머신, 칩 정보
+5. **Timer** `06_Timers_RTC/01`~`16`: 주기, PWM, 펄스폭 측정 
+6. **ADC** `03_ADC/01`~`09`: Analog to digital 변환    
+7. **통신** I2C(`04_I2C_Communication/01`~`08`), SPI(`05_SPI_Communication/01`~`07`), CAN(`11_CAN_Communication/01`~`02`)
+8. **DMA** `07_DMA/01`~`03`, **저전력** `09_WatchDog_Sleep/01`~`07`, **Flash/CRC** `10_Flash_CRC/01`~`02`
+9. **코어 심화** `08_Clock_System/07`~`12`: AFIO 리맵, HardFault 진단, MCO, DWT, 상태 머신, 칩 정보
 
 강의자료 폴더(`20_STM32`)의 교안 8장(공통 기반 1~3: 메모리 맵·클럭 트리·인터럽트, 주변장치 1~5: GPIO·AFIO·타이머·ADC·직렬 통신·DMA)이 이 순서에 대응하며, 각 교안의 10절 대응표가 예제 번호를 가리킨다.
 

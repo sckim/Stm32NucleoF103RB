@@ -10,7 +10,7 @@
 |---|---|
 | 96비트 고유 ID | `0x1FFFF7E8 ~ 0x1FFFF7F3` (읽기 전용, 공장 기록). 시리얼 번호/암호화 키 시드/통신 주소 생성에 활용 |
 | Flash 크기(KB) | `0x1FFFF7E0` (16비트). Nucleo-F103RB는 128 |
-| `DBGMCU->IDCODE` | `0xE0042000`: `DEV_ID[11:0] = 0x410`(medium-density), `REV_ID[31:16]` |
+| `DBGMCU->IDCODE` | `0xE0042000`: `DEV_ID[11:0] = 0x410`(medium-density), `REV_ID[31:16]`. **디버그 모드에서만 읽힌다** — 디버거 없이 실행하면 0x00으로 읽힌다(ES096 2.2.2) |
 | `SCB->CPUID` | `0xE000ED00`: Cortex-M3 r1p1이면 `0x411FC231` |
 | `RCC->CSR` | `0x40021024`: 리셋 원인 플래그 |
 
@@ -21,6 +21,8 @@
 ## 동작
 
 부팅 때 위 정보를 UART(115200, HSI 8MHz)로 한 번 출력하고 LD2 점멸. NRST 버튼(PINRST), 전원 재인가(PORRST)를 바꿔 가며 리셋 원인 표시가 바뀌는 것을 확인한다.
+
+- **DEV_ID 확인 실험**: 디버거로 실행(디버그 세션)하면 `DEV_ID 0x410`이, 업로드 후 USB만 다시 꽂아 실행하면 `0x000`이 출력된다. 정오표 ES096 2.2.2 "DBGMCU_IDCODE and DBGMCU_CR … are accessible only in debug mode"의 내용을 그대로 관찰하는 실험이다. 디버거 없이도 칩을 구별하려면 Flash 크기(`0x1FFFF7E0`)와 고유 ID를 쓴다.
 
 ## 인터럽트
 

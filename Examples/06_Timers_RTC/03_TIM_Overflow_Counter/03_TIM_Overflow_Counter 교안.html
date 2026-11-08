@@ -208,7 +208,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · 타이머 · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · 타이머 · 교안 · <a href="../06_Timers_RTC%20교안.html" style="color:inherit">↑ 06_Timers_RTC 상위 교안</a></div>
   <h1>자유 계수 카운터: 32비트 µs 시계와 경쟁 조건</h1>
   <p class="lead">01·02 예제는 오버플로를 '주기 신호'로만 썼다. 이 교안은 카운터가 멈추지 않고 계속 도는 자유 계수(free-running) 상태에서 <b>CNT 값 자체를 시간</b>으로 읽는다. 16비트 CNT와 오버플로 횟수를 결합해 32비트 µs 시계를 만들고, 두 번의 읽기 사이에서 생기는 경쟁 조건을 관찰하는 <code>03_TIM_Overflow_Counter</code> 예제를 해석한다.</p>
   <nav class="toc" aria-label="목차">

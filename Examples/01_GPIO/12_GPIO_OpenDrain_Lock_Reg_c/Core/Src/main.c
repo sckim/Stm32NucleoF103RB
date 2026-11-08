@@ -15,7 +15,7 @@
  *   잠금 순서(RM0008 9.2.7): LCKR에 (LCKK=1 | LCK) 쓰기 → (LCKK=0 | LCK) 쓰기 → (LCKK=1 | LCK) 쓰기 → 읽기(LCKK=0) → 읽기(LCKK=1).
  *   이 순서 동안 LCK[15:0] 값이 바뀌면 잠금이 취소된다.
  *   PA0만 잠근 뒤 CRL의 PA0 니블(잠김)과 PA1 니블(안 잠김)을 바꿔 보고 다시 읽어 결과를 출력한다.
- *   잠금이 막는 것이 설정(CRL/CRH 4비트)인지, 출력 데이터(ODR)도 막는지 BSRR로 PA0을 써서 확인한다.
+ *   잠금은 설정(CRL/CRH의 해당 4비트)만 고정한다(RM0008 9.2.7). ODR·BSRR은 잠기지 않으므로 BSRR로 PA0을 써서 ODR이 0/1로 바뀌는 것을 확인한다.
  *
  * 클럭: HSI/2 × 16 = SYSCLK 64 MHz, APB2 ÷1(64 MHz, GPIO)
  *
@@ -139,7 +139,7 @@ static void Lock_Run(void)
     GPIOA->BSRR = GPIO_BSRR_BR0; uint32_t o_lo = GPIOA->ODR & 1u;
     GPIOA->BSRR = GPIO_BSRR_BS0; uint32_t o_hi = GPIOA->ODR & 1u;
     uart_puts("   PA0 ODR after BR0 / BS0  : "); uart_putu(o_lo); uart_puts(" / "); uart_putu(o_hi);
-    uart_puts("   (does the lock freeze ODR too?)\r\n");
+    uart_puts("   (expect 0 / 1: ODR is not locked)\r\n");
 
     /* PA1은 실험 C를 위해 오픈드레인(0x6)으로 되돌린다. PA0은 잠겨 있으므로 그대로 오픈드레인이다 */
     GPIOA->CRL = (GPIOA->CRL & ~0xF0u) | 0x60u;

@@ -39,11 +39,11 @@ D) LCKR lock of PA0 (irreversible until reset)
    lock sequence -> LCKK = 1  LCKR = 0x10001
    CRL nibble PA0 (locked)  : 0x6 -> write 0x2 -> 0x6
    CRL nibble PA1 (unlocked): 0x6 -> write 0x2 -> 0x2
-   PA0 ODR after BR0 / BS0  : ? / ?   (does the lock freeze ODR too?)
+   PA0 ODR after BR0 / BS0  : 0 / 1   (ODR is not locked)
    (reset the board to unlock)
 ```
 
-실험 D의 마지막 줄은 RM0008이 "각 잠금 비트는 CRL/CRH의 4비트를 고정한다"고 적은 것을 실측으로 확인하는 질문이다. 잠금이 출력 데이터까지 막는지는 보드에서 실행해 확인한다. 실험 D는 리셋 직후 한 번만 실행되고, 이후에는 실험 C만 3초마다 반복한다.
+실험 D의 마지막 줄은 RM0008 9.2.7의 "각 잠금 비트는 CRL/CRH의 해당 4비트를 고정한다"를 확인한다. 잠그는 대상은 설정뿐이므로 ODR·BSRR 쓰기는 잠금 뒤에도 동작해 `0 / 1`이 나와야 한다(F4 이후 계열은 MODER·OTYPER·OSPEEDR·PUPDR·AFR을 잠근다). 실험 D는 리셋 직후 한 번만 실행되고, 이후에는 실험 C만 3초마다 반복한다.
 
 ## 생각해 볼 것
 

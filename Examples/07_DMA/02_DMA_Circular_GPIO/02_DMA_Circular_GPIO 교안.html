@@ -206,7 +206,7 @@ footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:v
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · DMA · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · DMA · 교안 · <a href="../07_DMA%20교안.html" style="color:inherit">↑ 07_DMA 상위 교안</a></div>
   <h1>원형 DMA와 핑퐁 버퍼: 타이머가 박자를 맞추고 DMA가 포트를 구동한다</h1>
   <p class="lead">01 예제의 DMA는 한 번 옮기면 끝났다. 이 교안은 DMA가 <b>타이머의 박자에 맞춰 끝없이 반복</b>하는 구성을 다룬다. TIM2가 10 kHz로 DMA 요청을 내면 DMA1 채널2가 64샘플 버퍼의 값을 <code>GPIOC-&gt;ODR</code>에 하나씩 쓴다. CPU는 파형을 만들지 않고, 반쯤 보냈을 때(HT)와 끝까지 보냈을 때(TC)의 인터럽트에서 <b>이미 보낸 쪽 절반만 새 패턴으로 채운다.</b> 이것이 핑퐁(더블 버퍼) 구조이다.</p>
   <nav class="toc" aria-label="목차">

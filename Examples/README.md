@@ -5,20 +5,24 @@ Nucleo-F103RB(Cortex-M3, 64MHz, Flash 128KB / SRAM 20KB) 보드로 GPIO부터 �
 
 ## 폴더 구조
 
-| 그룹 | 주제 | 핵심 키워드 |
-|---|---|---|
-| [01_GPIO](01_GPIO) | 출력·입력·외부 인터럽트 | 4가지 추상화 계층 비교, EXTI, 비트 밴딩 |
-| [02_USART](02_USART) | 시리얼 통신 | printf 리다이렉션, 수신 인터럽트, DMA+IDLE, 링 버퍼, CLI, 단선 반이중, 스택·임계 구역, 2포트 동시 출력(AD2 파형 관찰) |
-| [03_ADC](03_ADC) | 아날로그 입력 | 타이머 트리거, DMA, 아날로그 워치독, Vrefint 보정, 가변저항 PWM |
-| [04_I2C_Communication](04_I2C_Communication) | I2C | PCF8574 출력, 주소 스캔, 문자 LCD, MPU6050, OLED, EEPROM, DS3231 RTC |
-| [05_SPI_Communication](05_SPI_Communication) | SPI | 루프백, 전이중 DMA, OLED, SD 카드, NOR Flash, MAX7219 |
-| [06_Timers_RTC](06_Timers_RTC) | 타이머·RTC | 시간 기준(인터럽트/폴링), PWM, 입력 캡처, 데드타임, RTC, PWM 입력, 엔코더, 원 펄스, 서보, 모터 드라이버, 이중 버퍼, 중앙 정렬, 입력 필터 |
-| [07_DMA](07_DMA) | DMA | 메모리↔메모리, 원형 DMA 핑퐁 |
-| [08_Clock_System](08_Clock_System) | 코어·클럭 시스템 | 레지스터/명령어, 메모리 맵, 예외 모델, RCC, SysTick, NVIC, AFIO, 폴트, MCO, DWT, 상태 머신, 칩 정보 |
-| [09_WatchDog_Sleep](09_WatchDog_Sleep) | 워치독·저전력 | WWDG, IWDG, Sleep/Stop/Standby, BKP 탬퍼 |
-| [10_Flash_CRC](10_Flash_CRC) | 내부 Flash·CRC | 페이지 소거/쓰기, 하드웨어 CRC |
-| [11_CAN_Communication](11_CAN_Communication) | CAN | bxCAN 루프백, 수신 필터 |
-| [12_Advanced_Topics](12_Advanced_Topics) | 심화(선택) | ADC 주입/듀얼, I2C·SPI 슬레이브, PendSV 미니 RTOS, IAP/XMODEM 부트로더, CAN 실제 버스 — 기본 진도가 아님 |
+| 그룹 | 주제 | 핵심 키워드 | 상위 교안 |
+|---|---|---|---|
+| [01_GPIO](01_GPIO) | 출력·입력·외부 인터럽트 | 4가지 추상화 계층 비교, EXTI, 비트 밴딩 | [교안](01_GPIO/01_GPIO%20교안.html) |
+| [02_USART](02_USART) | 시리얼 통신 | printf 리다이렉션, 수신 인터럽트, DMA+IDLE, 링 버퍼, CLI, 단선 반이중, 스택·임계 구역, 2포트 동시 출력(AD2 파형 관찰) | [교안](02_USART/02_USART%20교안.html) |
+| [03_ADC](03_ADC) | 아날로그 입력 | 타이머 트리거, DMA, 아날로그 워치독, Vrefint 보정, 가변저항 PWM | [교안](03_ADC/03_ADC%20교안.html) |
+| [04_I2C_Communication](04_I2C_Communication) | I2C | PCF8574 출력, 주소 스캔, 문자 LCD, MPU6050, OLED, EEPROM, DS3231 RTC | [교안](04_I2C_Communication/04_I2C_Communication%20교안.html) |
+| [05_SPI_Communication](05_SPI_Communication) | SPI | 루프백, 전이중 DMA, OLED, SD 카드, NOR Flash, MAX7219 | [교안](05_SPI_Communication/05_SPI_Communication%20교안.html) |
+| [06_Timers_RTC](06_Timers_RTC) | 타이머·RTC | 시간 기준(인터럽트/폴링), PWM, 입력 캡처, 데드타임, RTC, PWM 입력, 엔코더, 원 펄스, 서보, 모터 드라이버, 이중 버퍼, 중앙 정렬, 입력 필터 | [교안](06_Timers_RTC/06_Timers_RTC%20교안.html) |
+| [07_DMA](07_DMA) | DMA | 메모리↔메모리, 원형 DMA 핑퐁 | [교안](07_DMA/07_DMA%20교안.html) |
+| [08_Clock_System](08_Clock_System) | 코어·클럭 시스템 | 레지스터/명령어, 메모리 맵, 예외 모델, RCC, SysTick, NVIC, AFIO, 폴트, MCO, DWT, 상태 머신, 칩 정보 | [교안](08_Clock_System/08_Clock_System%20교안.html) |
+| [09_WatchDog_Sleep](09_WatchDog_Sleep) | 워치독·저전력 | WWDG, IWDG, Sleep/Stop/Standby, BKP 탬퍼 | [교안](09_WatchDog_Sleep/09_WatchDog_Sleep%20교안.html) |
+| [10_Flash_CRC](10_Flash_CRC) | 내부 Flash·CRC | 페이지 소거/쓰기, 하드웨어 CRC | [교안](10_Flash_CRC/10_Flash_CRC%20교안.html) |
+| [11_CAN_Communication](11_CAN_Communication) | CAN | bxCAN 루프백, 수신 필터 | [교안](11_CAN_Communication/11_CAN_Communication%20교안.html) |
+| [12_Advanced_Topics](12_Advanced_Topics) | 심화(선택) | ADC 주입/듀얼, I2C·SPI 슬레이브, PendSV 미니 RTOS, IAP/XMODEM 부트로더, CAN 실제 버스 — 기본 진도가 아님 | — |
+
+## 상위 교안
+
+그룹마다 `<그룹명> 교안.html` 상위 교안이 있다. 주변장치 하드웨어를 RM0008·DS5319·PM0056·ES096(Flash는 PM0075 추가) 원본 블록도로 설명하며, 신호 경로, 디지털논리 등가, 클럭·시간 계산, 이벤트 생성, 설계상 한계, 확인 문제를 같은 10장 틀로 다룬다. 각 장 끝에서 하부 예제 교안으로 연결된다. 코드와 라이브러리는 예제 교안에서 다룬다(12_Advanced_Topics는 상위 교안 없음).
 
 ## 명명 규칙
 

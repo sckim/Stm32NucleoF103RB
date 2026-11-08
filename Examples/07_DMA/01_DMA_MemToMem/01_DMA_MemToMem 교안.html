@@ -194,7 +194,7 @@ footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:v
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · DMA · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · DMA · 교안 · <a href="../07_DMA%20교안.html" style="color:inherit">↑ 07_DMA 상위 교안</a></div>
   <h1>DMA 메모리 복사: CPU 없이 1 KB를 옮기는 채널 하나</h1>
   <p class="lead">DMA(Direct Memory Access)는 CPU 대신 버스 마스터가 되어 데이터를 옮기는 하드웨어이다. 이 교안은 가장 단순한 형태인 <b>메모리 → 메모리 복사</b>로 DMA 채널의 구성 요소를 익힌다. 256워드(1 KB) 배열을 CPU 반복문과 DMA로 각각 복사하고, 복사하는 동안 CPU가 다른 일을 할 수 있는지를 <code>free_loops</code>로 확인한다. 이 예제의 핵심은 DMA가 CPU 반복문보다 빠르다는 것이 아니라, <b>전송 중에 CPU가 자유롭다</b>는 것이다.</p>
   <nav class="toc" aria-label="목차">

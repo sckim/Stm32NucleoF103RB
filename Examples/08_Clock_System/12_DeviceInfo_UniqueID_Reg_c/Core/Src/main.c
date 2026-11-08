@@ -5,6 +5,7 @@
  *   고유 ID (96비트)      : 주소 0x1FFFF7E8 ~ 0x1FFFF7F3 (읽기 전용, 공장에서 기록). 칩마다 다름 -> 시리얼 번호/암호화 키 시드/통신 주소 생성
  *   플래시 크기 (KB)       : 0x1FFFF7E0 (16비트). Nucleo-F103RB 는 128
  *   DBGMCU->IDCODE (0xE0042000) : DEV_ID[11:0] = 0x410 (medium-density), REV_ID[31:16] (실리콘 리비전)
+ *                                 ※ 디버그 모드에서만 읽힌다. 디버거 없이 실행하면 0x00 (ES096 2.2.2)
  *   SCB->CPUID (0xE000ED00)     : 코어 종류/리비전. Cortex-M3 r1p1 이면 0x411FC231
  *   RCC->CSR (0x40021024)       : 리셋 원인 플래그
  *        LPWRRSTF(31) 저전력 관리 리셋, WWDGRSTF(30), IWDGRSTF(29), SFTRSTF(28) 소프트웨어(NVIC_SystemReset),
@@ -62,7 +63,9 @@ int main(void)
 
     uint32_t idc = DBGMCU->IDCODE;
     uart_puts("DEV_ID        : 0x"); uart_hex(idc & 0xFFF, 3);
-    uart_puts((idc & 0xFFF) == 0x410 ? "  (STM32F10x medium-density)\r\n" : "\r\n");
+    uart_puts((idc & 0xFFF) == 0x410 ? "  (STM32F10x medium-density)\r\n"
+              : (idc == 0u ? "  (0x00: no debugger attached, DBGMCU readable only in debug mode - ES096 2.2.2)\r\n"
+                           : "\r\n"));
     uart_puts("REV_ID        : 0x"); uart_hex(idc >> 16, 4); uart_puts("\r\n");
 
     uart_puts("Flash size    : "); uart_dec(*(volatile uint16_t *)FLASH_SIZE_ADDR); uart_puts(" KB\r\n");

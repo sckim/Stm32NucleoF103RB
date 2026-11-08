@@ -19,6 +19,26 @@
 
 ## 실습 예제 (`Examples/`)
 
+### 그룹별 상위 교안
+
+각 그룹의 주변장치 하드웨어를 원본 블록도와 디지털논리 관점으로 설명하는 교안이다(같은 10장 틀). 예제별 교안은 각 예제 폴더에 있다.
+
+| 상위 교안 |
+|---|
+| [01_GPIO](Examples/01_GPIO/01_GPIO%20교안.html) |
+| [02_USART](Examples/02_USART/02_USART%20교안.html) |
+| [03_ADC](Examples/03_ADC/03_ADC%20교안.html) |
+| [04_I2C_Communication](Examples/04_I2C_Communication/04_I2C_Communication%20교안.html) |
+| [05_SPI_Communication](Examples/05_SPI_Communication/05_SPI_Communication%20교안.html) |
+| [06_Timers_RTC](Examples/06_Timers_RTC/06_Timers_RTC%20교안.html) |
+| [07_DMA](Examples/07_DMA/07_DMA%20교안.html) |
+| [08_Clock_System](Examples/08_Clock_System/08_Clock_System%20교안.html) |
+| [09_WatchDog_Sleep](Examples/09_WatchDog_Sleep/09_WatchDog_Sleep%20교안.html) |
+| [10_Flash_CRC](Examples/10_Flash_CRC/10_Flash_CRC%20교안.html) |
+| [11_CAN_Communication](Examples/11_CAN_Communication/11_CAN_Communication%20교안.html) |
+
+### 예제 목록
+
 | 번호 | 예제 (`그룹/예제`) | 구현 방식 | 내용 |
 |---|---|---|---|
 | 01 | [`01_GPIO/01_BlinkArduino`](Examples/01_GPIO/01_BlinkArduino) | Arduino 프레임워크(PlatformIO) | `pinMode`/`digitalWrite`로 온보드 LED(PA5) 점멸 |
@@ -130,6 +150,7 @@
 | [UM1850](Docs/HAL_UM1850_hal_and_lowlayer_drivers.pdf) | STM32F1 HAL/LL 드라이버 사용자 매뉴얼 |
 | [MB1136 회로도](Docs/Schematic_STM32F103RB.pdf) | Nucleo-F103RB 보드 회로도 |
 | [UM1718 (st.com)](https://www.st.com/resource/en/user_manual/um1718-stm32cubemx.pdf) | STM32CubeMX 사용자 매뉴얼 (77MB라 저장소에 넣지 않고 ST 사이트로 연결) |
+| [PM0075](Docs/PM0075-stm32f10xxx-flash-memory.pdf) | STM32F10xxx Flash 메모리 프로그래밍 매뉴얼(쓰기·지우기·옵션 바이트) |
 | [ES096](Docs/ES096_F103x8xB_Errata.pdf) | STM32F103x8/xB(중밀도, F103RB) 디바이스 errata(오류 정정표) |
 | [AN2834](https://github.com/sckim/Stm32NucleoF103RB/blob/main/Docs/AN2834_ADC_Accuracy.pdf) | ADC 정확도 최적화 |
 | [AN4013](https://github.com/sckim/Stm32NucleoF103RB/blob/main/Docs/AN4013_Timers_Introduction.pdf) | STM32 타이머 개요 |

@@ -208,7 +208,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · 타이머 · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · 타이머 · 교안 · <a href="../06_Timers_RTC%20교안.html" style="color:inherit">↑ 06_Timers_RTC 상위 교안</a></div>
   <h1>타이머 시간 기준: 1 ms 업데이트 인터럽트와 소프트웨어 분주</h1>
   <p class="lead">CPU가 반복문으로 시간을 재면 다른 일을 할 수 없고 정확하지도 않다. 타이머는 CPU와 무관하게 세고, 정해진 값에 도달하면 이벤트만 알려 준다. 이 교안은 TIM3를 PSC=63, ARR=999로 설정해 1 ms마다 업데이트 인터럽트를 만들고, 소프트웨어 분주로 1초를 얻는 <code>01_TIM_TimeBase</code> 예제를 레지스터 수준까지 해석한다.</p>
   <nav class="toc" aria-label="목차">

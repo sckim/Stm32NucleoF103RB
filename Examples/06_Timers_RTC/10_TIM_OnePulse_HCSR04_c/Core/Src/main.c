@@ -29,8 +29,9 @@
  *
  * 원 펄스 모드(OPM) (RM0008 15.3.10)
  *   TIM3->CR1.OPM = 1 : 카운터가 다음 업데이트 이벤트에서 스스로 멈춘다(CEN 자동 클리어).
- *   PWM 모드 2 + OPM: 카운터가 CCR1 이 되기 전에는 Low, 이후 ARR 까지 High -> "CCR1 지연 후 (ARR-CCR1) 폭의 펄스 1개"
- *   1MHz 카운터에서 CCR1 = 2, ARR = 12  ->  2us 지연 후 10us 폭의 High 펄스.  CEN 을 세울 때마다 펄스가 1번 나간다.
+ *   PWM 모드 2 + OPM: 카운터가 CCR1 이 되기 전에는 Low, CCR1 ~ ARR 동안 High -> "CCR1 지연 후 (ARR-CCR1+1) 폭의 펄스 1개"
+ *     (RM0008 15.3.10: tPULSE = TIMx_ARR - TIMx_CCR + 1. 카운트 값 CCR1, CCR1+1, ..., ARR 이 모두 High 이므로 +1)
+ *   1MHz 카운터에서 CCR1 = 2, ARR = 11  ->  2us 지연 후 (11-2+1) = 10us 폭의 High 펄스.  CEN 을 세울 때마다 펄스가 1번 나간다.
  *   -> CPU 가 10us 를 바쁜 대기하지 않고 하드웨어가 정확한 폭을 만든다.
  *
  * 에코 폭 측정: TIM2 의 CH1(상승 에지 캡처)/CH2(하강 에지 캡처, 같은 TI1 입력)  -> 폭 = CCR2 - CCR1
@@ -343,7 +344,7 @@ static void MX_TIM3_Init(void)
   htim3.Instance = TIM3;
   htim3.Init.Prescaler = 63;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 12;
+  htim3.Init.Period = 11;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)

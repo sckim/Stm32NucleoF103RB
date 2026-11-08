@@ -208,7 +208,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <body>
 <div class="wrap">
 <header>
-  <div class="kicker">STM32 Nucleo-F103RB · 타이머 · 교안</div>
+  <div class="kicker">STM32 Nucleo-F103RB · 타이머 · 교안 · <a href="../06_Timers_RTC%20교안.html" style="color:inherit">↑ 06_Timers_RTC 상위 교안</a></div>
   <h1>UIF 폴링과 틱 누락: 플래그는 횟수를 세지 못한다</h1>
   <p class="lead">타이머는 오버플로가 나면 인터럽트를 허용하지 않아도 상태 플래그(UIF)를 세운다. 이 플래그를 main 루프가 직접 읽는 것이 폴링이다. 이 교안은 01 예제와 같은 1 ms 타임베이스를 인터럽트 없이 폴링으로 처리하고, 루프가 막히면 틱이 누락되는 현상을 SysTick 기준 시계와 비교하여 측정하는 <code>02_TIM_TimeBase_Polling</code> 예제를 해석한다.</p>
   <nav class="toc" aria-label="목차">

@@ -1,0 +1,877 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>06_Timers_RTC 상위 교안</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* 상위 교안(주변장치 개요). 01_GPIO 상위 교안과 같은 토큰·클래스를 쓴다.
+   색 규칙: 신호 경로 = 파랑(--c0), 선택·제어 비트 = 주황(--c1), 플래그·이벤트 = 청록(--c2), 하드웨어 소자 = 보라(--c3). */
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --surface2:#E7ECF0; --fg:#14222C; --muted:#52636F; --line:#CBD5DC;
+  --c0:#1D4ED8; --c0-soft:#DCE6FB; --c1:#C2410C; --c1-soft:#FDE6DA; --c2:#0F766E; --c2-soft:#D5F0EC; --c3:#7E22CE; --c3-soft:#EEDFFB;
+  --warn:#9A3412; --warn-bg:#FFF1E6; --ok:#166534; --ok-bg:#E4F5EA;
+  --font-body:"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.75;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));counter-reset:fig}
+.wrap{max-width:860px;margin:0 auto}
+header{padding-block:40px 8px}
+.kicker{font-family:var(--font-mono);font-size:13px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.kicker a{color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.25;margin:8px 0 12px;text-wrap:balance;font-weight:700}
+.lead{color:var(--muted);margin:0;max-width:66ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0}
+nav.toc a{display:block;padding:6px 12px;border:1px solid var(--line);border-radius:6px;color:var(--fg);text-decoration:none;font-size:14px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--c0);outline:2px solid var(--c0);outline-offset:1px}
+section{margin-top:56px}
+h2{font-size:24px;line-height:1.35;margin:0 0 12px;text-wrap:balance;font-weight:700}
+h3{font-size:18px;margin:28px 0 8px;font-weight:700}
+p{margin:0 0 14px;max-width:68ch}
+ul,ol{margin:0 0 14px;padding-left:22px;max-width:68ch}
+li{margin-bottom:4px}
+a{color:var(--c0)}
+code{font-family:var(--font-mono);font-size:.9em;background:var(--surface2);padding:1px 6px;border-radius:4px;overflow-wrap:anywhere}
+.k0{color:var(--c0);font-weight:700} .k1{color:var(--c1);font-weight:700} .k2{color:var(--c2);font-weight:700} .k3{color:var(--c3);font-weight:700}
+.box{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:16px 18px;margin:16px 0}
+.box.warn{background:var(--warn-bg);border-color:var(--warn)} .box.ok{background:var(--ok-bg);border-color:var(--ok)}
+.box > :last-child{margin-bottom:0}
+.label{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.eqv{display:inline-block;font-family:var(--font-mono);font-size:11.5px;padding:0 6px;border-radius:4px;background:var(--c3-soft);color:var(--c3);vertical-align:1px}
+.tablewrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:15px;background:var(--surface)}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--surface2);font-weight:700;white-space:nowrap}
+td.m,th.m{font-family:var(--font-mono);font-size:13.5px}
+td.on{color:var(--ok);font-weight:700} td.off{color:var(--muted)}
+.eq{font-family:var(--font-mono);font-size:14.5px;background:var(--surface2);border-left:4px solid var(--c0);padding:10px 14px;margin:14px 0;overflow-x:auto;white-space:pre-wrap}
+.flow{list-style:none;padding:0;margin:16px 0;display:grid;max-width:none}
+.flow li{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:0;padding:0 0 14px;position:relative}
+.flow li:not(:last-child)::before{content:"";position:absolute;left:16px;top:34px;bottom:0;width:2px;background:var(--line)}
+.flow .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:14px;font-weight:600;background:var(--surface2);border:2px solid var(--c0);color:var(--c0)}
+.flow .tx{min-width:0} .flow .tx b{display:block} .flow .tx span{color:var(--muted);font-size:14.5px}
+
+/* 원본 그림(PDF에서 잘라 낸 PNG): 다크모드에서도 흰 바탕 카드에 넣는다 */
+figure{margin:18px 0;counter-increment:fig}
+figure.src .img{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px}
+figure.src img{display:block;width:100%;height:auto}
+figure.src.narrow .img{max-width:560px;margin:0 auto}
+figcaption{font-size:14px;color:var(--muted);margin:6px 2px 0}
+figcaption::before{content:"그림 " counter(fig) ". ";font-weight:700;color:var(--fg)}
+.cite{display:block;font-family:var(--font-mono);font-size:12.5px;margin-top:2px}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.figs figure{margin:0}
+
+/* 등가 모델 SVG */
+.diag svg{display:block;width:100%;height:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.diag .bx{fill:var(--surface);stroke:var(--fg);stroke-width:1.4}
+.diag .hw{fill:var(--c3-soft);stroke:var(--c3)} .diag .sel{fill:var(--c1-soft);stroke:var(--c1)} .diag .flg{fill:var(--c2-soft);stroke:var(--c2)}
+.diag .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.diag .tc{font-family:var(--font-body);font-size:13px;fill:var(--fg);text-anchor:middle}
+.diag .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.diag .sc{font-family:var(--font-mono);font-size:11px;fill:var(--muted);text-anchor:middle}
+.diag .o{font-family:var(--font-mono);font-size:11px;fill:var(--c1)}
+.diag .w{stroke:var(--c0);stroke-width:1.8;fill:none}
+.diag .wc{stroke:var(--c1);stroke-width:1.5;fill:none}
+.diag .wm{stroke:var(--muted);stroke-width:1.3;fill:none}
+.diag .dash{stroke:var(--muted);stroke-width:1.2;fill:none;stroke-dasharray:5 4}
+.diag .ah{fill:var(--c0)} .diag .ahc{fill:var(--c1)} .diag .ahm{fill:var(--muted)}
+.diag .sig{stroke:var(--c0);stroke-width:2;fill:none} .diag .sig2{stroke:var(--c2);stroke-width:2;fill:none} .diag .sig3{stroke:var(--c3);stroke-width:2;fill:none}
+.diag .isr{fill:var(--c1-soft);stroke:var(--c1)}
+
+/* 시뮬레이터 */
+.sim{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:18px;margin:16px 0}
+.subhead{font-weight:700;margin:0 0 6px}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px 16px;margin:10px 0}
+.ctl label{display:block;font-size:14px;color:var(--muted)}
+.ctl select,.ctl input{font-family:inherit;font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl select:focus-visible,.ctl input:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+.regs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.stat{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.stat .k{font-size:12px;color:var(--muted);font-family:var(--font-mono)}
+.stat .v{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.35;overflow-wrap:anywhere}
+.note{font-size:14px;color:var(--muted);margin:8px 0 0}
+.verdict{font-weight:700} .verdict.good{color:var(--ok)} .verdict.bad{color:var(--warn)}
+
+details{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0}
+summary{cursor:pointer;padding:12px 16px;font-weight:500;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--c0)} details[open] summary::before{content:"▾ "}
+summary:focus-visible{outline:3px solid var(--fg);outline-offset:-3px;border-radius:8px}
+details .ans{padding:0 16px 14px} details .ans p{margin-bottom:8px}
+.nextprev{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+.nextprev a{border:1px solid var(--line);border-radius:8px;padding:8px 14px;text-decoration:none;color:var(--c0);background:var(--surface)}
+footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+footer ul{max-width:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">STM32F103RB · 06_Timers_RTC · 상위 교안</div>
+  <h1>타이머와 RTC: 카운터와 비교기로 시간을 만들고 재기</h1>
+  <p class="lead">타이머(TIM, Timer)는 디지털논리에서 배운 분주 카운터, 업/다운 카운터, 크기·일치 비교기, 래치(이중 버퍼), 엣지 검출기, 디바운서, 멀티플렉서를 한 블록에 묶은 주변장치이다. 같은 카운터 하나로 "정해진 시각에 사건을 만드는 일(출력 비교·PWM)"과 "사건이 일어난 시각을 기록하는 일(입력 캡처)"을 모두 한다. RTC(Real-Time Clock, 실시간 시계)는 32.768 kHz 시계 수정에서 1초를 만들어 전원이 꺼져도 세는 32비트 카운터이다. 이 교안은 STM32F103RB를 기준으로, 클럭이 분주기와 카운터를 지나 비교기·캡처 래치에 닿고 다시 핀·플래그·인터럽트·다른 타이머로 나가는 경로를 원본 블록도 위에서 따라간다. 레지스터 비트는 그 경로 위의 스위치·선택기·플래그로만 등장한다. 코드와 라이브러리는 하부 예제 교안에서 다룬다.</p>
+  <nav class="toc" aria-label="목차">
+    <a href="#s1">1. 문제 정의</a><a href="#s2">2. 일반 개념</a><a href="#s3">3. F103 블록도</a><a href="#s4">4. 클럭과 시간</a><a href="#s5">5. 제어 요소</a><a href="#s6">6. 이벤트 생성</a><a href="#s7">7. 동작 시나리오</a><a href="#s8">8. 설계상 한계</a><a href="#s9">9. 확인 문제</a><a href="#s10">10. 하부 예제</a>
+  </nav>
+</header>
+
+<div class="box">
+  <div class="label">근거 문서 (저장소 Docs 폴더)</div>
+  <p>이 교안의 사실은 아래 네 문서에서만 가져왔다. 인용마다 문서, 쪽, Figure/Table 번호를 붙였고 링크를 누르면 해당 쪽이 열린다. 문서에 내부 구현이 나오지 않아 디지털논리 소자로 바꿔 그린 부분에는 <span class="eqv">등가 모델</span> 표시를 달았다. NVIC·EXTI·클럭 게이트 같은 공통 개념은 <a href="../01_GPIO/01_GPIO%20교안.html">01_GPIO 상위 교안</a>, ADC 외부 트리거는 <a href="../03_ADC/03_ADC%20교안.html">03_ADC 상위 교안</a>에서 다뤘다.</p>
+  <ul>
+    <li><a href="../../Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a>: 참조 매뉴얼(Reference Manual). 15장 범용 타이머 TIM2~TIM5, 14장 고급 타이머 TIM1, 18장 RTC, 7장 클럭(RCC)</li>
+    <li><a href="../../Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a>: STM32F103x8/xB 데이터시트. 타이머 구성(Table 4), 타이머 특성(Table 40), LSE·LSI 특성</li>
+    <li><a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a>: Cortex-M3 프로그래밍 매뉴얼. NVIC(Nested Vectored Interrupt Controller, 중첩 벡터 인터럽트 컨트롤러)의 레벨 감지 인터럽트</li>
+    <li><a href="../../Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a>: F103x8/xB 정오표(Errata sheet). 타이머 결함 2.6절, LSE 기동 2.2.6절</li>
+  </ul>
+</div>
+
+<details class="gloss"><summary>약어 모음 (본문에서도 처음 나올 때 풀어 썼다)</summary><div class="ans"><div class="tablewrap"><table>
+<tr><th>약어</th><th>풀네임</th><th>뜻</th></tr>
+<tr><td class="m">TIM / TIMx</td><td>Timer</td><td>타이머. x는 번호(F103RB에는 TIM1~TIM4)</td></tr>
+<tr><td class="m">RTC</td><td>Real-Time Clock</td><td>실시간 시계. 초 단위 32비트 카운터</td></tr>
+<tr><td class="m">CNT · PSC · ARR</td><td>Counter · Prescaler · Auto-Reload Register</td><td>카운터 값 · 분주값 · 자동 재적재값(카운터의 끝값)</td></tr>
+<tr><td class="m">CCRx</td><td>Capture/Compare Register x</td><td>채널 x의 비교값(출력) 또는 캡처값(입력)</td></tr>
+<tr><td class="m">RCR</td><td>Repetition Counter Register</td><td>TIM1 전용. 오버플로 몇 번마다 갱신할지</td></tr>
+<tr><td class="m">CK_INT · CK_PSC · CK_CNT</td><td>internal clock · prescaler clock · counter clock</td><td>타이머 내부 클럭 · 분주기 입력 · 카운터를 실제로 미는 클럭</td></tr>
+<tr><td class="m">TIMxCLK</td><td>Timer x clock</td><td>RCC가 타이머에 주는 클럭(APB 클럭 ×1 또는 ×2)</td></tr>
+<tr><td class="m">UEV · UG · UIF</td><td>Update Event · Update Generation · Update Interrupt Flag</td><td>갱신 사건 · 소프트웨어로 갱신 사건 만들기 · 갱신 플래그</td></tr>
+<tr><td class="m">URS · UDIS</td><td>Update Request Source · Update Disable</td><td>UIF를 세울 사건 고르기 · 갱신 사건 막기</td></tr>
+<tr><td class="m">ARPE · OCxPE</td><td>Auto-Reload Preload Enable · Output Compare x Preload Enable</td><td>ARR / CCRx 이중 버퍼 사용</td></tr>
+<tr><td class="m">CEN · DIR · CMS · OPM</td><td>Counter Enable · Direction · Center-aligned Mode Selection · One-Pulse Mode</td><td>카운터 허용 · 방향 · 중앙 정렬 선택 · 한 번만 세고 멈춤</td></tr>
+<tr><td class="m">CKD · DTS</td><td>Clock Division · Dead-Time and Sampling clock</td><td>필터·데드타임용 클럭(f_DTS)의 분주비</td></tr>
+<tr><td class="m">OC · IC · PWM</td><td>Output Compare · Input Capture · Pulse Width Modulation</td><td>출력 비교 · 입력 캡처 · 펄스 폭 변조</td></tr>
+<tr><td class="m">OCxM · OCxREF</td><td>Output Compare x Mode · OCx reference</td><td>출력 모드 선택 · 극성 적용 전의 기준 출력(항상 High가 "활성")</td></tr>
+<tr><td class="m">CCxS · CCxP · CCxE</td><td>Capture/Compare x Selection · Polarity · Enable</td><td>채널 방향(입력·출력)과 입력 선택 · 극성 · 채널 허용</td></tr>
+<tr><td class="m">ICxF · ICxPSC</td><td>Input Capture x Filter · Input Capture x Prescaler</td><td>입력 디지털 필터 · 캡처 분주(엣지 몇 번마다 캡처)</td></tr>
+<tr><td class="m">CCxIF · CCxOF</td><td>Capture/Compare x Interrupt Flag · Overcapture Flag</td><td>비교 일치·캡처 발생 · 읽기 전에 또 캡처됨</td></tr>
+<tr><td class="m">TIx · TIxFPy</td><td>Timer Input x · TIx Filtered, Polarity-selected, for channel y</td><td>타이머 입력 핀 신호 · 필터·극성 처리 뒤 채널 y로 가는 신호</td></tr>
+<tr><td class="m">ETR</td><td>External Trigger input</td><td>외부 트리거 핀 입력</td></tr>
+<tr><td class="m">TRGO · TRGI · ITRx</td><td>Trigger Output · Trigger Input · Internal Trigger x</td><td>다른 장치로 보내는 트리거 · 슬레이브가 받는 트리거 · 타이머끼리 잇는 내부 선</td></tr>
+<tr><td class="m">MMS · SMS · TS · MSM</td><td>Master Mode Selection · Slave Mode Selection · Trigger Selection · Master/Slave Mode</td><td>TRGO로 무엇을 보낼지 · 트리거로 무엇을 할지 · 어느 트리거를 받을지 · 동시 출발 보정</td></tr>
+<tr><td class="m">TIF · TG</td><td>Trigger Interrupt Flag · Trigger Generation</td><td>트리거 사건 플래그 · 소프트웨어 트리거</td></tr>
+<tr><td class="m">OCxN · DTG · MOE</td><td>complementary output · Dead-Time Generator · Main Output Enable</td><td>TIM1의 반대 위상 출력 · 데드타임 길이 · TIM1 출력 전체 스위치</td></tr>
+<tr><td class="m">BKIN · BKE · AOE · OSSI/OSSR</td><td>Break Input · Break Enable · Automatic Output Enable · Off-State Selection Idle/Run</td><td>비상 정지 입력 · 그 허용 · 다음 UEV에 MOE 자동 복구 · 꺼진 상태의 출력 처리</td></tr>
+<tr><td class="m">CSS</td><td>Clock Security System</td><td>외부 클럭 고장 감시. TIM1 브레이크 원인 중 하나</td></tr>
+<tr><td class="m">LSE / LSI / HSE</td><td>Low-Speed External / Low-Speed Internal / High-Speed External</td><td>32.768 kHz 외부 수정 / 약 40 kHz 내부 RC / 고속 외부 발진</td></tr>
+<tr><td class="m">RTCCLK · TR_CLK</td><td>RTC clock · time-base clock</td><td>RTC 입력 클럭 · 분주 뒤 RTC 카운터를 미는 클럭(보통 1 Hz)</td></tr>
+<tr><td class="m">PRL · DIV · ALR</td><td>Prescaler Load · Divider · Alarm</td><td>RTC 분주 재적재값 · 분주 카운터 현재값 · 알람 비교값</td></tr>
+<tr><td class="m">SECF · ALRF · OWF</td><td>Second Flag · Alarm Flag · Overflow Flag</td><td>1초 · 알람 · 32비트 카운터 넘침</td></tr>
+<tr><td class="m">RSF · RTOFF · CNF</td><td>Registers Synchronized Flag · RTC operation OFF · Configuration flag</td><td>읽기 동기화 완료 · 쓰기 끝남 · 설정 모드</td></tr>
+<tr><td class="m">BKP · DBP</td><td>Backup registers · Disable Backup domain write Protection</td><td>백업 도메인 레지스터 · 그 쓰기 보호 해제</td></tr>
+<tr><td class="m">VBAT</td><td>Battery supply</td><td>VDD가 없을 때 백업 도메인에 전원을 주는 핀</td></tr>
+<tr><td class="m">EXTI</td><td>Extended Interrupts and Events controller</td><td>외부 인터럽트/이벤트 컨트롤러. 17번 선이 RTC 알람</td></tr>
+<tr><td class="m">APB · PCLK1 / PCLK2</td><td>Advanced Peripheral Bus · APB1 / APB2 clock</td><td>주변장치 버스 · 그 클럭</td></tr>
+<tr><td class="m">RCC</td><td>Reset and Clock Control</td><td>리셋·클럭 제어 블록</td></tr>
+<tr><td class="m">DMA</td><td>Direct Memory Access</td><td>CPU를 거치지 않는 메모리 전송</td></tr>
+<tr><td class="m">ISR · IRQ</td><td>Interrupt Service Routine · Interrupt Request</td><td>인터럽트 처리 함수 · 인터럽트 요청(번호)</td></tr>
+<tr><td class="m">ppm</td><td>parts per million</td><td>백만분율. 1 ppm은 하루 약 0.0864초</td></tr>
+<tr><td class="m">rc_w0</td><td>read / clear by writing 0</td><td>읽을 수 있고, 0을 쓰면 지워지는 비트</td></tr>
+</table></div></div></details>
+
+<!-- ============================================================ 1 -->
+<section id="s1">
+<h2>1. 문제 정의: 타이머가 없으면 CPU가 무엇을 직접 해야 하는가</h2>
+<p>마이크로컨트롤러는 "1 ms마다 무엇을 한다", "LED 밝기를 30 %로", "이 펄스가 몇 µs 동안 High였나", "모터 축이 몇 칸 돌았나", "지금 몇 시인가"를 끊임없이 묻는다. 타이머가 없다면 CPU가 명령어 실행 시간을 세어서 이 모든 일을 직접 한다.</p>
+<div class="tablewrap"><table>
+<tr><th>풀어야 할 문제</th><th>타이머가 없다면 CPU가 하는 일</th><th>타이머가 대신하는 소자</th></tr>
+<tr><td>일정한 주기 만들기</td><td>빈 루프를 정해진 횟수만큼 돈다. 그동안 다른 일을 못 하고, 인터럽트가 끼면 주기가 늘어난다</td><td>분주 카운터(PSC) + 모듈로 카운터(CNT, ARR) → 갱신 사건(UEV)</td></tr>
+<tr><td>정해진 시각에 핀 바꾸기</td><td>시각을 계속 확인하다가 핀을 쓴다. 확인 간격만큼 오차가 생긴다</td><td>일치 비교기(CNT = CCRx) + 출력 세트/리셋 논리</td></tr>
+<tr><td>PWM으로 평균 전압 조절</td><td>주기마다 두 번 핀을 바꾼다. 20 kHz면 초당 4만 번 끼어든다</td><td>크기 비교기(CNT &lt; CCRx)가 매 클럭 핀 값을 정한다</td></tr>
+<tr><td>펄스 폭·주기 재기</td><td>핀을 폴링하며 엣지가 오는 순간의 시각을 읽는다. 폴링 간격만큼 오차가 생긴다</td><td>엣지 검출기 + 디지털 필터 + 캡처 래치(CNT → CCRx)</td></tr>
+<tr><td>엔코더의 방향과 이동량</td><td>A·B 두 핀의 모든 엣지에 인터럽트를 받아 상태표로 판정한다</td><td>직교 신호 디코더가 CNT를 직접 올리고 내린다</td></tr>
+<tr><td>정확한 펄스 하나</td><td>핀을 켜고 바쁜 대기 후 끈다. 인터럽트가 끼면 폭이 늘어난다</td><td>원 펄스 모드: 카운터가 한 바퀴 돌고 스스로 멈춘다</td></tr>
+<tr><td>전원이 꺼져도 흐르는 시계</td><td>불가능하다. CPU가 멈추면 셈도 멈춘다</td><td>배터리 도메인의 RTC: 32.768 kHz ÷ 32768 = 1 Hz 카운터</td></tr>
+</table></div>
+<p>64 MHz CPU에서 1 µs는 64 클럭이다. 소프트웨어로 1 µs 분해능의 펄스 폭을 재려면 64 클럭마다 핀을 확인해야 하므로 사실상 다른 일을 할 수 없다. 타이머는 이 셈을 하드웨어 카운터가 매 클럭 하게 하고, CPU에는 "사건이 일어났다"는 플래그와 "그때의 카운터 값"만 남긴다. 이것이 이 그룹 예제들이 시간 기준 → 출력(OC → PWM) → 입력(IC → PWM 입력) → 응용 순서로 나아가는 이유이다.</p>
+</section>
+
+<!-- ============================================================ 2 -->
+<section id="s2">
+<h2>2. 칩과 무관한 일반 개념</h2>
+<h3>시간 기준: 분주기와 모듈로 카운터</h3>
+<p>타이머의 심장은 클럭 엣지마다 1씩 늘어나는 <b>카운터</b>이다. 카운터가 0부터 N−1까지 세고 다시 0으로 돌아가면(모듈로 N 카운터), 넘어가는 순간마다 펄스가 하나 나온다. 그 펄스의 주파수는 f/N이다. 이것이 주기 인터럽트의 원리이다.</p>
+<p>16비트 카운터 하나로는 N이 최대 65 536이다. 64 MHz를 65 536으로 나누면 약 977 Hz이므로 1초 주기를 못 만든다. 그래서 카운터 앞에 또 하나의 카운터(<b>분주기</b>, prescaler)를 둔다. 분주기가 M개를 세면 주 카운터가 1 증가한다. 전체 분주비는 M × N이 되어 최대 2<sup>32</sup>까지 늘어난다. 디지털논리의 직렬 연결된 카운터(캐스케이드 카운터)와 같다.</p>
+
+<h3>비교: "그 시각이 되면"</h3>
+<p>카운터 값과 미리 정한 수를 <b>일치 비교기</b>(CNT = CCR)에 넣으면, 같아지는 순간에 사건이 생긴다. 이 사건으로 핀을 세우거나(set), 내리거나(reset), 뒤집을(toggle) 수 있다. 이것이 <b>출력 비교</b>(OC, Output Compare)이다. 카운터가 시계라면 비교 레지스터는 알람 시각이다.</p>
+<p><b>크기 비교기</b>(CNT &lt; CCR)를 쓰면 카운터 한 바퀴 동안 앞부분은 1, 뒷부분은 0인 파형이 나온다. 이것이 <b>PWM</b>(Pulse Width Modulation, 펄스 폭 변조)이다. 주기는 카운터 길이(ARR+1)가 정하고, High 구간은 비교값(CCR)이 정한다.</p>
+<div class="eq">PWM 주기 = (ARR + 1) / f_CNT        듀티 = CCR / (ARR + 1)        (가장자리 정렬, PWM 모드 1)</div>
+
+<h3>캡처: "그 일이 언제 일어났나"</h3>
+<p>반대 방향도 가능하다. 입력 핀에 엣지가 오는 순간 카운터 값을 레지스터에 <b>래치</b>하면, 그 사건의 타임스탬프가 남는다. 이것이 <b>입력 캡처</b>(IC, Input Capture)이다. 두 캡처값의 차가 주기이고, 상승·하강 엣지 캡처값의 차가 펄스 폭이다. 카운터가 한 바퀴 돌아 0으로 넘어가도, 차이를 16비트 부호 없는 뺄셈으로 구하면 한 번의 넘어감은 저절로 보정된다(모듈로 2<sup>16</sup> 산술). 같은 레지스터가 출력에서는 "이 시각에 이 일을 하라", 입력에서는 "그 일이 이 시각에 일어났다"는 뜻이 된다.</p>
+<p>캡처 래치는 한 칸이다. 소프트웨어가 값을 꺼내기 전에 다음 엣지가 오면 이전 값은 덮어써진다. 이것을 <b>오버캡처</b>라고 하며, USART의 오버런과 같은 구조이다.</p>
+
+<h3>분해능과 주파수의 맞바꿈</h3>
+<p>카운터 클럭 f_CNT가 정해지면 PWM 주파수와 듀티 분해능은 서로 묶인다. 한 주기 안의 카운트 수가 곧 듀티의 단계 수이기 때문이다.</p>
+<div class="eq">듀티 단계 수 = ARR + 1 = f_CNT / f_PWM          분해능(비트) = log2(ARR + 1)
+예) f_CNT = 64 MHz:  1 kHz → 64 000단계(약 16비트),  20 kHz → 3 200단계(약 11.6비트),  1 MHz → 64단계(6비트)</div>
+<p>입력 캡처도 같다. f_CNT가 높으면 타임스탬프가 세밀하지만(1/f_CNT), 16비트 카운터가 금방 한 바퀴 돌아 잴 수 있는 가장 긴 간격(65 536/f_CNT)이 짧아진다.</p>
+
+<h3>RTC와 32.768 kHz</h3>
+<p>시계용 수정 진동자는 32 768 Hz = 2<sup>15</sup> Hz이다. 15비트 이진 카운터를 거치면 정확히 1 Hz가 나온다. 주파수가 낮아 소비 전력이 아주 작으므로 배터리로 몇 년씩 돌릴 수 있다. RTC는 이 1 Hz로 초 카운터를 올리고, 날짜·시각은 그 초 수에서 계산한다. 수정의 오차는 보통 ppm(백만분율) 단위로 말한다. 20 ppm이면 하루에 약 1.7초가 어긋난다.</p>
+
+<div class="sim" id="pwmsim">
+  <div class="subhead">파형 그리기: 카운터와 비교기가 만드는 PWM</div>
+  <div class="ctl">
+    <div><label for="pw_arr">ARR (작은 값으로 관찰)</label><input id="pw_arr" type="number" min="1" max="20" value="8"></div>
+    <div><label for="pw_ccr">CCR</label><input id="pw_ccr" type="number" min="0" max="25" value="4"></div>
+    <div><label for="pw_mode">출력 모드</label><select id="pw_mode"><option value="1" selected>PWM 모드 1 (CNT &lt; CCR이면 활성)</option><option value="2">PWM 모드 2 (반대)</option></select></div>
+    <div><label for="pw_al">정렬</label><select id="pw_al"><option value="e" selected>가장자리 정렬 (업카운트)</option><option value="c">중앙 정렬 (업/다운)</option></select></div>
+  </div>
+  <div class="diag"><svg id="pw_svg" viewBox="0 0 680 190" role="img" aria-label="카운터 값과 OCxREF 파형"></svg></div>
+  <div class="regs">
+    <div class="stat"><div class="k">한 주기 카운트 수</div><div class="v" id="pw_per">-</div></div>
+    <div class="stat"><div class="k">활성(High) 카운트 수</div><div class="v" id="pw_on">-</div></div>
+    <div class="stat"><div class="k">듀티</div><div class="v" id="pw_duty">-</div></div>
+  </div>
+  <p class="note" id="pw_note"></p>
+</div>
+</section>
+
+<!-- ============================================================ 3 -->
+<section id="s3">
+<h2>3. F103 내부 구현 블록도</h2>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig100_p367.png"><img src="img/RM0008_Fig100_p367.png" alt="범용 타이머 블록도" width="1314" height="1279" loading="lazy"></a></div>
+<figcaption>범용 타이머(TIM2~TIM5)의 블록도이다. 위쪽은 트리거·슬레이브 제어(어떤 클럭과 어떤 트리거로 카운터를 움직일지), 가운데 줄은 시간 기준 유닛(PSC → CNT, Auto-reload register), 아래 네 줄은 채널 1~4이다. 각 채널은 왼쪽 입력 경로(Input filter &amp; edge detector → Prescaler → 캡처)와 오른쪽 출력 경로(비교 → OCxREF → Output control → 핀)를 함께 가진다. 그림자 친 "Reg" 상자는 UEV 때 프리로드 값이 실제 레지스터로 옮겨지는 이중 버퍼이고, 번개 화살표는 사건(Event), 꺾인 화살표는 인터럽트·DMA 출력이다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=367">RM0008 Rev 21, p.367</a>, Figure 100. General-purpose timer block diagram</span></figcaption></figure>
+
+<p>신호를 입력 → 클럭 → 처리 → 플래그/이벤트 → 출력 순서로 따라간다.</p>
+<ol class="flow">
+  <li><span class="n">1</span><div class="tx"><b>입력: TIMxCLK, ETR 핀, ITR0~3, TIMx_CH1~4 핀</b><span>내부 클럭 CK_INT는 RCC에서 온다(4장). ETR(External Trigger)은 외부 클럭·트리거 핀, ITR(Internal Trigger)은 다른 타이머의 TRGO가 들어오는 내부 선이다. 채널 핀은 입력으로 쓰면 TIx가 된다.</span></div></li>
+  <li><span class="n">2</span><div class="tx"><b>클럭: CK_INT (또는 TIx·ETR·ITR) → 슬레이브 모드 제어 → CK_PSC → PSC → CK_CNT</b><span>보통은 CK_INT가 그대로 CK_PSC가 된다. 슬레이브 모드를 고르면 외부 엣지로 세거나(외부 클럭 모드), 트리거로 시작·정지·리셋한다(RM0008 15.3.3, 15.3.14).</span></div></li>
+  <li><span class="n">3</span><div class="tx"><b>처리: CNT가 ARR까지 세고 넘어감, CNT와 CCRx 비교, 엣지 때 CNT를 CCRx로 캡처</b><span>시간 기준 유닛과 네 채널이 같은 CNT를 공유한다. 그래서 한 타이머의 네 PWM 채널은 주파수가 같고 듀티만 다르다.</span></div></li>
+  <li><span class="n">4</span><div class="tx"><b>플래그/이벤트: UEV → UIF, 비교 일치·캡처 → CCxIF(CCxOF), 트리거 → TIF</b><span>허용 비트와 AND되어 인터럽트·DMA 요청이 되고, 선택된 사건은 TRGO로 다른 타이머·ADC에 간다(6장).</span></div></li>
+  <li><span class="n">5</span><div class="tx"><b>출력: OCxREF → 극성(CCxP) → 출력 허용(CCxE) → TIMx_CHx 핀</b><span>핀은 GPIO에서 대체 기능(AF) 푸시풀 출력으로 둔다. 입력으로 쓰는 채널 핀은 입력 모드로 둔다(01_GPIO 상위 교안).</span></div></li>
+</ol>
+
+<figure class="diag"><svg viewBox="0 0 680 300" role="img" aria-label="시간 기준 유닛의 디지털논리 등가">
+<rect class="bx" x="8" y="38" width="80" height="44" rx="4"/><text class="tc" x="48" y="58">CK_PSC</text><text class="sc" x="48" y="74">CK_INT 등</text>
+<line class="w" x1="88" y1="60" x2="112" y2="60"/><polygon class="ah" points="118,60 110,55 110,65"/>
+<rect class="bx hw" x="118" y="30" width="150" height="60" rx="4"/><text class="tc" x="193" y="52">분주 카운터</text><text class="sc" x="193" y="68">0 → PSC 반복</text><text class="sc" x="193" y="82">16비트</text>
+<line class="w" x1="268" y1="60" x2="292" y2="60"/><polygon class="ah" points="298,60 290,55 290,65"/><text class="s" x="258" y="22">CK_CNT</text>
+<rect class="bx hw" x="298" y="30" width="140" height="60" rx="4"/><text class="tc" x="368" y="52">CNT 카운터</text><text class="sc" x="368" y="68">+1 (또는 −1)</text><text class="sc" x="368" y="82">16비트</text>
+<line class="w" x1="438" y1="60" x2="462" y2="60"/><polygon class="ah" points="468,60 460,55 460,65"/>
+<rect class="bx" x="468" y="30" width="130" height="60" rx="4"/><text class="tc" x="533" y="54">일치 비교기</text><text class="sc" x="533" y="72">CNT = ARR ?</text>
+<line class="w" x1="598" y1="60" x2="620" y2="60"/><text class="s" x="604" y="50">넘침</text>
+<line class="w" x1="620" y1="60" x2="620" y2="196"/><polygon class="ah" points="620,204 615,196 625,196"/>
+<line class="wm" x1="533" y1="90" x2="533" y2="118"/><line class="wm" x1="468" y1="76" x2="452" y2="76"/><line class="wm" x1="452" y1="76" x2="452" y2="102"/><line class="wm" x1="452" y1="102" x2="368" y2="102"/><line class="wm" x1="368" y1="102" x2="368" y2="90"/><text class="s" x="376" y="116">넘치면 CNT를 0으로</text>
+<rect class="bx sel" x="118" y="120" width="150" height="34" rx="4"/><text class="tc" x="193" y="142">PSC 섀도(실제값)</text>
+<rect class="bx sel" x="468" y="120" width="130" height="34" rx="4"/><text class="tc" x="533" y="142">ARR 섀도</text>
+<line class="wm" x1="193" y1="120" x2="193" y2="90"/>
+<rect class="bx" x="118" y="186" width="150" height="34" rx="4"/><text class="tc" x="193" y="208">PSC 프리로드 (쓰기)</text>
+<rect class="bx" x="468" y="186" width="130" height="34" rx="4"/><text class="tc" x="533" y="208">ARR 프리로드 (쓰기)</text>
+<line class="wc" x1="193" y1="186" x2="193" y2="154"/><line class="wc" x1="533" y1="186" x2="533" y2="154"/>
+<line class="dash" x1="603" y1="203" x2="603" y2="137"/><line class="dash" x1="603" y1="137" x2="598" y2="137"/><text class="o" x="446" y="236">ARPE = 0이면 바로 통과</text>
+<rect class="bx flg" x="298" y="200" width="140" height="44" rx="4"/><text class="tc" x="368" y="219">UEV 게이트</text><text class="sc" x="368" y="235">(넘침+UG+리셋)·¬UDIS</text>
+<line class="w" x1="620" y1="222" x2="438" y2="222"/>
+<line class="dash" x1="298" y1="210" x2="280" y2="210"/><line class="dash" x1="280" y1="210" x2="280" y2="170"/><line class="dash" x1="280" y1="170" x2="460" y2="170"/><text class="s" x="290" y="166">UEV: 프리로드 → 섀도 적재</text>
+<rect class="bx flg" x="298" y="256" width="140" height="34" rx="4"/><text class="tc" x="368" y="278">UIF 플래그</text>
+<line class="wm" x1="368" y1="244" x2="368" y2="256"/>
+<text class="o" x="450" y="270">URS = 1이면 넘침만 UIF를 세움</text>
+<text class="s" x="8" y="278">UG(소프트웨어),</text><text class="s" x="8" y="292">슬레이브 리셋도 UEV</text>
+</svg><figcaption><span class="eqv">등가 모델</span> Figure 100의 시간 기준 유닛을 디지털논리 소자로 다시 그렸다. 분주 카운터와 CNT는 캐스케이드 카운터이고, 쓰기용 프리로드와 실제로 쓰이는 섀도 레지스터는 UEV를 클럭으로 받는 이중 버퍼 래치이다. PSC는 항상 버퍼링되고, ARR은 ARPE로 버퍼링 여부를 고른다(RM0008 15.3.1, <a href="../../Docs/RM0008_Reference_manual.pdf#page=368">p.368</a>). UEV와 UIF의 조건은 CR1의 UDIS·URS 설명(<a href="../../Docs/RM0008_Reference_manual.pdf#page=405">p.405</a>)과 SR의 UIF 설명(p.411)을 따랐다. 비교기와 리셋의 실제 회로는 문서에 없다.</figcaption></figure>
+
+<div class="tablewrap"><table>
+<tr><th>Figure 100의 블록</th><th>디지털논리 등가</th><th>근거</th></tr>
+<tr><td>PSC prescaler</td><td>0~PSC를 반복하는 16비트 분주 카운터. 분주비는 PSC+1</td><td>RM0008 15.3.1, 15.4.11</td></tr>
+<tr><td>CNT counter + Auto-reload register</td><td>업/다운 카운터 + 끝값 일치 비교기(모듈로 ARR+1 카운터)</td><td>RM0008 15.3.2</td></tr>
+<tr><td>그림자 친 Reg 상자(ARR, PSC, CCRx)</td><td>UEV로 적재되는 이중 버퍼 래치</td><td>RM0008 15.3.1, Figure 126</td></tr>
+<tr><td>Capture/Compare x register (출력)</td><td>CNT와의 크기·일치 비교기 → 출력 모드 논리(세트/리셋/토글)</td><td>RM0008 15.3.8, Figure 127</td></tr>
+<tr><td>Capture/Compare x register (입력)</td><td>캡처 펄스에 CNT를 잡는 래치</td><td>RM0008 15.3.5, Figure 126</td></tr>
+<tr><td>Input filter &amp; edge detector</td><td>N회 연속 같은 값이어야 바뀌는 카운터형 디바운서 + 엣지 검출기 + 극성 선택 MUX</td><td>RM0008 15.4.7 ICxF, Figure 125</td></tr>
+<tr><td>Prescaler (채널 입력)</td><td>엣지 1·2·4·8개마다 한 번 통과시키는 분주 카운터</td><td>RM0008 15.4.7 ICxPSC</td></tr>
+<tr><td>ITR·TRC·TRGI 사다리꼴</td><td>트리거 입력 선택 멀티플렉서(TS)</td><td>RM0008 15.4.3</td></tr>
+<tr><td>Slave controller mode</td><td>트리거로 카운터를 리셋·게이트·시작·클럭하는 제어기(SMS)</td><td>RM0008 15.3.14</td></tr>
+<tr><td>Encoder interface</td><td>두 입력의 엣지 순서로 +1/−1을 정하는 직교 디코더</td><td>RM0008 15.3.12, Table 85</td></tr>
+<tr><td>TRGO 쪽 Trigger controller</td><td>내보낼 신호를 고르는 멀티플렉서(MMS)</td><td>RM0008 15.4.2</td></tr>
+</table></div>
+
+<h3>칩 안의 타이머와 RTC</h3>
+<div class="tablewrap"><table>
+<tr><th>블록</th><th>종류</th><th>버스</th><th>카운터</th><th>채널</th><th>특징</th></tr>
+<tr><td class="m">TIM1</td><td>고급 제어 타이머</td><td>APB2</td><td>16비트 업/다운</td><td>4 (CH1~3은 상보 출력 CHxN 포함)</td><td>데드타임, 브레이크, 반복 카운터, MOE</td></tr>
+<tr><td class="m">TIM2, TIM3, TIM4</td><td>범용 타이머</td><td>APB1</td><td>16비트 업/다운</td><td>4</td><td>입력 캡처, 출력 비교, PWM, 원 펄스, 엔코더</td></tr>
+<tr><td class="m">RTC</td><td>실시간 시계</td><td>APB1(인터페이스)</td><td>32비트 업 + 20비트 분주</td><td>-</td><td>백업 도메인, LSE·LSI·HSE/128 클럭</td></tr>
+</table></div>
+<p>근거: 타이머 구성은 DS5319 Table 4와 2.3.15(<a href="../../Docs/Datasheet_stm32f103.pdf#page=17">p.17</a>), 버스는 RM0008 Figure 8(<a href="../../Docs/RM0008_Reference_manual.pdf#page=93">p.93</a>), RTC는 RM0008 18.2(<a href="../../Docs/RM0008_Reference_manual.pdf#page=483">p.483</a>)이다. F103RB(128 KB 플래시)는 중밀도(medium-density) 장치이므로 TIM5와 TIM8이 없다. RM0008 14장 서두(<a href="../../Docs/RM0008_Reference_manual.pdf#page=292">p.292</a>)는 저·중밀도 F103에 고급 타이머가 TIM1 하나뿐이라고 적는다. 15장 그림과 표에 TIM5·TIM8이 나오면 이 칩에서는 없는 것으로 읽는다.</p>
+
+<h3>확장: TIM1 고급 타이머</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig52_p294.png"><img src="img/RM0008_Fig52_p294.png" alt="고급 타이머 블록도" width="1314" height="1405" loading="lazy"></a></div>
+<figcaption>TIM1의 블록도는 범용 타이머에 세 가지를 더한 것이다. ① 오른쪽 위 REP Register / Repetition counter: 넘침을 몇 번 모아 UEV를 한 번 낸다(4장). ② 각 채널의 DTG(Dead-Time Generator): OCxREF 하나에서 서로 겹치지 않는 OCx와 OCxN 두 출력을 만든다(5장). ③ 아래쪽 BRK 경로: BKIN 핀(극성 선택)과 CSS 클럭 고장 신호를 OR해서 모든 출력을 끈다. 원본 그림의 "TIF_ED"는 TI1F_ED(Figure 100과 같은 신호), "CK_TIM18"은 TIM1·TIM8용 타이머 클럭을 뜻하는 것으로 읽는다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=294">RM0008 Rev 21, p.294</a>, Figure 52. Advanced-control timer block diagram</span></figcaption></figure>
+
+<h3>RTC 블록</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig179_p484.png"><img src="img/RM0008_Fig179_p484.png" alt="RTC 블록도" width="1157" height="837" loading="lazy"></a></div>
+<figcaption>회색 영역이 백업 도메인이다. RTCCLK가 RTC_DIV(20비트 다운카운터, 0이 되면 RTC_PRL 값을 다시 적재)를 돌리고, 그 출력 TR_CLK가 32비트 RTC_CNT를 1 올린다. RTC_CNT는 RTC_ALR과 일치 비교기(=)로 비교된다. 오른쪽 RTC_CR 칸에서 SECF·OWF·ALRF가 각각 SECIE·OWIE·ALRIE와 AND된 뒤 OR되어 NVIC로 간다. 알람 신호는 따로 WKUP 핀과 OR되어 대기 모드(Standby)에서 깨우는 데도 쓰인다. 위쪽 APB1 interface는 PCLK1로 돌고 대기 모드에서 전원이 끊긴다. 그래서 RTC 코어와 CPU 쪽 레지스터 사이에 동기화 절차가 필요하다(5장).
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=484">RM0008 Rev 21, p.484</a>, Figure 179. RTC simplified block diagram</span></figcaption></figure>
+<p>RTC 코어(분주기, 알람, 카운터, 분주 카운터)는 백업 도메인 리셋으로만 초기화된다. 시스템 리셋이나 대기 모드에서 깨어나도 시간이 이어진다(RM0008 18.1·18.3.2, <a href="../../Docs/RM0008_Reference_manual.pdf#page=482">p.482</a>~485). LSE를 RTC 클럭으로 쓰면 VDD가 꺼져도 VBAT만 있으면 RTC가 계속 돈다(RM0008 7.2.8, <a href="../../Docs/RM0008_Reference_manual.pdf#page=98">p.98</a>). 같은 도메인에 16비트 백업 레지스터 10개(20바이트)가 있다(DS5319 2.3.14, <a href="../../Docs/Datasheet_stm32f103.pdf#page=17">p.17</a>).</p>
+</section>
+
+<!-- ============================================================ 4 -->
+<section id="s4">
+<h2>4. 클럭 경로와 시간 계산</h2>
+<figure class="src narrow"><div class="img"><a href="img/RM0008_Fig8_p93.png"><img src="img/RM0008_Fig8_p93.png" alt="클럭 트리" width="1157" height="1231" loading="lazy"></a></div>
+<figcaption>오른쪽 가운데에 두 개의 타이머 클럭 상자가 있다. APB1 Prescaler 아래 상자는 "TIM2,3,4,5,6,7,12,13,14 / If (APB1 prescaler = 1) x1 else x2", APB2 Prescaler 아래 상자는 "TIM1,8,9,10,11 timers / If (APB2 prescaler = 1) x1 else x2"이다. 왼쪽 아래의 RTCSEL[1:0] 멀티플렉서는 HSE/128, LSE(32.768 kHz), LSI(40 kHz) 중 하나를 RTCCLK로 고른다. 이 그림은 저·중·고밀도 공용이므로 F103RB에 없는 TIM5~14, USB 이외 블록 이름도 함께 나온다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=93">RM0008 Rev 21, p.93</a>, Figure 8. Clock tree</span></figcaption></figure>
+<p>타이머 클럭이 APB 클럭의 두 배가 되는 규칙은 RM0008 7.2(<a href="../../Docs/RM0008_Reference_manual.pdf#page=94">p.94</a>)에 있다. "if the APB prescaler is 1, the timer clock frequencies are set to the same frequency as that of the APB domain ... otherwise, they are set to twice (×2) the frequency of the APB domain." 그래서 SYSCLK 64 MHz, APB1 ÷2(PCLK1 32 MHz)로 두면 APB1에 붙은 TIM2~4도 64 MHz를 받는다. APB2 ÷1이면 TIM1도 64 MHz이다. 이 저장소 예제들이 쓰는 설정이다. PCLK1은 최대 36 MHz이므로 SYSCLK 72 MHz에서는 APB1을 ÷2로 둘 수밖에 없고, 타이머는 72 MHz를 받는다.</p>
+
+<h3>계산식</h3>
+<div class="eq">f_CK_CNT = f_CK_PSC / (PSC + 1)                       (RM0008 15.4.11, p.418)
+갱신률 (가장자리 정렬) = f_CK_CNT / (ARR + 1)
+갱신률 (중앙 정렬)     = f_CK_CNT / (2 × ARR)             (0 → ARR−1 업, ARR → 1 다운, 15.3.2)
+TIM1 갱신률            = 위 값 / (RCR + 1)                 (반복 카운터, 14.3.3)
+PWM 듀티 (모드 1, 가장자리) = CCR / (ARR + 1)      CCR &gt; ARR이면 100 %, CCR = 0이면 0 % (15.3.9)
+캡처 분해능 = 1 / f_CK_CNT          16비트로 잴 수 있는 가장 긴 간격 = 65 536 / f_CK_CNT
+RTC:  f_TR_CLK = f_RTCCLK / (PRL + 1)                     (RM0008 18.4.3, p.489)</div>
+<p>ARR = 0이면 카운터가 멈춘다("The counter is blocked while the auto-reload value is null", RM0008 15.4.12, <a href="../../Docs/RM0008_Reference_manual.pdf#page=419">p.419</a>). PSC의 새 값은 다음 UEV 때(UG로 카운터를 지울 때 포함) 실제 분주기에 들어간다(p.418). 그래서 초기화 끝에 UG를 한 번 써서 섀도 레지스터를 채운다. 이 UG가 UIF를 세우는 문제는 5장에서 다룬다.</p>
+
+<h3>계산 예: 이 그룹 예제들의 설정</h3>
+<div class="tablewrap"><table>
+<tr><th>용도</th><th>TIMxCLK</th><th>PSC</th><th>ARR</th><th>f_CK_CNT</th><th>결과</th></tr>
+<tr><td>1 ms 주기 인터럽트</td><td class="m">64 MHz</td><td class="m">63</td><td class="m">999</td><td class="m">1 MHz</td><td class="m">1 kHz 갱신</td></tr>
+<tr><td>자유 계수 µs 시계</td><td class="m">64 MHz</td><td class="m">63</td><td class="m">65535</td><td class="m">1 MHz</td><td class="m">65.536 ms마다 넘침 (15.26 Hz)</td></tr>
+<tr><td>출력 비교 시간축</td><td class="m">64 MHz</td><td class="m">6399</td><td class="m">65535</td><td class="m">10 kHz</td><td class="m">6.5536 s마다 넘침</td></tr>
+<tr><td>LED PWM</td><td class="m">64 MHz</td><td class="m">63</td><td class="m">999</td><td class="m">1 MHz</td><td class="m">1 kHz, 1000단계</td></tr>
+<tr><td>모터 PWM</td><td class="m">64 MHz</td><td class="m">0</td><td class="m">3199</td><td class="m">64 MHz</td><td class="m">20 kHz, 3200단계</td></tr>
+<tr><td>서보 PWM</td><td class="m">64 MHz</td><td class="m">63</td><td class="m">19999</td><td class="m">1 MHz</td><td class="m">50 Hz, 1 µs ≈ 0.18°</td></tr>
+<tr><td>중앙 정렬 PWM</td><td class="m">64 MHz</td><td class="m">63</td><td class="m">999</td><td class="m">1 MHz</td><td class="m">1 / (2 × 999 µs) ≈ 500.5 Hz</td></tr>
+</table></div>
+
+<h3>칩이 보장하는 한계</h3>
+<div class="tablewrap"><table>
+<tr><th>항목</th><th>값 (f_TIMxCLK = 72 MHz)</th><th>근거</th></tr>
+<tr><td>타이머 분해능 시간 t<sub>res(TIM)</sub></td><td>1 t<sub>TIMxCLK</sub> = 13.9 ns</td><td rowspan="4">DS5319 Table 40 (<a href="../../Docs/Datasheet_stm32f103.pdf#page=67">p.67</a>). 설계로 보장, 생산 시험은 하지 않음</td></tr>
+<tr><td>CH1~CH4 외부 클럭 주파수 f<sub>EXT</sub></td><td>0 ~ f<sub>TIMxCLK</sub>/2 = 36 MHz</td></tr>
+<tr><td>16비트 카운터 클럭 주기 t<sub>COUNTER</sub></td><td>1 ~ 65 536 t<sub>TIMxCLK</sub> = 0.0139 ~ 910 µs</td></tr>
+<tr><td>최대 셀 수 있는 시간 t<sub>MAX_COUNT</sub></td><td>65 536 × 65 536 t<sub>TIMxCLK</sub> = 59.6 s</td></tr>
+<tr><td>ETR 입력 주파수</td><td>ETRP ≤ f<sub>CK_INT</sub>/4 (ETPS 분주로 낮춘다)</td><td>RM0008 15.4.3 (<a href="../../Docs/RM0008_Reference_manual.pdf#page=407">p.407</a>)</td></tr>
+</table></div>
+
+<h3>TIM1의 반복 카운터</h3>
+<figure class="src narrow"><div class="img"><a href="img/RM0008_Fig72_p307.png"><img src="img/RM0008_Fig72_p307.png" alt="반복 카운터에 따른 갱신률" width="1157" height="985" loading="lazy"></a></div>
+<figcaption>TIM1은 넘침(또는 바닥 넘침) RCR+1번마다 UEV를 한 번 낸다. 왼쪽 열은 중앙 정렬로, 넘침과 바닥 넘침이 모두 반복 카운터를 줄이므로 RCR = 1이면 꼭대기나 바닥 한쪽에서만 갱신된다. 원본 그림의 왼쪽 제목 "Counter-aligned mode"는 본문(14.3.3)과 맞춰 읽으면 Center-aligned mode이다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=307">RM0008 Rev 21, p.307</a>, Figure 72. Update rate examples depending on mode and TIMx_RCR register settings</span></figcaption></figure>
+<p>반복 카운터는 갱신 사건을 줄여 준다. PWM 주기가 짧을 때 매 주기 인터럽트를 받지 않고 N+1주기마다 듀티를 바꿀 수 있다. 본문은 "data are transferred from the preload registers to the shadow registers ... every N+1 counter overflows or underflows, where N is the value in the TIMx_RCR"라고 적는다(RM0008 14.3.3, <a href="../../Docs/RM0008_Reference_manual.pdf#page=306">p.306</a>).</p>
+
+<h3>RTC 1 Hz 만들기</h3>
+<div class="eq">LSE 32 768 Hz,  PRL = 0x7FFF (32 767)  → f_TR_CLK = 32 768 / 32 768 = 1 Hz
+리셋값 PRL = 0x8000 (32 768)          → f_TR_CLK = 32 768 / 32 769 ≈ 0.999 97 Hz (약 −30.5 ppm, 하루 약 2.6 s 늦음)
+32비트 카운터를 1 Hz로 세면 2^32 s ≈ 136년 뒤 넘친다</div>
+<p>RM0008 18.4.3(<a href="../../Docs/RM0008_Reference_manual.pdf#page=490">p.490</a>)은 RTC_PRLL의 리셋값을 0x8000으로 적고, 32.768 kHz에서 1초 주기를 얻으려면 7FFFh를 쓰라고 한다. DS5319 2.3.14(p.17)는 "by default configured to generate a time base of 1 second from a clock at 32.768 kHz"라고 적지만, 리셋값 그대로면 위 식대로 한 카운트 길다. 분주비는 PRL이 아니라 PRL+1이기 때문이다. 이 교안은 RM0008의 레지스터 설명을 따른다. LSI는 30~60 kHz(전형 40 kHz)로 흩어지므로(DS5319 Table 25, <a href="../../Docs/Datasheet_stm32f103.pdf#page=55">p.55</a>) LSI로 만든 1초는 최대 수십 % 틀린다. LSI 보정 기능은 TIM5로 LSI를 재는 방식이라 고밀도 이상 장치에만 있다(RM0008 7.2.5, <a href="../../Docs/RM0008_Reference_manual.pdf#page=96">p.96</a>). TIM5가 없는 F103RB에는 해당하지 않는다.</p>
+
+<div class="sim" id="tcalc">
+  <div class="subhead">계산기: 타이머 클럭, PSC·ARR, PWM 분해능, 캡처 범위</div>
+  <div class="ctl">
+    <div><label for="tc_hclk">HCLK (MHz)</label><input id="tc_hclk" type="number" min="1" max="72" step="any" value="64"></div>
+    <div><label for="tc_apb">APB 분주비</label><select id="tc_apb"><option value="1">÷1 (APB2 기본)</option><option value="2" selected>÷2 (APB1 기본)</option><option value="4">÷4</option><option value="8">÷8</option><option value="16">÷16</option></select></div>
+    <div><label for="tc_psc">PSC (0~65535)</label><input id="tc_psc" type="number" min="0" max="65535" value="63"></div>
+    <div><label for="tc_arr">ARR (1~65535)</label><input id="tc_arr" type="number" min="0" max="65535" value="999"></div>
+    <div><label for="tc_al">정렬</label><select id="tc_al"><option value="e" selected>가장자리 정렬</option><option value="c">중앙 정렬</option></select></div>
+    <div><label for="tc_tgt">목표 갱신 주파수 (Hz)</label><input id="tc_tgt" type="number" min="0.001" step="any" value="20000"></div>
+  </div>
+  <p><button type="button" id="tc_find" style="font:inherit;padding:8px 14px;border-radius:6px;border:1px solid var(--c0);background:var(--c0-soft);color:var(--fg);cursor:pointer;min-height:40px">목표 주파수에 맞는 PSC·ARR 찾기</button></p>
+  <div class="regs">
+    <div class="stat"><div class="k">PCLK</div><div class="v" id="tc_pclk">-</div></div>
+    <div class="stat"><div class="k">TIMxCLK</div><div class="v" id="tc_tclk">-</div></div>
+    <div class="stat"><div class="k">f_CK_CNT</div><div class="v" id="tc_fcnt">-</div></div>
+    <div class="stat"><div class="k">갱신(PWM) 주파수</div><div class="v" id="tc_fu">-</div></div>
+    <div class="stat"><div class="k">목표 대비 오차</div><div class="v" id="tc_err">-</div></div>
+    <div class="stat"><div class="k">듀티 단계 / 비트</div><div class="v" id="tc_res">-</div></div>
+    <div class="stat"><div class="k">캡처 분해능</div><div class="v" id="tc_cres">-</div></div>
+    <div class="stat"><div class="k">넘침 없이 잴 최대 간격</div><div class="v" id="tc_cmax">-</div></div>
+  </div>
+  <p class="note" id="tc_note"></p>
+  <div class="subhead" style="margin-top:16px">RTC 분주</div>
+  <div class="ctl">
+    <div><label for="rc_src">RTCCLK</label><select id="rc_src"><option value="32768" selected>LSE 32.768 kHz</option><option value="40000">LSI 40 kHz (전형)</option><option value="30000">LSI 30 kHz (최소)</option><option value="60000">LSI 60 kHz (최대)</option><option value="62500">HSE 8 MHz / 128 = 62.5 kHz</option></select></div>
+    <div><label for="rc_prl">PRL (0~1048575)</label><input id="rc_prl" type="number" min="1" max="1048575" value="32767"></div>
+    <div><label for="rc_pclk1">PCLK1 (MHz)</label><input id="rc_pclk1" type="number" min="0.001" step="any" value="32"></div>
+  </div>
+  <div class="regs">
+    <div class="stat"><div class="k">f_TR_CLK</div><div class="v" id="rc_f">-</div></div>
+    <div class="stat"><div class="k">1 Hz 대비 오차</div><div class="v" id="rc_err">-</div></div>
+    <div class="stat"><div class="k">하루 어긋남</div><div class="v" id="rc_day">-</div></div>
+    <div class="stat"><div class="k">1 Hz용 PRL</div><div class="v" id="rc_best">-</div></div>
+  </div>
+  <p class="note" id="rc_note"></p>
+</div>
+</section>
+
+<!-- ============================================================ 5 -->
+<section id="s5">
+<h2>5. 제어 요소의 역할: 블록도의 스위치와 레지스터 비트</h2>
+<p>Figure 100의 각 상자를 움직이는 비트를 블록도 위치와 함께 정리한다(비트 정의는 RM0008 15.4, <a href="../../Docs/RM0008_Reference_manual.pdf#page=404">p.404</a>~421).</p>
+<div class="tablewrap"><table>
+<tr><th>블록도 위의 요소</th><th>고르는 비트</th><th>동작</th></tr>
+<tr><td>카운터 전원 스위치</td><td class="m">CR1.CEN</td><td>1이면 CK_CNT가 흐른다. 실제 허용 신호 CNT_EN은 CEN보다 1클럭 늦다(15.3.1). 트리거 모드에서는 하드웨어가 세운다</td></tr>
+<tr><td>카운트 방향 / 정렬</td><td class="m">CR1.DIR, CMS</td><td>DIR 0 업, 1 다운. CMS 00 가장자리, 01·10·11 중앙 정렬(비교 플래그를 내려갈 때·올라갈 때·양쪽에서). 중앙 정렬과 엔코더 모드에서 DIR은 읽기 전용이다. CEN = 1인 동안 가장자리 → 중앙 전환 금지</td></tr>
+<tr><td>ARR 이중 버퍼 스위치</td><td class="m">CR1.ARPE</td><td>0 = 쓰면 즉시 섀도에 반영, 1 = 다음 UEV에 반영</td></tr>
+<tr><td>UEV 게이트</td><td class="m">CR1.UDIS</td><td>1이면 넘침이 와도 UEV를 내지 않아 섀도 레지스터가 그대로이다. 여러 프리로드 값을 한꺼번에 바꿀 때 쓴다</td></tr>
+<tr><td>UIF 원인 선택</td><td class="m">CR1.URS</td><td>0 = 넘침·UG·슬레이브 리셋 모두 UIF, 1 = 넘침(바닥 넘침)만 UIF</td></tr>
+<tr><td>한 번만 세기</td><td class="m">CR1.OPM</td><td>1이면 다음 UEV에서 CEN이 저절로 0이 된다</td></tr>
+<tr><td>필터·데드타임 클럭 분주</td><td class="m">CR1.CKD</td><td>t<sub>DTS</sub> = 1, 2, 4 × t<sub>CK_INT</sub></td></tr>
+<tr><td>채널 방향과 입력 MUX</td><td class="m">CCMRx.CCxS</td><td>00 출력, 01 TIx(자기 핀), 10 이웃 채널 핀, 11 TRC. CCxE = 0일 때만 쓸 수 있다</td></tr>
+<tr><td>출력 모드 논리</td><td class="m">CCMRx.OCxM</td><td>000 고정(비교만, 핀 불변), 001 일치 시 활성, 010 일치 시 비활성, 011 토글, 100/101 강제 비활성/활성, 110 PWM 1, 111 PWM 2</td></tr>
+<tr><td>CCR 이중 버퍼 스위치</td><td class="m">CCMRx.OCxPE</td><td>0 = CCR 쓰기 즉시 반영, 1 = 다음 UEV에 반영. PWM 모드는 원 펄스가 아니면 OCxPE = 1이 필요하다(15.4.7 주석)</td></tr>
+<tr><td>출력 극성 XOR / 출력 허용 AND</td><td class="m">CCER.CCxP / CCxE</td><td>CCxP = 1이면 OCx = ¬OCxREF. CCxE = 0이면 핀으로 나가지 않는다. 입력일 때 CCxP는 엣지 선택(0 상승, 1 하강), CCxE는 캡처 허용</td></tr>
+<tr><td>입력 디지털 필터</td><td class="m">CCMRx.ICxF</td><td>표본 주파수와 연속 일치 횟수 N을 고른다(아래 계산기)</td></tr>
+<tr><td>캡처 분주</td><td class="m">CCMRx.ICxPSC</td><td>엣지 1·2·4·8개마다 한 번 캡처</td></tr>
+<tr><td>트리거 MUX / 슬레이브 동작</td><td class="m">SMCR.TS / SMS</td><td>TS: ITR0~3, TI1F_ED, TI1FP1, TI2FP2, ETRF. SMS: 엔코더 1·2·3, 리셋, 게이트, 트리거, 외부 클럭 1</td></tr>
+<tr><td>TRGO MUX</td><td class="m">CR2.MMS</td><td>000 리셋(UG), 001 Enable(CNT_EN), 010 UEV, 011 비교 펄스, 100~111 OC1REF~OC4REF</td></tr>
+<tr><td>인터럽트 / DMA 허용 AND</td><td class="m">DIER.UIE, CCxIE, TIE / UDE, CCxDE, TDE</td><td>해당 플래그를 인터럽트·DMA 요청으로 내보낸다(6장)</td></tr>
+<tr><td>소프트웨어 사건 발생기</td><td class="m">EGR.UG, CCxG, TG</td><td>UG: 카운터·분주 카운터를 지우고 UEV 생성. CCxG: 소프트웨어 캡처/비교. 하드웨어가 스스로 0으로 돌린다</td></tr>
+</table></div>
+
+<h3>이중 버퍼: 프리로드와 섀도</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig126_p383.png"><img src="img/RM0008_Fig126_p383.png" alt="캡처/비교 채널 1 주 회로" width="1314" height="767" loading="lazy"></a></div>
+<figcaption>CCR1 한 칸이 실제로는 두 겹이다. 소프트웨어는 위쪽 preload register를 읽고 쓰고, 비교기(Comparator)는 아래 shadow register와 Counter를 비교한다. 출력 모드에서는 compare_transfer가 프리로드 → 섀도로 옮긴다. 이 신호는 OC1PE = 0이면 늘 열려 있고, OC1PE = 1이면 UEV 때만 열린다(오른쪽 OR·AND 게이트). 오른쪽 S-R 래치(write_in_progress)는 8비트씩 두 번 쓰는 동안 옮김을 막는다.입력 모드에서는 Capture 펄스가 Counter 값을 섀도에 잡고 capture_transfer가 프리로드로 올린다. 왼쪽 S-R 래치(read_in_progress)는 8비트씩 두 번 읽는 동안 옮김을 막아 상위·하위 바이트가 서로 다른 캡처에서 오지 않게 한다. 비교기 출력은 CNT&gt;CCR1과 CNT=CCR1 두 가닥이다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=383">RM0008 Rev 21, p.383</a>, Figure 126. Capture/compare channel 1 main circuit</span></figcaption></figure>
+<p>왜 두 겹인가? 카운터가 도는 중에 비교값을 바꾸면, 바꾸는 순간이 주기의 어디냐에 따라 그 주기의 파형이 깨진다(7장 시나리오 ①). 프리로드에 미리 써 두고 UEV, 즉 주기의 경계에서 한꺼번에 옮기면 모든 주기가 "옛 값으로 온전히" 또는 "새 값으로 온전히" 나온다. 디지털논리의 이중 버퍼(double buffering) 래치이다. PSC는 늘 이 방식이고, ARR은 ARPE, CCRx는 OCxPE로 고른다.</p>
+
+<h3>UG와 URS: 초기화가 인터럽트를 부르는 문제</h3>
+<p>프리로드가 켜져 있으면 처음 쓴 PSC·ARR·CCR은 UEV가 오기 전까지 섀도에 들어가지 않는다. 그래서 RM0008은 PWM을 시작하기 전에 "initialize all the registers by setting the UG bit"라고 한다(15.3.9, <a href="../../Docs/RM0008_Reference_manual.pdf#page=387">p.387</a>). 그런데 URS = 0이면 이 UG도 UIF를 세운다. UIE를 먼저 켜 두었다면 카운터를 시작하기도 전에 갱신 인터럽트가 한 번 들어온다. URS = 1이면 넘침만 UIF를 세우므로 이 문제가 없다. URS의 원래 목적은 "to avoid generating both update and capture interrupts when clearing the counter on the capture event"이다(15.3.2, <a href="../../Docs/RM0008_Reference_manual.pdf#page=370">p.370</a>).</p>
+
+<h3>입력 경로: 필터 → 엣지 → 극성 → MUX → 분주</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig125_p382.png"><img src="img/RM0008_Fig125_p382.png" alt="채널 1 입력단" width="1314" height="664" loading="lazy"></a></div>
+<figcaption>TI1이 f<sub>DTS</sub>로 표본화되어 Filter downcounter를 지나 TI1F가 되고, Edge detector가 상승·하강 엣지를 따로 낸다. CC1P가 둘 중 하나를 골라 TI1FP1을 만들고, CC1S MUX가 자기 핀(01), 이웃 채널 핀(10, TI2FP1), TRC(11) 중 하나를 IC1로 고른다. 마지막 Divider가 엣지 1·2·4·8개마다 한 번 IC1PS를 낸다. TI1FP1과 TI1F_ED(양쪽 엣지 OR)는 슬레이브 모드 제어기로도 간다. 원본의 "ICF[3:0]"은 IC1F[3:0]이고, "CC1P/CC1NP"의 CC1NP는 TIM1에서 가져온 표기로 TIM2~TIM5에는 없는 비트이다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=382">RM0008 Rev 21, p.382</a>, Figure 125. Capture/compare channel (example: channel 1 input stage)</span></figcaption></figure>
+<p>디지털 필터는 "event counter in which N consecutive events are needed to validate a transition"이다(15.4.7, <a href="../../Docs/RM0008_Reference_manual.pdf#page=415">p.415</a>). 디지털논리로 보면 입력이 지금 출력과 다를 때만 세고 같으면 0으로 돌아가는 카운터이며, N에 닿아야 출력이 바뀌는 <b>카운터형 디바운서</b>이다. 그래서 N/f<sub>SAMPLING</sub>보다 짧은 펄스는 걸러지고, 통과하는 모든 엣지는 같은 만큼 늦어진다. 주기 측정에는 영향이 없지만 절대 시각이 중요하면 이 지연을 따져야 한다.</p>
+
+<div class="sim" id="fcalc">
+  <div class="subhead">계산기: 입력 필터가 걸러 내는 펄스 폭</div>
+  <div class="ctl">
+    <div><label for="fl_f">ICxF</label><select id="fl_f"></select></div>
+    <div><label for="fl_ck">f_CK_INT (MHz)</label><input id="fl_ck" type="number" min="1" max="72" step="any" value="64"></div>
+    <div><label for="fl_ckd">CKD</label><select id="fl_ckd"><option value="1" selected>00 (t_DTS = t_CK_INT)</option><option value="2">01 (×2)</option><option value="4">10 (×4)</option></select></div>
+  </div>
+  <div class="regs">
+    <div class="stat"><div class="k">f_DTS</div><div class="v" id="fl_dts">-</div></div>
+    <div class="stat"><div class="k">f_SAMPLING</div><div class="v" id="fl_fs">-</div></div>
+    <div class="stat"><div class="k">N (연속 일치 횟수)</div><div class="v" id="fl_n">-</div></div>
+    <div class="stat"><div class="k">이보다 짧은 펄스는 걸러짐</div><div class="v" id="fl_w">-</div></div>
+  </div>
+  <p class="note" id="fl_note"></p>
+</div>
+
+<h3>출력 경로: 비교 → 모드 논리 → 극성 → 허용</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig127_p383.png"><img src="img/RM0008_Fig127_p383.png" alt="채널 1 출력단" width="1157" height="546" loading="lazy"></a></div>
+<figcaption>비교기의 두 출력(CNT&gt;CCR1, CNT=CCR1)이 Output mode controller로 들어가고, OC1M[2:0]이 그 둘로 oc1ref를 어떻게 만들지 고른다. oc1ref는 마스터 모드 제어기(TRGO)로도 간다. CC1P가 반전 여부를 고르고, CC1E가 출력 허용 회로를 연다. 위쪽 ETRF는 외부 신호로 oc1ref를 Low로 끌어내리는 OCxCE 기능이다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=383">RM0008 Rev 21, p.383</a>, Figure 127. Output stage of capture/compare channel (channel 1)</span></figcaption></figure>
+<div class="tablewrap"><table>
+<tr><th>OCxM</th><th>이름</th><th>디지털논리로 본 OCxREF</th></tr>
+<tr><td class="m">000</td><td>Frozen</td><td>변화 없음. 비교 플래그 CCxIF만 선다(시간 기준용)</td></tr>
+<tr><td class="m">001 / 010</td><td>일치 시 활성 / 비활성</td><td>SR 래치: S = (CNT = CCR) 또는 R = (CNT = CCR)</td></tr>
+<tr><td class="m">011</td><td>Toggle</td><td>T 플립플롭: (CNT = CCR)일 때 반전</td></tr>
+<tr><td class="m">100 / 101</td><td>강제 비활성 / 활성</td><td>상수 0 / 1. 비교와 플래그는 계속된다</td></tr>
+<tr><td class="m">110</td><td>PWM 모드 1</td><td>업카운트: OCxREF = (CNT &lt; CCR). 다운카운트: OCxREF = ¬(CNT &gt; CCR)</td></tr>
+<tr><td class="m">111</td><td>PWM 모드 2</td><td>PWM 모드 1의 반전</td></tr>
+</table></div>
+<p>근거: RM0008 15.4.7 OC1M(<a href="../../Docs/RM0008_Reference_manual.pdf#page=414">p.414</a>). PWM 모드에서 OCxREF는 "비교 결과가 바뀔 때"만 바뀐다(같은 쪽 주석). 출력 비교 모드에서 UEV는 OCxREF에 영향이 없다(15.3.8, p.386).</p>
+<div class="figs">
+<figure class="src"><div class="img"><a href="img/RM0008_Fig129_p387.png"><img src="img/RM0008_Fig129_p387.png" alt="출력 비교 토글" width="1314" height="538" loading="lazy"></a></div>
+<figcaption>토글 모드에서 CCR1 = 003A와 일치할 때 OC1이 High가 되고, 그 사이 CCR1에 B201을 써 두면 다음 일치에서 Low가 된다. 프리로드를 쓰지 않으므로(OC1PE = 0) 쓴 값이 바로 다음 비교에 쓰인다. 원본의 "CC1R register"는 CCR1이다. <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=387">RM0008 Rev 21, p.387</a>, Figure 129. Output compare mode, toggle on OC1</span></figcaption></figure>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig130_p388.png"><img src="img/RM0008_Fig130_p388.png" alt="가장자리 정렬 PWM" width="1157" height="790" loading="lazy"></a></div>
+<figcaption>ARR = 8, PWM 모드 1. CCR = 4이면 0~3 동안 High(4/9), CCR = 8이면 0~7 동안 High(8/9), CCR &gt; 8이면 늘 1, CCR = 0이면 늘 0이다. <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=388">RM0008 Rev 21, p.388</a>, Figure 130. Edge-aligned PWM waveforms (ARR=8)</span></figcaption></figure>
+</div>
+<figure class="src narrow"><div class="img"><a href="img/RM0008_Fig131_p389.png"><img src="img/RM0008_Fig131_p389.png" alt="중앙 정렬 PWM" width="1157" height="1058" loading="lazy"></a></div>
+<figcaption>중앙 정렬(ARR = 8)에서 카운터는 0→8→0을 오가고 한 주기는 16카운트이다. CCR = 4이면 올라갈 때 4에서 Low, 내려올 때 4에서 High가 되어 펄스가 골짜기(카운터 0)를 중심으로 대칭이다. CCxIF가 서는 시점은 CMS 값(01 내려갈 때, 10 올라갈 때, 11 양쪽)에 따라 다르다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=389">RM0008 Rev 21, p.389</a>, Figure 131. Center-aligned PWM waveforms (ARR=8)</span></figcaption></figure>
+
+<h3>플래그는 어떻게 지워지는가</h3>
+<div class="tablewrap"><table>
+<tr><th>플래그</th><th>세트 조건</th><th>지우는 방법</th><th>근거</th></tr>
+<tr><td class="m">UIF</td><td>UEV(URS·UDIS 조건에 따라)</td><td>0 쓰기(rc_w0)</td><td>RM0008 15.4.5</td></tr>
+<tr><td class="m">CCxIF (출력)</td><td>CNT = CCRx (중앙 정렬은 CMS에 따라)</td><td>0 쓰기</td><td>15.4.5</td></tr>
+<tr><td class="m">CCxIF (입력)</td><td>캡처 발생</td><td>0 쓰기 또는 CCRx 읽기</td><td>15.3.5, 15.4.5</td></tr>
+<tr><td class="m">CCxOF</td><td>CCxIF = 1인 채로 또 캡처</td><td>0 쓰기만</td><td>15.3.5</td></tr>
+<tr><td class="m">TIF</td><td>TRGI의 유효 엣지(게이트 모드는 양쪽 엣지)</td><td>0 쓰기</td><td>15.4.5</td></tr>
+<tr><td class="m">BIF (TIM1)</td><td>브레이크 입력 활성</td><td>0 쓰기. 브레이크 입력이 활성인 동안은 지워지지 않는다</td><td>14.3.12</td></tr>
+<tr><td class="m">SECF · ALRF · OWF (RTC)</td><td>1초 / 알람 일치 / 32비트 넘침</td><td>0 쓰기(rc_w0). 1을 쓰면 무시</td><td>18.4.2 (p.488)</td></tr>
+</table></div>
+<p>TIMx_SR의 플래그 비트는 모두 rc_w0이다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=410">p.410</a>). 0을 쓴 비트만 지워지고 1을 쓴 비트는 그대로이므로, 지울 플래그 자리에만 0을 쓰고 나머지는 1로 채워 쓰면 읽고-고치고-쓰는 사이에 새로 선 다른 플래그를 실수로 지우지 않는다.</p>
+
+<h3>RTC 쪽 스위치: 동기화와 설정 모드</h3>
+<p>RTC 코어는 RTCCLK(예: 32.768 kHz)로, 레지스터 창구(APB1 interface)는 PCLK1로 돈다. 두 클럭 영역 사이에 값이 오가므로 손 맞잡기(handshake)가 필요하다.</p>
+<ul>
+  <li><b>읽기 쪽 RSF</b>: CPU가 읽는 RTC 레지스터는 RTC 클럭의 상승 엣지마다 갱신된다. 리셋이나 정지·대기 모드 뒤에는 APB1 쪽 사본이 아직 갱신되지 않아 첫 읽기가 틀릴 수 있다(보통 0). 그래서 RSF를 0으로 지우고 하드웨어가 다시 1로 세울 때까지 기다린 뒤 읽는다(RM0008 18.3.3, <a href="../../Docs/RM0008_Reference_manual.pdf#page=485">p.485</a>).</li>
+  <li><b>쓰기 쪽 RTOFF·CNF</b>: RTOFF가 1(이전 쓰기 끝)인지 확인 → CNF = 1(설정 모드) → PRL·CNT·ALR 쓰기 → CNF = 0 → RTOFF가 1이 될 때까지 기다림. 실제 쓰기는 CNF를 내릴 때 시작되며 RTCCLK로 최소 3클럭 걸린다(18.3.4, p.485). 32.768 kHz에서 약 92 µs이다. 본문은 RTOFF가 "RTC_CR register"에 있다고 적지만 레지스터 설명(18.4.2)에서 RTOFF는 RTC_CRL의 비트 5이다.</li>
+  <li><b>백업 도메인 쓰기 보호</b>: 리셋 뒤에는 RTC와 백업 레지스터가 쓰기 보호된다. PWR·BKP 인터페이스 클럭을 켜고 PWR_CR의 DBP를 1로 해야 쓸 수 있다(18.1, p.482). RM0008 7.2.8(p.98)의 "DPB bit"는 DBP의 오기이다.</li>
+  <li><b>클럭 선택은 한 번만</b>: RTCSEL은 백업 도메인을 리셋하지 않고는 바꿀 수 없다(7.2.8).</li>
+</ul>
+
+<h3>확장: TIM1의 상보 출력, 데드타임, 브레이크</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig86_p321.png"><img src="img/RM0008_Fig86_p321.png" alt="데드타임 삽입" width="1157" height="413" loading="lazy"></a></div>
+<figcaption>OCxREF 하나에서 OCx와 OCxN이 나온다. OCx는 OCxREF의 상승 엣지만 delay만큼 늦추고, OCxN은 OCxREF 반전의 상승 엣지만 늦춘다. 그래서 한쪽이 꺼진 뒤 delay가 지나야 다른 쪽이 켜지고, 둘이 동시에 High인 순간이 없다(CCxP = CCxNP = 0, MOE = 1).
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=321">RM0008 Rev 21, p.321</a>, Figure 86. Complementary output with dead-time insertion</span></figcaption></figure>
+<figure class="diag"><svg viewBox="0 0 680 170" role="img" aria-label="데드타임 생성기의 디지털논리 등가">
+<text class="t" x="8" y="62">OCxREF</text><line class="w" x1="66" y1="58" x2="110" y2="58"/>
+<circle class="ah" cx="110" cy="58" r="3"/>
+<line class="w" x1="110" y1="58" x2="110" y2="40"/><line class="w" x1="110" y1="40" x2="150" y2="40"/>
+<line class="w" x1="110" y1="58" x2="110" y2="118"/><line class="w" x1="110" y1="118" x2="130" y2="118"/>
+<rect class="bx" x="130" y="106" width="40" height="24" rx="4"/><text class="tc" x="150" y="123">NOT</text>
+<line class="w" x1="170" y1="118" x2="200" y2="118"/>
+<line class="w" x1="150" y1="40" x2="200" y2="40"/>
+<rect class="bx hw" x="200" y="20" width="170" height="44" rx="4"/><text class="tc" x="285" y="39">상승 엣지 지연</text><text class="sc" x="285" y="55">DT 카운터 (t_dtg 단위)</text>
+<rect class="bx hw" x="200" y="96" width="170" height="44" rx="4"/><text class="tc" x="285" y="115">상승 엣지 지연</text><text class="sc" x="285" y="131">같은 DT</text>
+<line class="w" x1="370" y1="42" x2="400" y2="42"/><line class="w" x1="370" y1="118" x2="400" y2="118"/>
+<rect class="bx sel" x="400" y="20" width="130" height="44" rx="4"/><text class="tc" x="465" y="39">극성 · 허용</text><text class="sc" x="465" y="55">CCxP, CCxE, MOE</text>
+<rect class="bx sel" x="400" y="96" width="130" height="44" rx="4"/><text class="tc" x="465" y="115">극성 · 허용</text><text class="sc" x="465" y="131">CCxNP, CCxNE, MOE</text>
+<line class="w" x1="530" y1="42" x2="590" y2="42"/><polygon class="ah" points="596,42 588,37 588,47"/><text class="t" x="600" y="46">OCx</text>
+<line class="w" x1="530" y1="118" x2="590" y2="118"/><polygon class="ah" points="596,118 588,113 588,123"/><text class="t" x="600" y="122">OCxN</text>
+<text class="o" x="200" y="160">상승 엣지 지연(x) = x AND (DT만큼 1이 이어졌는가)</text>
+</svg><figcaption><span class="eqv">등가 모델</span> Figure 86의 동작을 소자로 옮겼다. "상승 엣지만 늦춘다"는 입력이 1이 된 뒤 DT 동안 계속 1이어야 출력이 1이 되는 회로, 즉 입력이 0이면 리셋되는 카운터의 AND이다. 펄스가 DT보다 짧으면 그 출력 펄스는 사라진다(14.3.11, Figure 87·88). DT = DTG[7:0]로 정해지며, DTG[7:5] = 0xx이면 DT = DTG × t<sub>DTS</sub>이고 그 이상은 2·8·16배 단위로 성기게 늘어난다(14.4.18, <a href="../../Docs/RM0008_Reference_manual.pdf#page=361">p.361</a>). t<sub>DTS</sub> = 1/64 MHz = 15.625 ns이면 DTG = 64가 1.0 µs이다.</figcaption></figure>
+<ul>
+  <li><b>MOE</b>(Main Output Enable): TIM1 출력 전체의 주 스위치이다. 리셋 직후 0이므로 TIM1은 CCxE를 켜도 MOE를 1로 해야 핀에 나온다. 범용 타이머에는 없는 단계이다.</li>
+  <li><b>브레이크</b>: BKE = 1이면 BKIN 핀(BKP로 극성 선택)이나 CSS 클럭 고장이 오는 순간 MOE가 <b>비동기로</b> 0이 된다. 타이머 클럭이 없어도 동작한다. 출력은 OISx/OISxN으로 정한 안전 레벨로 가고, BIF가 선다. AOE = 1이면 다음 UEV에 MOE가 저절로 돌아오고, 0이면 소프트웨어가 다시 켤 때까지 꺼져 있다. 브레이크 입력은 레벨로 동작하므로 입력이 살아 있는 동안 MOE를 다시 켤 수 없다(14.3.12, <a href="../../Docs/RM0008_Reference_manual.pdf#page=323">p.323</a>~324). EGR.BG로 소프트웨어 브레이크도 낼 수 있다.</li>
+  <li><b>LOCK</b>: BDTR의 LOCK을 한 번 쓰면 리셋 전까지 데드타임, 극성, 출력 모드 등을 단계별로 잠근다. LOCK 비트 자체도 리셋 뒤 한 번만 쓸 수 있다(14.4.18, p.360).</li>
+</ul>
+</section>
+
+<!-- ============================================================ 6 -->
+<section id="s6">
+<h2>6. 이벤트 생성 기전: 플래그 → 인터럽트 → DMA → 다른 장치</h2>
+<h3>① 사건 여러 개, 벡터 하나(범용) 또는 넷(TIM1)</h3>
+<p>TIM2~TIM4는 UIF·UIE, CC1~4IF·CC1~4IE, TIF·TIE를 각각 AND한 뒤 OR해서 <b>벡터 하나</b>로 보낸다. ISR은 SR을 읽어 어떤 사건인지 가려야 한다. TIM1은 사건을 네 벡터로 나눈다. 그래서 브레이크 같은 급한 사건에 갱신과 다른 우선순위를 줄 수 있다.</p>
+<div class="tablewrap"><table>
+<tr><th>Table 63 이름</th><th>사건</th><th>위치(IRQ)</th><th>벡터 주소</th><th>쪽</th></tr>
+<tr><td class="m">RTC</td><td>RTC 전역(SECF·ALRF·OWF)</td><td class="m">3</td><td class="m">0x0000_004C</td><td><a href="../../Docs/RM0008_Reference_manual.pdf#page=204">p.204</a></td></tr>
+<tr><td class="m">TIM1_BRK</td><td>TIM1 브레이크</td><td class="m">24</td><td class="m">0x0000_00A0</td><td rowspan="8"><a href="../../Docs/RM0008_Reference_manual.pdf#page=205">p.205</a></td></tr>
+<tr><td class="m">TIM1_UP</td><td>TIM1 갱신</td><td class="m">25</td><td class="m">0x0000_00A4</td></tr>
+<tr><td class="m">TIM1_TRG_COM</td><td>TIM1 트리거·커뮤테이션</td><td class="m">26</td><td class="m">0x0000_00A8</td></tr>
+<tr><td class="m">TIM1_CC</td><td>TIM1 캡처/비교</td><td class="m">27</td><td class="m">0x0000_00AC</td></tr>
+<tr><td class="m">TIM2</td><td>TIM2 전역</td><td class="m">28</td><td class="m">0x0000_00B0</td></tr>
+<tr><td class="m">TIM3</td><td>TIM3 전역</td><td class="m">29</td><td class="m">0x0000_00B4</td></tr>
+<tr><td class="m">TIM4</td><td>TIM4 전역</td><td class="m">30</td><td class="m">0x0000_00B8</td></tr>
+<tr><td class="m">RTCAlarm</td><td>EXTI 17번 선을 거친 RTC 알람</td><td class="m">41</td><td class="m">0x0000_00E4</td></tr>
+</table></div>
+<p>근거: RM0008 Table 63(<a href="../../Docs/RM0008_Reference_manual.pdf#page=204">p.204</a>~205). 타이머 인터럽트는 플래그가 1인 동안 계속 요청을 내는 레벨 신호로 다룬다. PM0056 4.3.9(<a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf#page=126">p.126</a>)는 레벨 감지 인터럽트에서 "if the signal is not deasserted before the processor returns from the ISR, the interrupt becomes pending again"이라고 적는다. 따라서 ISR이 UIF·CCxIF를 지우지 않고 끝나면 곧바로 다시 들어온다. 타이머 요청선이 정확히 플래그 AND 허용인지는 범용 타이머 장에 그림이 없어 <span class="eqv">등가 모델</span>로 둔다. RTC의 AND-OR 구조는 Figure 179에 그려져 있다.</p>
+
+<h3>② DMA 요청: CPU 대신 CCR·ARR을 바꾸거나 캡처값을 옮긴다</h3>
+<div class="tablewrap"><table>
+<tr><th>DMA1 채널</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th></tr>
+<tr><td class="m">TIM1</td><td>-</td><td class="m">CH1</td><td>-</td><td class="m">CH4, TRIG, COM</td><td class="m">UP</td><td class="m">CH3</td><td>-</td></tr>
+<tr><td class="m">TIM2</td><td class="m">CH3</td><td class="m">UP</td><td>-</td><td>-</td><td class="m">CH1</td><td>-</td><td class="m">CH2, CH4</td></tr>
+<tr><td class="m">TIM3</td><td>-</td><td class="m">CH3</td><td class="m">CH4, UP</td><td>-</td><td>-</td><td class="m">CH1, TRIG</td><td>-</td></tr>
+<tr><td class="m">TIM4</td><td class="m">CH1</td><td>-</td><td>-</td><td class="m">CH2</td><td class="m">CH3</td><td>-</td><td class="m">UP</td></tr>
+</table></div>
+<p>근거: RM0008 Table 78(<a href="../../Docs/RM0008_Reference_manual.pdf#page=282">p.282</a>). Table 78의 TIM1 행에는 TIM1_CH2가 없다. 바로 앞쪽 Figure 50(<a href="../../Docs/RM0008_Reference_manual.pdf#page=281">p.281</a>)은 TIM1_CH2를 채널 3에 그려 두었다. 같은 문서 안에서 표와 그림이 다르므로 TIM1_CH2의 DMA를 쓸 일이 있으면 두 곳을 모두 확인해야 한다. 채널마다 요청이 OR로 묶여 있으므로 같은 채널의 요청은 하나만 켠다. CR2.CCDS = 1이면 CCx DMA 요청이 CCx 사건 대신 UEV 때 나간다(15.4.2). DMA 자체는 07_DMA 그룹에서 다룬다.</p>
+
+<h3>③ TRGO: 타이머가 다른 타이머와 ADC를 깨운다</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig140_p398.png"><img src="img/RM0008_Fig140_p398.png" alt="마스터/슬레이브 타이머" width="1157" height="389" loading="lazy"></a></div>
+<figcaption>마스터(TIM1)의 Master mode control이 MMS로 고른 신호(여기서는 UEV)를 TRGO1로 내보낸다. 슬레이브(TIM2)는 TS MUX로 ITR0을 골라 Slave mode control에 넣고, SMS가 그 트리거로 카운터를 클럭·리셋·게이트·시작한다. 이 예에서는 외부 클럭 모드 1(SMS = 111)로 TIM1 넘침마다 TIM2가 1씩 센다. 두 16비트 카운터가 32비트 카운터가 된다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=398">RM0008 Rev 21, p.398</a>, Figure 140. Master/Slave timer example</span></figcaption></figure>
+<div class="tablewrap"><table>
+<tr><th>슬레이브</th><th>ITR0 (TS = 000)</th><th>ITR1 (TS = 001)</th><th>ITR2 (TS = 010)</th><th>ITR3 (TS = 011)</th></tr>
+<tr><td class="m">TIM2</td><td class="m">TIM1</td><td class="off">TIM8 (없음)</td><td class="m">TIM3</td><td class="m">TIM4</td></tr>
+<tr><td class="m">TIM3</td><td class="m">TIM1</td><td class="m">TIM2</td><td class="off">TIM5 (없음)</td><td class="m">TIM4</td></tr>
+<tr><td class="m">TIM4</td><td class="m">TIM1</td><td class="m">TIM2</td><td class="m">TIM3</td><td class="off">TIM8 (없음)</td></tr>
+</table></div>
+<p>근거: RM0008 Table 86(<a href="../../Docs/RM0008_Reference_manual.pdf#page=409">p.409</a>). 표 주석대로 칩에 없는 타이머의 ITR은 쓸 수 없다. TS는 SMS = 000일 때만 바꿔야 잘못된 엣지가 생기지 않는다(15.4.3). TRGO는 ADC 외부 트리거로도 간다. 정규 변환에는 TIM1_CC1·CC2·CC3, TIM2_CC2, TIM3_TRGO, TIM4_CC4가(Table 67, <a href="../../Docs/RM0008_Reference_manual.pdf#page=225">p.225</a>), 주입 변환에는 TIM1_TRGO, TIM1_CC4, TIM2_TRGO, TIM2_CC1, TIM3_CC4, TIM4_TRGO가(Table 68, p.226) 연결된다. 일정한 샘플링 주기가 필요한 ADC 변환은 이 경로로 시작한다.</p>
+<p>정오표 ES096 2.6.2(<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=14">p.14</a>): 트리거 연결은 펄스 기반이므로, 슬레이브 타이머나 ADC의 클럭을 켜기 전에 마스터가 TRGO를 내거나 동작 중에 슬레이브 클럭 분주를 바꾸면 트리거가 실패할 수 있다. 정오표는 이것을 제품 결함이 아니라 문서 누락으로 분류하고, RM0008 15.4.2·15.4.3 주석(p.406, 408)도 같은 내용을 적는다. 정오표 제목의 TRGO2는 F1에 없는 신호로, 여러 계열에 공통인 문구이다.</p>
+
+<h3>④ RTC 사건: 1초, 알람, 넘침</h3>
+<p>SECF는 분주기가 넘쳐 카운터가 1 올라갈 때마다, ALRF는 카운터가 ALR에 닿을 때, OWF는 32비트 카운터가 0으로 넘어갈 때 선다(RM0008 18.3.5, <a href="../../Docs/RM0008_Reference_manual.pdf#page=486">p.486</a>). 각 플래그가 SECIE·ALRIE·OWIE와 AND되어 RTC 전역 인터럽트(IRQ 3)가 된다. 알람은 따로 EXTI 17번 선에 연결되어 있다("EXTI line 17 is connected to the RTC Alarm event", RM0008 10.2.5, <a href="../../Docs/RM0008_Reference_manual.pdf#page=210">p.210</a>). EXTI 17을 인터럽트 모드로 켜면 RTCAlarm(IRQ 41)이 나오고, 이벤트 모드로 켜면 인터럽트 없이 펄스만 낸다(18.4.2, p.489). EXTI를 거치는 이 경로가 저전력 모드에서 알람으로 깨어나는 길이다. RTC의 플래그들은 APB1 클럭이 멈춰 있으면 갱신되지 않는다(p.489).</p>
+</section>
+
+<!-- ============================================================ 7 -->
+<section id="s7">
+<h2>7. 동작 시나리오 추적</h2>
+<h3>시나리오 ① 도는 중에 주기·듀티를 바꾼다: 프리로드의 효과</h3>
+<div class="figs">
+<figure class="src"><div class="img"><a href="img/RM0008_Fig107_p372.png"><img src="img/RM0008_Fig107_p372.png" alt="ARPE=0 갱신" width="1157" height="609" loading="lazy"></a></div>
+<figcaption>ARPE = 0: TIMx_ARR에 36을 쓰자마자 비교에 쓰이는 값이 FF → 36으로 바뀐다. 카운터는 36에서 넘친다. <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=372">RM0008 Rev 21, p.372</a>, Figure 107. Counter timing diagram, Update event when ARPE=0 (TIMx_ARR not preloaded)</span></figcaption></figure>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig108_p372.png"><img src="img/RM0008_Fig108_p372.png" alt="ARPE=1 갱신" width="1157" height="649" loading="lazy"></a></div>
+<figcaption>ARPE = 1: 36을 써도 프리로드만 바뀌고, 섀도(실제 끝값)는 F5를 유지한다. 카운터는 F5에서 넘치고, 그 UEV에서 섀도가 36이 되어 다음 주기부터 적용된다. <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=372">RM0008 Rev 21, p.372</a>, Figure 108. Counter timing diagram, Update event when ARPE=1 (TIMx_ARR preloaded)</span></figcaption></figure>
+</div>
+<p>ARPE = 0에서 위험한 경우는 <b>끝값을 현재 CNT보다 작게</b> 줄일 때이다. 비교기는 CNT = ARR인 순간만 보므로, 이미 새 ARR을 지나친 카운터는 16비트 끝까지 갔다가 0으로 돌아와 새 ARR에 닿을 때까지 넘치지 않는다. 1 MHz 카운터에서 한 주기가 약 65 ms로 늘어난다(예제 14에서 측정). CNT가 ARR보다 클 때 0xFFFF 다음 동작은 문서에 직접 적혀 있지 않으며, 이 설명은 "일치할 때만 넘친다"는 15.3.2의 서술에서 나온 추론이다. ARPE = 1이면 새 값이 주기 경계에서만 들어가므로 이 일이 없다. CCR과 OCxPE도 같은 관계이다.</p>
+<figure class="diag"><svg viewBox="0 0 680 250" role="img" aria-label="PWM 도중 CCR을 바꿀 때 OCxPE에 따른 파형 차이">
+<text class="s" x="8" y="58">CNT</text>
+<polyline class="sig3" points="110,80 290,30 290,80 470,30 470,80 650,30 650,80"/>
+<line class="dash" x1="190" y1="20" x2="190" y2="216"/><text class="o" x="196" y="16">CNT = 4에서 CCR ← 6 쓰기</text>
+<line class="wm" x1="290" y1="84" x2="290" y2="100"/><line class="wm" x1="470" y1="84" x2="470" y2="100"/>
+<text class="sc" x="290" y="112">UEV</text><text class="sc" x="470" y="112">UEV</text>
+<text class="s" x="8" y="136">OCxREF</text><text class="s" x="8" y="150">OCxPE=0</text>
+<polyline class="sig" points="110,130 170,130 170,150 190,150 190,130 230,130 230,150 290,150 290,130 410,130 410,150 470,150 470,130 590,130 590,150 650,150"/>
+<text class="o" x="300" y="166">첫 주기에 펄스 두 개 (3/9 + 2/9)</text>
+<text class="s" x="8" y="191">OCxREF</text><text class="s" x="8" y="205">OCxPE=1</text>
+<polyline class="sig2" points="110,185 170,185 170,205 290,205 290,185 410,185 410,205 470,205 470,185 590,185 590,205 650,205"/>
+<text class="o" x="300" y="232">옛 듀티 3/9로 끝까지 → UEV부터 6/9</text>
+</svg><figcaption><span class="eqv">등가 모델</span> ARR = 8(한 주기 9카운트), PWM 모드 1, 처음 CCR = 3이다. 카운터가 4일 때 CCR에 6을 쓴다. OCxPE = 0이면 새 값이 바로 비교기에 들어가 비교 결과 "CNT &lt; CCR"이 거짓 → 참으로 바뀌므로 OCxREF가 다시 High가 되고, 6에서 다시 내려간다. 한 주기 안에 펄스가 두 개 생긴다. OCxPE = 1이면 첫 주기는 옛 값 3으로 끝나고 UEV에서 6이 들어간다. 그림은 RM0008 15.3.9와 15.4.7 OC1M 주석("OCREF level changes only when the result of the comparison changes")의 규칙을 적용해 그렸다.</figcaption></figure>
+
+<h3>시나리오 ② 펄스의 주기를 캡처하는데 CPU가 늦는다: 오버캡처</h3>
+<figure class="diag"><svg viewBox="0 0 680 250" role="img" aria-label="입력 캡처와 오버캡처 타이밍">
+<text class="s" x="8" y="34">TI1</text>
+<polyline class="sig" points="110,40 160,40 160,20 220,20 220,40 330,40 330,20 390,20 390,40 500,40 500,20 560,20 560,40 660,40"/>
+<text class="s" x="8" y="80">CCR1</text>
+<rect class="bx" x="110" y="64" width="50" height="24" rx="3"/><text class="sc" x="135" y="80">이전</text>
+<rect class="bx" x="160" y="64" width="170" height="24" rx="3"/><text class="sc" x="245" y="80">t1</text>
+<rect class="bx" x="330" y="64" width="170" height="24" rx="3"/><text class="sc" x="415" y="80">t2 (t1 덮어씀)</text>
+<rect class="bx" x="500" y="64" width="160" height="24" rx="3"/><text class="sc" x="580" y="80">t3</text>
+<text class="s" x="8" y="122">CC1IF</text>
+<polyline class="sig2" points="110,126 160,126 160,108 430,108 430,126 500,126 500,108 660,108"/>
+<text class="s" x="8" y="162">CC1OF</text>
+<polyline class="sig2" points="110,166 330,166 330,148 660,148"/>
+<text class="o" x="336" y="142">CC1IF = 1인데 또 캡처</text>
+<text class="s" x="8" y="200">CPU</text>
+<rect class="isr" x="110" y="186" width="310" height="22" rx="3"/><text class="sc" x="265" y="201">더 급한 일로 바쁨</text>
+<rect class="isr" x="420" y="186" width="70" height="22" rx="3"/><text class="sc" x="455" y="201">CCR1 읽기</text>
+<text class="o" x="110" y="236">CCR1 읽기 → CC1IF만 내려감. CC1OF는 0을 써야 지워진다. t1은 사라졌다.</text>
+</svg><figcaption><span class="eqv">등가 모델</span> 상승 엣지마다 CNT가 CCR1에 래치되고 CC1IF가 선다. CPU가 t1을 꺼내기 전에 두 번째 엣지가 오면 CCR1은 t2로 덮어써지고 CC1OF가 선다. 늦게 읽은 값 t2는 맞는 값이지만, t2 − t1 주기는 구할 수 없다. 규칙은 RM0008 15.3.5(<a href="../../Docs/RM0008_Reference_manual.pdf#page=384">p.384</a>)이다: "CCxIF can be cleared ... by reading the captured data ... CCxOF is cleared when written to 0." 같은 쪽은 오버캡처를 놓치지 않으려면 "read the data before the overcapture flag"라고 권한다. 데이터를 읽은 뒤 플래그를 보면, 그 사이에 생긴 오버캡처까지 잡을 수 있다.</figcaption></figure>
+<p>정오표 두 건이 이 경로에 걸린다. ES096 2.6.5(<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=15">p.15</a>): CCRx를 읽는 바로 그 순간 캡처가 일어나면 CCxIF가 지워진 채 CCxOF는 서지 않을 수 있다. 새 데이터는 레지스터에 들어가 있지만 소프트웨어는 새 캡처를 모른다. 회피책은 캡처 핀에 EXTI를 잠깐 켜서 놓친 엣지를 따로 잡는 것이다. ES096 2.6.6(<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=16">p.16</a>): 반대로 데이터를 잃지 않았는데 CCxOF가 설 수 있다. 회피책은 없다. 따라서 CCxOF는 "잃었을 수 있다"는 경고로 다루고, 측정값의 타당성은 주기 범위 같은 응용 지식으로도 확인한다.</p>
+
+<h3>시나리오 ③ PWM 입력: 하드웨어가 주기와 펄스 폭을 함께 잰다</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig128_p385.png"><img src="img/RM0008_Fig128_p385.png" alt="PWM 입력 모드 타이밍" width="1157" height="585" loading="lazy"></a></div>
+<figcaption>TI1 하나를 두 채널이 함께 본다. IC1(TI1FP1, 상승 엣지)은 주기를 CCR1에 잡고, 슬레이브 리셋 모드(SMS = 100, TS = 101)가 같은 엣지에서 CNT를 0으로 만든다. IC2(TI1FP2, 하강 엣지, CC2S = 10)는 High 폭을 CCR2에 잡는다. 그래서 CCR1 = 주기, CCR2 = 펄스 폭이 바로 나온다(그림에서 CCR1 = 0004, CCR2 = 0002). 캡처값과 실제 카운트 수 사이의 ±1 관계는 문서에 따로 적혀 있지 않다. 원본 가운데 아래의 겹친 글자는 "IC2 capture / pulse width measurement"이다. 이 모드는 TI1FP1·TI2FP2만 슬레이브 제어기에 연결되므로 CH1/CH2에서만 된다(15.3.6).
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=385">RM0008 Rev 21, p.385</a>, Figure 128. PWM input mode timing</span></figcaption></figure>
+
+<h3>시나리오 ④ 원 펄스: 트리거 한 번에 정확한 펄스 하나</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig132_p390.png"><img src="img/RM0008_Fig132_p390.png" alt="원 펄스 모드" width="1157" height="598" loading="lazy"></a></div>
+<figcaption>TI2 상승 엣지가 트리거 모드(SMS = 110)로 카운터를 시작시키고, PWM 모드 2에서 CNT가 CCR1에 닿으면 OC1이 High, ARR에서 넘치면 Low가 된다. OPM = 1이므로 그 UEV에서 CEN이 저절로 0이 되어 카운터가 멈춘다. t<sub>DELAY</sub>는 CCR1, t<sub>PULSE</sub>는 ARR과 CCR1의 차가 정한다. 이 그림은 TIM2~TIM5 장에 있지만 축 이름이 "TIM1_ARR", "TIM1_CCR1"로 적혀 있다. TIMx_ARR, TIMx_CCR1로 읽는다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=390">RM0008 Rev 21, p.390</a>, Figure 132. Example of one-pulse mode</span></figcaption></figure>
+<p>펄스 폭 식은 두 장이 서로 다르게 적는다. 15.3.10(<a href="../../Docs/RM0008_Reference_manual.pdf#page=391">p.391</a>)은 "TIMx_ARR − TIMx_CCR + 1", TIM1 장의 같은 절 14.3.15(<a href="../../Docs/RM0008_Reference_manual.pdf#page=328">p.328</a>)는 "TIMx_ARR − TIMx_CCR1"이다. 카운트를 직접 세면 PWM 모드 2에서 CNT = CCR1부터 ARR까지(양 끝 포함) 활성이므로 ARR − CCR1 + 1카운트가 된다. 트리거에서 출력까지는 최소 몇 클럭의 지연이 있으며, OCxFE = 1이면 비교를 기다리지 않고 트리거에 바로 반응해 지연이 5클럭에서 3클럭으로 준다(15.4.7 OC1FE, p.414).</p>
+
+<h3>시나리오 ⑤ 엔코더: 두 입력의 순서로 위아래를 정한다</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig134_p394.png"><img src="img/RM0008_Fig134_p394.png" alt="엔코더 모드 카운터 동작" width="1156" height="514" loading="lazy"></a></div>
+<figcaption>SMS = 011(두 입력의 모든 엣지에서 셈)이면 TI1·TI2의 엣지마다 CNT가 1씩 움직인다. 방향은 "엣지가 난 쪽"과 "반대쪽 입력의 레벨" 조합으로 정해진다(Table 85). 앞으로 돌면 up, 뒤로 돌면 down이다. jitter 구간처럼 한 입력만 흔들리면 +1, −1이 번갈아 나와 값이 제자리를 지킨다. 엔코더 1주기(A·B 각각 한 번 오르내림)에 4카운트가 쌓이는 이유이다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=394">RM0008 Rev 21, p.394</a>, Figure 134. Example of counter operation in encoder interface mode</span></figcaption></figure>
+<p>엔코더 모드는 "an external clock with direction selection"이며 CNT는 0과 ARR 사이를 돈다(15.3.12, <a href="../../Docs/RM0008_Reference_manual.pdf#page=392">p.392</a>). 다음 쪽(p.393)의 설정 예는 CC2S를 "TIMx_CCMR2 register"에 있다고 적지만 CC2S는 CCMR1에 있다(15.4.7).</p>
+
+<h3>시나리오 ⑥ RTC: 1초와 알람</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig180_p486.png"><img src="img/RM0008_Fig180_p486.png" alt="RTC 초와 알람 파형" width="1314" height="394" loading="lazy"></a></div>
+<figcaption>PR = 3이면 분주 카운터가 0002 → 0001 → 0000 → 0003으로 4클럭마다 돌고(÷(PRL+1)), RTC_Second가 한 RTCCLK 동안 서며 RTC_CNT가 1 오른다. ALARM = 4이면 카운터가 4인 마지막 RTCCLK에 RTC_ALARM이 서고, ALRF는 소프트웨어가 지울 때까지 남는다. 본문은 이것을 "the counter reaches the RTC Alarm value ... increased by one (RTC_ALR + 1)" 직전의 클럭이라고 적는다(18.3.5).
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=486">RM0008 Rev 21, p.486</a>, Figure 180. RTC second and alarm waveform example with PR=0003, ALARM=00004</span></figcaption></figure>
+<p>RTC_CNT는 32비트이지만 CPU는 16비트 두 칸(CNTH, CNTL)으로 읽는다. 두 번 읽는 사이에 하위 칸이 FFFF → 0000으로 넘어가면 상위·하위가 서로 다른 초에서 온다. 상위 → 하위 → 상위로 읽어 상위가 같은지 확인하는 방법이 예제 13에 있다. 이것은 03_TIM_Overflow_Counter의 "넘침 횟수 + CNT" 읽기 경쟁과 같은 문제이다. 문서는 이 읽기 순서를 규정하지 않는다.</p>
+</section>
+
+<!-- ============================================================ 8 -->
+<section id="s8">
+<h2>8. 설계상 한계와 이유</h2>
+<div class="tablewrap"><table>
+<tr><th>설계 선택</th><th>얻은 것</th><th>감수한 것</th><th>근거</th></tr>
+<tr><td>16비트 카운터</td><td>작은 면적, 16비트 버스 접근</td><td>최대 65 536카운트. 긴 간격은 PSC를 키워 분해능을 버리거나, 넘침을 소프트웨어로 세거나(예제 03), 타이머를 캐스케이드(Figure 140)한다</td><td>DS5319 Table 40</td></tr>
+<tr><td>네 채널이 CNT 하나를 공유</td><td>채널끼리 위상이 정확히 맞는다</td><td>한 타이머의 PWM 채널은 주파수가 모두 같다. 채널별 주파수가 필요하면 출력 비교 + CCR 전진(예제 04)을 쓴다</td><td>RM0008 15.3.9</td></tr>
+<tr><td>PWM 듀티 단계 = ARR+1</td><td>단순한 비교기 하나로 PWM</td><td>주파수를 올리면 분해능이 준다. 64 MHz에서 20 kHz는 3200단계, 1 MHz는 64단계</td><td>RM0008 15.3.9</td></tr>
+<tr><td>캡처 래치 한 칸</td><td>작은 하드웨어</td><td>읽기 전에 다음 엣지가 오면 덮어쓰기(CCxOF). 빠른 신호는 DMA나 PWM 입력 모드로. 정오표상 CCxOF가 빠지거나(2.6.5) 거짓으로 설 수 있다(2.6.6)</td><td>RM0008 15.3.5, ES096 p.15~16</td></tr>
+<tr><td>ARPE를 고를 수 있게 함</td><td>ARPE = 0이면 즉시 반영</td><td>도는 중 ARR을 CNT 아래로 줄이면 한 주기가 16비트 끝까지 늘어난다</td><td>RM0008 15.3.1, 15.3.2</td></tr>
+<tr><td>UG도 UEV로 취급</td><td>초기화 때 섀도를 채우는 한 가지 방법</td><td>URS = 0이면 초기화가 UIF를 세워 시작 전 인터럽트가 한 번 들어온다</td><td>RM0008 15.4.1</td></tr>
+<tr><td>디지털 필터 N회 연속 일치</td><td>짧은 글리치·접점 튐 제거</td><td>통과하는 엣지도 N/f<sub>SAMPLING</sub>만큼 늦는다. 너무 크게 잡으면 진짜 짧은 펄스도 사라진다</td><td>RM0008 15.4.7</td></tr>
+<tr><td>외부 입력 표본화</td><td>입력을 타이머 클럭에 동기화</td><td>CH 외부 클럭 ≤ f<sub>TIMxCLK</sub>/2, ETRP ≤ f<sub>CK_INT</sub>/4</td><td>DS5319 Table 40, RM0008 15.4.3</td></tr>
+<tr><td>비교 사건은 일치 순간에만</td><td>단순한 일치 비교기</td><td>연속한 두 클럭에 일치가 나도록 CCR을 바꾸면(가장자리 정렬에서 ARR → 0 등) 두 번째 사건을 놓친다. 토글 모드에서 짧은 펄스를 만들 때 문제이다. 회피책 없음</td><td>ES096 2.6.3 (<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=15">p.15</a>)</td></tr>
+<tr><td>중앙 정렬의 방향은 하드웨어가 관리</td><td>대칭 PWM</td><td>CEN = 1일 때 CMS 전환 금지. 도는 중 CNT 쓰기는 예상 밖 결과를 낼 수 있다. 시작 직전 UG를 권장</td><td>RM0008 15.3.9 (p.390), 15.4.1</td></tr>
+<tr><td>TIM1 브레이크는 레벨·비동기</td><td>클럭이 죽어도 출력을 끈다</td><td>AOE = 1이면 CSS 같은 시스템 브레이크도 래치되지 않아 다음 주기에 PWM이 다시 나온다(2.6.1). 리셋 슬레이브 모드에서는 OCREF_CLR이 한 주기 더 유지될 수 있고(2.6.4), CCR &gt; ARR(100 %)이면 OCREF_CLR 뒤 다시 켜지지 않는다(2.6.7)</td><td>ES096 p.14~16</td></tr>
+<tr><td>디버그 정지 시 타이머 동작 선택</td><td>계속 돌거나 멈출 수 있음</td><td>코어를 멈춰도 기본적으로 타이머가 돌 수 있다. 디버거로 멈춘 동안 PWM이 계속 나가는지 따져야 한다(DBGMCU의 DBG_TIMx_STOP)</td><td>RM0008 15.3.16 (<a href="../../Docs/RM0008_Reference_manual.pdf#page=403">p.403</a>)</td></tr>
+<tr><td>F1 RTC = 32비트 초 카운터</td><td>단순, 저전력, 136년 범위</td><td>달력·BCD 하드웨어가 없어 날짜·요일·윤년을 소프트웨어가 계산한다. 1초 미만은 DIV를 읽어야 한다</td><td>RM0008 18.1, 18.4.4</td></tr>
+<tr><td>RTC 코어와 APB1 인터페이스 분리</td><td>대기 모드에서도 RTC만 살아 있음</td><td>쓰기마다 RTOFF 대기(≥ 3 RTCCLK), 깨어난 뒤 읽기 전 RSF 대기. RTCCLK는 PCLK1의 1/4 이하여야 한다</td><td>RM0008 18.2~18.3.4</td></tr>
+<tr><td>LSI를 RTC 클럭으로 허용</td><td>수정 없이도 RTC 동작</td><td>30~60 kHz로 흩어지고, F103RB에는 하드웨어 보정 경로(TIM5)가 없다</td><td>DS5319 Table 25, RM0008 7.2.5</td></tr>
+<tr><td>저전력 LSE 발진기</td><td>VBAT로 오래 동작</td><td>코팅 없는 기판, 습한 환경에서 처음 켤 때 기동하지 않을 수 있다. 16~22 MΩ 병렬 저항 권장</td><td>ES096 2.2.6 (<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=8">p.8</a>)</td></tr>
+<tr><td>타이머 핀이 다른 기능과 겹침</td><td>핀 수 절약</td><td>PB5로 리맵한 TIM3_CH2는 I2C1이 클럭을 받으면 출력으로 못 쓴다(2.3.8). TIM1_CH2 PWM이 켜져 있으면 PA9의 USART1_TX가 깨진다(2.3.10). 2.3.10의 제목은 "with output", 본문은 "without output"이라 서로 다르다</td><td>ES096 p.12~13</td></tr>
+</table></div>
+</section>
+
+<!-- ============================================================ 9 -->
+<section id="s9">
+<h2>9. 이해 확인 문제</h2>
+<details><summary>Q1. SYSCLK 72 MHz, APB1 ÷2일 때 TIM3의 클럭은? APB1 ÷1로 바꿀 수 있는가?</summary><div class="ans">
+<p>PCLK1 = 36 MHz이고 APB1 분주비가 1이 아니므로 TIM3는 ×2인 72 MHz를 받는다(RM0008 p.94). APB1 ÷1이면 PCLK1이 72 MHz가 되어 최대 36 MHz를 넘으므로 이 SYSCLK에서는 쓸 수 없다.</p></div></details>
+<details><summary>Q2. 타이머 클럭 64 MHz에서 1 µs 분해능으로 50 Hz 서보 PWM을 내려면 PSC와 ARR은? 1 µs는 몇 도인가(1~2 ms = 0~180°)?</summary><div class="ans">
+<p>PSC = 63이면 f_CNT = 1 MHz, 20 ms = 20 000카운트이므로 ARR = 19 999이다. 1 ms 폭에 180°가 담기므로 1 µs ≈ 0.18°이다. 0.09° 분해능이 필요하면 f_CNT를 2 MHz로 올려야 하는데 그러면 ARR = 39 999로 16비트 안에 들어간다. 8 MHz로 올리면 ARR = 159 999가 16비트를 넘는다.</p></div></details>
+<details><summary>Q3. 64 MHz 카운터 클럭에서 20 kHz PWM의 듀티 단계 수와 비트 수는? 중앙 정렬로 같은 20 kHz를 내면?</summary><div class="ans">
+<p>가장자리 정렬: ARR + 1 = 64 000 000 / 20 000 = 3 200단계, log2 3200 ≈ 11.6비트. 중앙 정렬: 주기가 2 × ARR이므로 ARR = 1 600, 듀티 = CCR/ARR로 1 600단계(약 10.6비트). 같은 주파수에서 중앙 정렬은 분해능이 절반이다. 대신 펄스가 주기 중앙에 대칭으로 놓인다.</p></div></details>
+<details><summary>Q4. f_CNT = 1 MHz, ARR = 999, ARPE = 0으로 돌다가 CNT = 700일 때 ARR에 499를 썼다. 그 주기는 얼마나 걸리는가? ARPE = 1이면?</summary><div class="ans">
+<p>ARPE = 0이면 새 끝값 499가 즉시 비교에 쓰이는데 CNT는 이미 700이다. 일치는 CNT가 0xFFFF를 지나 0으로 돌아온 뒤 499가 될 때 일어나므로 그 주기는 약 65.5 ms 이상으로 늘어난다(예제 14의 측정: 65~66 ms). ARPE = 1이면 현재 주기는 1 000 µs로 끝나고 그 UEV부터 500 µs 주기가 된다(Figure 108).</p></div></details>
+<details><summary>Q5. 초기화 끝에 UG를 쓰고, UIE를 켜고, CEN을 켰더니 시작하자마자 갱신 인터럽트가 한 번 들어왔다. 왜인가? 두 가지 고치는 방법은?</summary><div class="ans">
+<p>URS = 0이면 UG로 만든 UEV도 UIF를 세운다(RM0008 15.4.1, 15.4.5). 그 UIF가 남은 채로 UIE를 켜면 즉시 인터럽트가 걸린다. URS = 1로 두고 UG를 쓰거나, UG 뒤 UIE를 켜기 전에 UIF에 0을 써서 지운다.</p></div></details>
+<details><summary>Q6. f_CNT = 1 MHz, ARR = 0xFFFF에서 연속한 두 상승 엣지의 캡처값이 0xFF00, 0x0100이었다. 주기는? 이 방법이 틀리는 경우는?</summary><div class="ans">
+<p>16비트 부호 없는 뺄셈 0x0100 − 0xFF00 = 0x0200 = 512이므로 512 µs이다. 카운터가 그 사이 한 번 넘어간 것이 저절로 보정된다. 실제 주기가 65 536 µs보다 길면 넘침이 두 번 이상이라 구분할 수 없다. 이때는 넘침을 함께 세거나 PSC를 키운다.</p></div></details>
+<details><summary>Q7. 타이머 클럭 64 MHz, CKD = 00에서 ICxF = 0011과 0101은 각각 대략 몇 ns보다 짧은 펄스를 거르는가? 187.5 ns 폭 펄스는 각각 통과하는가?</summary><div class="ans">
+<p>0011은 f_SAMPLING = f_CK_INT = 64 MHz, N = 8이므로 약 125 ns, 0101은 f_DTS/2 = 32 MHz, N = 8이므로 약 250 ns이다(RM0008 15.4.7). 187.5 ns는 첫째는 통과하고 둘째에서는 걸린다. 예제 16의 측정이 이 계산과 같다. 경계 가까운 폭에서는 표본 위상에 따라 결과가 달라질 수 있다.</p></div></details>
+<details><summary>Q8. f_CNT = 1 MHz, PWM 모드 2 + 원 펄스, CCR1 = 2, ARR = 12이다. 지연과 펄스 폭은?</summary><div class="ans">
+<p>지연은 CNT 0, 1 동안이므로 2 µs이다. 활성 구간은 CNT = 2~12(양 끝 포함) 11카운트이므로 RM0008 15.3.10의 식(ARR − CCR1 + 1)으로 11 µs이다. 14장의 식(ARR − CCR1)을 따르면 10 µs가 되므로, 정확한 폭이 중요하면 측정으로 확인한다. 하부 예제 10_TIM_OnePulse_HCSR04_c는 이 계산에 따라 ARR을 11로 고쳐 (11 − 2 + 1) = 10 µs 펄스를 낸다.</p></div></details>
+<details><summary>Q9. LSE로 RTC를 돌리는데 PRL을 리셋값 그대로 두었다. 하루에 얼마나 어긋나는가? LSI(실제 30 kHz)에 PRL = 39 999를 쓰면 RTC의 1초는 실제 몇 초인가?</summary><div class="ans">
+<p>리셋값 0x8000이면 분주비가 32 769이므로 1/32 769 ≈ 30.5 ppm 느리고, 하루 86 400 s × 30.5 ppm ≈ 2.6 s 늦다. LSI 30 kHz에 분주비 40 000이면 TR_CLK = 0.75 Hz이므로 RTC의 1초는 실제 약 1.33초이다. LSI는 정밀 시계에 쓸 수 없다.</p></div></details>
+<details><summary>Q10. 회전당 100주기를 내는 직교 엔코더를 SMS = 011로 읽는다. 회전당 카운트와, ARR = 0xFFFF일 때 몇 바퀴마다 CNT가 한 바퀴 도는가?</summary><div class="ans">
+<p>두 입력의 모든 엣지를 세므로 주기당 4카운트, 회전당 400카운트이다. 65 536 / 400 = 163.84바퀴마다 CNT가 한 바퀴 돈다. 이동량은 이전 값과의 16비트 부호 있는 차로 구하면 그 사이 한 번의 래핑은 보정된다.</p></div></details>
+<details><summary>Q11. TIM1으로 64 MHz, CKD = 00, DTG = 64를 쓰면 데드타임은? 20 kHz, 50 % PWM의 High 구간은 얼마나 짧아지는가?</summary><div class="ans">
+<p>DTG[7:5] = 010(0xx)이므로 DT = 64 × t<sub>DTS</sub> = 64 × 15.625 ns = 1.0 µs이다(RM0008 14.4.18). 20 kHz 50 %의 High 구간 25 µs는 OCx와 OCxN 모두 상승 엣지가 1 µs 늦어져 약 24 µs가 된다.</p></div></details>
+<details><summary>Q12. TIM2·TIM3을 동시에 출발시키려 한다. 어떤 MMS, TS, SMS 조합이 필요한가? TS 값은 Table 86의 어디서 나오는가?</summary><div class="ans">
+<p>TIM2(마스터) MMS = 001(Enable → TRGO), TIM3(슬레이브) SMS = 110(트리거 모드)이다. TIM3에서 TIM2는 ITR1이므로 TS = 001이다(Table 86). TIM2의 CEN이 켜지면 TRGO가 High가 되고 TIM3의 CEN을 하드웨어가 세운다. 슬레이브 클럭은 미리 켜 두어야 한다(ES096 2.6.2).</p></div></details>
+</section>
+
+<!-- ============================================================ 10 -->
+<section id="s10">
+<h2>10. 하부 예제 연결</h2>
+<p>각 예제가 이 교안의 어느 경로를 쓰는지 정리했다. 코드, 라이브러리, 보드 배선은 예제 교안과 README에서 다룬다. 교안이 아직 없는 예제는 폴더로 연결했다. 권장 학습 순서는 01 → 02 → 03 → 14 → 04 → 05 → 15 → 06 → 07 → 16 → 08~13이다(그룹 README).</p>
+<div class="tablewrap"><table>
+<tr><th>예제</th><th>지나가는 경로</th><th>이 교안의 장</th></tr>
+<tr><td><a href="01_TIM_TimeBase/01_TIM_TimeBase%20교안.html">01_TIM_TimeBase</a></td><td>PSC → CNT → ARR 일치 → UEV → UIF·UIE AND → TIM3 벡터. 1 ms 주기</td><td><a href="#s3">3</a>, <a href="#s4">4</a>, <a href="#s6">6①</a></td></tr>
+<tr><td><a href="02_TIM_TimeBase_Polling/02_TIM_TimeBase_Polling%20교안.html">02_TIM_TimeBase_Polling</a></td><td>같은 UEV를 인터럽트 없이 UIF 폴링, rc_w0로 지움. UIF가 1비트라 놓친 틱은 합쳐진다</td><td><a href="#s5">5</a>, <a href="#s8">8</a></td></tr>
+<tr><td><a href="03_TIM_Overflow_Counter/03_TIM_Overflow_Counter%20교안.html">03_TIM_Overflow_Counter</a></td><td>자유 계수 CNT를 시간으로 읽고 넘침 횟수로 32비트 확장. 두 값 읽기 사이의 경쟁</td><td><a href="#s2">2</a>, <a href="#s8">8</a></td></tr>
+<tr><td><a href="04_TIM_OutputCompare/04_TIM_OutputCompare%20교안.html">04_TIM_OutputCompare</a></td><td>CNT = CCRx 일치 → 토글(OCxM = 011) / Frozen. CCR 전진으로 채널마다 다른 주파수</td><td><a href="#s5">5</a>, <a href="#s8">8</a>(ES096 2.6.3)</td></tr>
+<tr><td><a href="05_TIM_PWM/05_TIM_PWM%20교안.html">05_TIM_PWM</a></td><td>TIM1 CH1·CH3 PWM 모드 1, OCxPE·ARPE, MOE</td><td><a href="#s2">2</a>, <a href="#s5">5</a>, <a href="#s7">7①</a></td></tr>
+<tr><td><a href="06_TIM_InputCapture_c/">06_TIM_InputCapture_c</a></td><td>TI1 상승 엣지 → CNT를 CCR1에 캡처 → CC1IF 인터럽트, 두 캡처값의 차로 주기. 다른 타이머가 시험 신호를 만든다</td><td><a href="#s2">2</a>, <a href="#s7">7②</a></td></tr>
+<tr><td><a href="07_TIM_PWMInput_c/">07_TIM_PWMInput_c</a></td><td>TI1을 IC1(상승)·IC2(하강)가 함께 보고 슬레이브 리셋 모드로 주기·High 폭을 하드웨어로</td><td><a href="#s7">7③</a></td></tr>
+<tr><td><a href="08_TIM1_DeadTime_Break_c/">08_TIM1_DeadTime_Break_c</a></td><td>TIM1 상보 출력 CH1/CH1N, DTG = 64(약 1 µs), BKIN·소프트웨어 브레이크 → MOE = 0, BIF</td><td><a href="#s5">5 확장</a>, <a href="#s6">6①</a></td></tr>
+<tr><td><a href="09_TIM_Encoder_c/">09_TIM_Encoder_c</a></td><td>SMS = 011 직교 디코더, ICxF 필터, 16비트 부호 있는 차로 이동량</td><td><a href="#s7">7⑤</a></td></tr>
+<tr><td><a href="10_TIM_OnePulse_HCSR04_c/">10_TIM_OnePulse_HCSR04_c</a></td><td>한 타이머는 OPM + PWM 모드 2로 트리거 펄스, 다른 타이머는 상승·하강 캡처로 에코 폭</td><td><a href="#s7">7④</a>, Q8</td></tr>
+<tr><td><a href="11_TIM_Servo_c/">11_TIM_Servo_c</a></td><td>50 Hz PWM, CCR = 펄스 폭(µs)</td><td><a href="#s4">4</a>, Q2</td></tr>
+<tr><td><a href="12_TIM_MotorDriver_TB6612_c/">12_TIM_MotorDriver_TB6612_c</a></td><td>PSC = 0, 20 kHz PWM(3200단계)으로 H-브리지 속도 제어</td><td><a href="#s2">2</a>, Q3</td></tr>
+<tr><td><a href="13_RTC_Calendar_c/">13_RTC_Calendar_c</a></td><td>LSE → RTCCLK → PRL 분주 → 32비트 CNT, SECF 인터럽트. RSF·RTOFF·CNF 절차, 백업 도메인, 날짜는 소프트웨어 계산</td><td><a href="#s4">4</a>, <a href="#s5">5</a>, <a href="#s7">7⑥</a></td></tr>
+<tr><td><a href="14_TIM_Preload_URS_Reg_c/">14_TIM_Preload_URS_Reg_c</a></td><td>ARPE 0/1에서 ARR 축소, UG와 URS로 생기는 초기 UIF를 실측</td><td><a href="#s5">5</a>, <a href="#s7">7①</a>, Q4·Q5</td></tr>
+<tr><td><a href="15_TIM_CenterAligned_PWM_Reg_c/">15_TIM_CenterAligned_PWM_Reg_c</a></td><td>가장자리·중앙 정렬 PWM 비교, CCR 경계(0, &gt; ARR), MMS = 001 / ITR1 / SMS = 110 동시 출발</td><td><a href="#s5">5</a>, <a href="#s6">6③</a>, Q12</td></tr>
+<tr><td><a href="16_TIM_IC_Filter_Overcapture_Reg_c/">16_TIM_IC_Filter_Overcapture_Reg_c</a></td><td>ICxF 경계 실측, CCxIF·CCxOF 지우는 방법 차이</td><td><a href="#s5">5</a>, <a href="#s7">7②</a>, Q7</td></tr>
+</table></div>
+
+<div class="box ok">
+  <div class="label">정리</div>
+  <ul>
+    <li>타이머는 분주 카운터(PSC) + 모듈로 카운터(CNT, ARR) + 채널마다 비교기·캡처 래치이다. f_CNT = f_CK_PSC/(PSC+1), 갱신률 = f_CNT/(ARR+1).</li>
+    <li>APB 분주비가 1이 아니면 타이머 클럭은 APB 클럭의 두 배이다. TIM1은 APB2, TIM2~4는 APB1에 있다.</li>
+    <li>PSC는 늘, ARR·CCR은 ARPE·OCxPE로 이중 버퍼링된다. 새 값은 UEV, 즉 주기 경계에서 들어가므로 파형이 깨지지 않는다. UG도 UEV이며 URS = 0이면 UIF를 세운다.</li>
+    <li>같은 CCRx가 출력에서는 "그 시각에 하라", 입력에서는 "그 시각에 일어났다"이다. PWM은 크기 비교, OC는 일치 비교, IC는 엣지에 CNT를 래치하는 것이다. 래치가 한 칸이라 늦게 읽으면 CCxOF이다.</li>
+    <li>입력은 필터(N회 연속 일치 디바운서) → 엣지 → 극성 → MUX → 분주를 지나고, 슬레이브 제어기는 트리거로 카운터를 리셋·게이트·시작·클럭한다. TRGO는 다른 타이머와 ADC를 깨운다.</li>
+    <li>RTC는 RTCCLK ÷ (PRL+1) = 1 Hz로 32비트 초를 세는 백업 도메인 카운터이다. LSE + PRL 0x7FFF가 정확한 1 Hz이고, 읽기는 RSF, 쓰기는 RTOFF·CNF 절차를 따른다.</li>
+  </ul>
+</div>
+<div class="nextprev"><a href="../05_SPI_Communication/05_SPI_Communication%20교안.html">← 05_SPI_Communication 상위 교안</a><a href="01_TIM_TimeBase/01_TIM_TimeBase%20교안.html">첫 예제: 01_TIM_TimeBase →</a><a href="../07_DMA/07_DMA%20교안.html">다음 그룹: 07_DMA 상위 교안 →</a></div>
+</section>
+
+<footer>
+  <p>그림 출처: STMicroelectronics RM0008 Rev 21(저장소 <code>Docs/</code>). 원본 그림은 PDF의 해당 쪽을 잘라 실었고, 등가 모델 그림과 파형 그리기는 이 교안에서 새로 그렸다. 수치 근거는 RM0008 Rev 21, DS5319 Rev 19, PM0056 Rev 7, ES096 Rev 15이다.</p>
+</footer>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  function fmt(x,d){return (Math.round(x*Math.pow(10,d))/Math.pow(10,d)).toLocaleString('ko-KR')}
+  function fhz(f){return f>=1e6?fmt(f/1e6,4)+" MHz":(f>=1e3?fmt(f/1e3,4)+" kHz":fmt(f,4)+" Hz")}
+  function ftime(s){return s>=1?fmt(s,4)+" s":(s>=1e-3?fmt(s*1e3,4)+" ms":(s>=1e-6?fmt(s*1e6,4)+" µs":fmt(s*1e9,3)+" ns"))}
+  function ival(id,lo,hi,def){var v=parseInt($(id).value,10); if(isNaN(v)) v=def; return Math.min(hi,Math.max(lo,v));}
+  function on(ids,fn){ids.forEach(function(id){$(id).addEventListener("input",fn);$(id).addEventListener("change",fn)})}
+
+  /* ---------- 2장 PWM 파형 그리기 ---------- */
+  function drawPWM(){
+    var arr=ival("pw_arr",1,20,8), ccr=ival("pw_ccr",0,25,4), m=$("pw_mode").value, al=$("pw_al").value;
+    var seq=[], i;
+    if(al==="e"){ for(i=0;i<=arr;i++) seq.push({v:i,up:true}); }
+    else { for(i=0;i<arr;i++) seq.push({v:i,up:true}); for(i=arr;i>=1;i--) seq.push({v:i,up:false}); }
+    var per=seq.length, all=seq.concat(seq), n=all.length, x0=70, w=(660-x0)/n;
+    var yb=80, yt=20, sc=(yb-yt)/arr, hi=118, lo=146, s="", onc=0;
+    function act(o){var a = o.up ? (o.v<ccr) : (o.v<=ccr); return m==="1"?a:!a;}
+    seq.forEach(function(o){ if(act(o)) onc++; });
+    var cp=[], rp=[], x=x0;
+    all.forEach(function(o,k){
+      var y=yb-o.v*sc; cp.push(x+","+y, (x+w)+","+y);
+      var r=act(o)?hi:lo; rp.push(x+","+r, (x+w)+","+r); x+=w;
+    });
+    s+='<text class="s" x="4" y="54">CNT</text><text class="s" x="4" y="136">OCxREF</text>';
+    if(ccr<=arr){var yc=yb-ccr*sc; s+='<line class="dash" x1="'+x0+'" y1="'+yc+'" x2="660" y2="'+yc+'"/><text class="o" x="'+(x0+2)+'" y="'+(yc-3)+'">CCR = '+ccr+'</text>';}
+    s+='<line class="wm" x1="'+(x0+per*w)+'" y1="14" x2="'+(x0+per*w)+'" y2="156"/>';
+    s+='<polyline class="sig3" points="'+cp.join(" ")+'"/><polyline class="sig" points="'+rp.join(" ")+'"/>';
+    if(w>=13){ x=x0; all.forEach(function(o){ s+='<text class="sc" x="'+(x+w/2)+'" y="176">'+o.v+'</text>'; x+=w; }); }
+    $("pw_svg").innerHTML=s;
+    $("pw_per").textContent=per+(al==="e"?" (= ARR+1)":" (= 2×ARR)");
+    $("pw_on").textContent=onc;
+    $("pw_duty").textContent=fmt(onc/per*100,2)+" %";
+    var note=(al==="e"?"가장자리 정렬: 카운터가 0 → ARR로 오르고 0으로 돌아간다. ":"중앙 정렬: 0 → ARR−1로 오르고(넘침) ARR → 1로 내려온다(바닥 넘침). 내려갈 때 PWM 모드 1은 CNT ≤ CCR이면 활성이다. ");
+    if(m==="1"&&ccr===0) note+="CCR = 0이면 OCxREF는 늘 0이다. ";
+    if(m==="1"&&((al==="e"&&ccr>arr)||(al==="c"&&ccr>=arr))) note+="CCR이 ARR보다 크면(중앙 정렬은 같아도) OCxREF는 늘 1이다. ";
+    note+="세로 회색선은 주기 경계(UEV)이다.";
+    $("pw_note").textContent=note;
+  }
+  on(["pw_arr","pw_ccr","pw_mode","pw_al"],drawPWM); drawPWM();
+
+  /* ---------- 4장 타이머 계산기 ---------- */
+  function calcT(){
+    var h=parseFloat($("tc_hclk").value)||64, apb=+$("tc_apb").value;
+    var pclk=h/apb, tclk=pclk*(apb===1?1:2);
+    var psc=ival("tc_psc",0,65535,63), arr=ival("tc_arr",0,65535,999), al=$("tc_al").value, tgt=parseFloat($("tc_tgt").value);
+    var f=tclk*1e6, fcnt=f/(psc+1), note="";
+    $("tc_pclk").textContent=fmt(pclk,4)+" MHz"; $("tc_tclk").textContent=fmt(tclk,4)+" MHz ("+(apb===1?"×1":"×2")+")";
+    $("tc_fcnt").textContent=fhz(fcnt);
+    var e=$("tc_err");
+    if(arr===0||(al==="c"&&arr<1)){
+      $("tc_fu").textContent="카운터 정지"; e.textContent="-"; e.className="v"; $("tc_res").textContent="-";
+      note+="ARR = 0이면 카운터가 멈춘다(RM0008 15.4.12). ";
+    } else {
+      var fu= al==="e" ? fcnt/(arr+1) : fcnt/(2*arr), steps= al==="e" ? arr+1 : arr;
+      $("tc_fu").textContent=fhz(fu)+" ("+ftime(1/fu)+")";
+      if(tgt>0){var er=(fu-tgt)/tgt; e.textContent=(er>=0?"+":"")+fmt(er*100,4)+" %"; e.className="v verdict "+(Math.abs(er)<1e-3?"good":"bad");}
+      else {e.textContent="-"; e.className="v";}
+      $("tc_res").textContent=steps.toLocaleString('ko-KR')+" / "+fmt(Math.log(steps)/Math.LN2,2)+"비트";
+    }
+    $("tc_cres").textContent=ftime(1/fcnt);
+    $("tc_cmax").textContent=ftime(65536/fcnt);
+    if(h>72) note+="HCLK 최대는 72 MHz이다. ";
+    if(pclk>36) note+="APB1에 붙은 타이머라면 PCLK1 최대 36 MHz를 넘는다(APB2는 72 MHz까지). ";
+    note+="타이머 클럭은 APB 분주비가 1이면 ×1, 아니면 ×2이다(RM0008 p.94).";
+    $("tc_note").textContent=note;
+  }
+  function findT(){
+    var h=parseFloat($("tc_hclk").value)||64, apb=+$("tc_apb").value, al=$("tc_al").value, tgt=parseFloat($("tc_tgt").value);
+    if(!(tgt>0)) return;
+    var f=h/apb*(apb===1?1:2)*1e6, best=null;
+    for(var p=0;p<=65535;p++){
+      var fc=f/(p+1), a, fu;
+      if(al==="e"){a=Math.round(fc/tgt)-1; if(a<1||a>65535) continue; fu=fc/(a+1);}
+      else {a=Math.round(fc/tgt/2); if(a<1||a>65535) continue; fu=fc/(2*a);}
+      var er=Math.abs(fu-tgt)/tgt;
+      if(best===null||er<best.er-1e-12){best={p:p,a:a,er:er}; if(er===0) break;}
+    }
+    if(best===null){$("tc_note").textContent="이 클럭으로는 16비트 PSC·ARR 범위 안에서 목표 주파수를 만들 수 없다."; return;}
+    $("tc_psc").value=best.p; $("tc_arr").value=best.a; calcT();
+    $("tc_note").textContent="오차가 가장 작은 조합 중 PSC가 가장 작은(= ARR이 가장 커서 분해능이 가장 좋은) 것을 골랐다. "+$("tc_note").textContent;
+  }
+  on(["tc_hclk","tc_apb","tc_psc","tc_arr","tc_al","tc_tgt"],calcT); $("tc_find").addEventListener("click",findT); calcT();
+
+  /* ---------- 4장 RTC 분주 ---------- */
+  function calcR(){
+    var src=+$("rc_src").value, prl=ival("rc_prl",0,1048575,32767), p1=parseFloat($("rc_pclk1").value)||32;
+    var ftr=src/(prl+1), ppm=(ftr-1)*1e6, note="";
+    $("rc_f").textContent=fhz(ftr);
+    var e=$("rc_err"); e.textContent=(ppm>=0?"+":"")+fmt(ppm,1)+" ppm"; e.className="v verdict "+(Math.abs(ppm)<1?"good":"bad");
+    $("rc_day").textContent=(ppm>=0?"+":"")+fmt(86400*(ftr-1),2)+" s";
+    $("rc_best").textContent=(Math.round(src)-1).toLocaleString('ko-KR')+" (0x"+(Math.round(src)-1).toString(16).toUpperCase()+")";
+    if(prl===0) note+="PRL = 0은 권장되지 않는다. 플래그와 인터럽트가 올바르게 서지 않는다(RM0008 18.4.3). ";
+    if(p1*1e6<4*src) note+="RTCCLK가 PCLK1의 1/4보다 빠르다. RM0008 18.2의 조건(RTCCLK는 PCLK1보다 4배 이상 느릴 것)을 어긴다. ";
+    if(src!==32768&&src!==62500) note+="LSI는 30~60 kHz로 흩어지므로(DS5319 Table 25) 실제 주파수를 모르면 오차가 수십 %이다. ";
+    if(src===62500) note+="HSE/128은 VDD가 꺼지면 RTC를 보장하지 않는다(RM0008 7.2.8). ";
+    note+="32비트 카운터는 이 속도로 약 "+fmt(4294967296/ftr/86400/365.25,1)+"년 뒤 넘친다.";
+    $("rc_note").textContent=note;
+  }
+  on(["rc_src","rc_prl","rc_pclk1"],calcR); calcR();
+
+  /* ---------- 5장 입력 필터 ---------- */
+  var FT=[["0000",0,1],["0001",0,2],["0010",0,4],["0011",0,8],["0100",2,6],["0101",2,8],["0110",4,6],["0111",4,8],
+          ["1000",8,6],["1001",8,8],["1010",16,5],["1011",16,6],["1100",16,8],["1101",32,5],["1110",32,6],["1111",32,8]];
+  var sel=$("fl_f");
+  FT.forEach(function(t,i){var o=document.createElement("option"); o.value=i;
+    o.textContent=t[0]+(i===0?" (필터 없음)":" ("+(t[1]===0?"f_CK_INT":"f_DTS/"+t[1])+", N="+t[2]+")"); if(i===3) o.selected=true; sel.appendChild(o);});
+  function calcF(){
+    var t=FT[+sel.value], ck=(parseFloat($("fl_ck").value)||64)*1e6, ckd=+$("fl_ckd").value;
+    var dts=ck/ckd, fs= t[1]===0 ? (+sel.value===0?dts:ck) : dts/t[1];
+    $("fl_dts").textContent=fhz(dts); $("fl_fs").textContent=fhz(fs);
+    if(+sel.value===0){ $("fl_n").textContent="-"; $("fl_w").textContent="걸러 내지 않음";
+      $("fl_note").textContent="ICxF = 0000은 f_DTS로 표본화만 하고 필터는 쓰지 않는다(RM0008 15.4.7)."; return; }
+    $("fl_n").textContent=t[2];
+    $("fl_w").textContent="약 "+ftime(t[2]/fs);
+    $("fl_note").textContent="새 레벨이 표본 "+t[2]+"개 연속으로 보여야 전이로 인정된다. 통과하는 엣지도 약 "+ftime(t[2]/fs)+" 늦어진다. 경계 근처 폭에서 통과 여부는 표본 위상에 따라 달라질 수 있으며, 그 세부 동작은 문서에 없다.";
+  }
+  on(["fl_f","fl_ck","fl_ckd"],calcF); calcF();
+})();
+</script>
+</body></html>

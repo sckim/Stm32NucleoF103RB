@@ -43,7 +43,7 @@ B) Flash wait states (cycles measured by DWT, lower is faster)
 
 - 8 MHz에서 LATENCY를 0 → 2로 올렸을 때 `linear`와 `branch` 중 어느 쪽이 더 크게 느려지는가? 이유를 프리페치 버퍼(2 × 64비트)의 동작으로 설명해 보자.
 - 64 MHz LATENCY 2의 사이클 수를 8 MHz LATENCY 0과 비교하면, 클럭은 8배인데 실제 실행 시간은 몇 배 빨라졌는가?
-- `08_Clock_System/04_Clock_Config_Reg_c`는 48 MHz에서 `FLASH_ACR_LATENCY_1`을 쓰며 주석에 "1WS"라고 적었다. 실제로 몇 웨이트가 설정되는가?
+- `08_Clock_System/04_Clock_Config_Reg_c`는 48 MHz에서 1 웨이트를 `FLASH_ACR_LATENCY_0`으로 설정한다. 이것을 이름만 보고 `FLASH_ACR_LATENCY_1`로 바꿔 쓰면 실제로 몇 웨이트가 설정되는가? 48 MHz에서 그 설정은 허용되는가?
 
 ## 인터럽트
 

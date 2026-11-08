@@ -1,0 +1,90 @@
+# Build artifacts
+Debug/
+Release/
+Drivers/
+.vscode/
+Project Backups/
+*.Soochan Kim.workspace
+# 예제 폴더마다 PlatformIO가 만드는 .gitignore(루트 규칙과 중복)는 올리지 않는다
+Examples/**/.gitignore
+
+.metadata/
+.cproject
+.project
+.xml
+
+# Toolchain / IDE outputs
+*.map
+*.elf
+*.bin
+*.hex
+*.list
+*.cyclo
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Prerequisites
+*.d
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Linker output
+*.ilk
+*.map
+*.exp
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Kernel Module Compile Results
+*.mod*
+*.cmd
+.tmp_versions/
+modules.order
+Module.symvers
+Mkfile.old
+dkms.conf
+
+# debug information files
+*.dwo
+
+.pio/
+CLAUDE.MD
+# 저작권 있는 시판 교재는 저장소에 올리지 않는다
+Docs/The Definitive Guide*.pdf
+
+# 용량이 커서(77MB) 저장소에 넣지 않는 문서. README는 st.com 링크로 연결한다.
+Docs/UM1718_STM32CubeMX_User_Manual.pdf

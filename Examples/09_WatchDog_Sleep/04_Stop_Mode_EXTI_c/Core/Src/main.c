@@ -20,7 +20,7 @@
  *
  * 동작
  *   1) 부팅 후 LD2 를 켜고 3초간 "실행 중" 메시지 출력
- *   2) LD2 를 끄고 Stop 모드 진입 (고속 클럭/PLL 정지, SRAM·레지스터 값 유지, 전류 수 uA 수준)
+ *   2) LD2 를 끄고 Stop 모드 진입 (고속 클럭/PLL 정지, SRAM·레지스터 값 유지, 전류 전형값 약 24 uA / LPDS=1이면 약 14 uA, DS5319 Table 16)
  *   3) B1(PC13) 을 누르면 EXTI13 하강 에지로 깨어남 -> 클럭 재설정 -> "wake" 메시지 -> 1로 돌아가 반복
  *
  * Stop 모드 핵심 (RM0008 5장)
@@ -28,8 +28,9 @@
  *   PWR->CR.LPDS = 1 : 전압 레귤레이터를 저전력으로 (전류 더 감소, 웨이크업이 조금 느림)
  *   웨이크업 원인: 임의의 EXTI 라인(0~15), RTC 알람(EXTI17), USB 웨이크업 등
  *   *** 깨어난 직후 시스템 클럭은 HSI 8MHz 로 되돌아가 있다 -> SystemClock_Config() 를 다시 호출해야 PLL 64MHz 복구 ***
- *   Stop 중에는 SysTick 도 정지하지만, 진입 전에 HAL_SuspendTick() 으로 SysTick 인터럽트를 꺼 두지 않으면
- *   진입 직후 SysTick 인터럽트에 바로 깨어난다.
+ *   Stop 중에는 SysTick 도 정지하고 Stop 은 EXTI 라인으로만 깨어난다(RM0008 Table 14).
+ *   단, 디버그용 DBG_STOP=1(아래에서 설정) 상태에서 SysTick 인터럽트가 켜져 있으면 SysTick 이 Stop 을 깨운다
+ *   (ES096 2.2.3). 그래서 진입 전에 HAL_SuspendTick() 으로 SysTick 인터럽트를 꺼 둔다(정오표의 회피책).
  *
  * ISR vs 콜백
  *   EXTI15_10_IRQHandler (stm32f1xx_it.c, 진짜 ISR) -> HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_13)

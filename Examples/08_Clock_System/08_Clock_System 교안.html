@@ -1,0 +1,884 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>08_Clock_System 상위 교안</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* 상위 교안(주변장치 개요). 01_GPIO 상위 교안과 같은 토큰·클래스를 쓴다.
+   색 규칙: 신호 경로 = 파랑(--c0), 선택·제어 비트 = 주황(--c1), 플래그·이벤트 = 청록(--c2), 하드웨어 소자 = 보라(--c3). */
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --surface2:#E7ECF0; --fg:#14222C; --muted:#52636F; --line:#CBD5DC;
+  --c0:#1D4ED8; --c0-soft:#DCE6FB; --c1:#C2410C; --c1-soft:#FDE6DA; --c2:#0F766E; --c2-soft:#D5F0EC; --c3:#7E22CE; --c3-soft:#EEDFFB;
+  --warn:#9A3412; --warn-bg:#FFF1E6; --ok:#166534; --ok-bg:#E4F5EA;
+  --font-body:"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.75;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));counter-reset:fig}
+.wrap{max-width:860px;margin:0 auto}
+header{padding-block:40px 8px}
+.kicker{font-family:var(--font-mono);font-size:13px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.kicker a{color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.25;margin:8px 0 12px;text-wrap:balance;font-weight:700}
+.lead{color:var(--muted);margin:0;max-width:66ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0}
+nav.toc a{display:block;padding:6px 12px;border:1px solid var(--line);border-radius:6px;color:var(--fg);text-decoration:none;font-size:14px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--c0);outline:2px solid var(--c0);outline-offset:1px}
+section{margin-top:56px}
+h2{font-size:24px;line-height:1.35;margin:0 0 12px;text-wrap:balance;font-weight:700}
+h3{font-size:18px;margin:28px 0 8px;font-weight:700}
+p{margin:0 0 14px;max-width:68ch}
+ul,ol{margin:0 0 14px;padding-left:22px;max-width:68ch}
+li{margin-bottom:4px}
+a{color:var(--c0)}
+code{font-family:var(--font-mono);font-size:.9em;background:var(--surface2);padding:1px 6px;border-radius:4px;overflow-wrap:anywhere}
+.k0{color:var(--c0);font-weight:700} .k1{color:var(--c1);font-weight:700} .k2{color:var(--c2);font-weight:700} .k3{color:var(--c3);font-weight:700}
+.box{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:16px 18px;margin:16px 0}
+.box.warn{background:var(--warn-bg);border-color:var(--warn)} .box.ok{background:var(--ok-bg);border-color:var(--ok)}
+.box > :last-child{margin-bottom:0}
+.label{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.eqv{display:inline-block;font-family:var(--font-mono);font-size:11.5px;padding:0 6px;border-radius:4px;background:var(--c3-soft);color:var(--c3);vertical-align:1px}
+.tablewrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:15px;background:var(--surface)}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--surface2);font-weight:700;white-space:nowrap}
+td.m,th.m{font-family:var(--font-mono);font-size:13.5px}
+td.on{color:var(--ok);font-weight:700} td.off{color:var(--muted)}
+.eq{font-family:var(--font-mono);font-size:14.5px;background:var(--surface2);border-left:4px solid var(--c0);padding:10px 14px;margin:14px 0;overflow-x:auto;white-space:pre-wrap}
+.flow{list-style:none;padding:0;margin:16px 0;display:grid;max-width:none}
+.flow li{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:0;padding:0 0 14px;position:relative}
+.flow li:not(:last-child)::before{content:"";position:absolute;left:16px;top:34px;bottom:0;width:2px;background:var(--line)}
+.flow .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:14px;font-weight:600;background:var(--surface2);border:2px solid var(--c0);color:var(--c0)}
+.flow .tx{min-width:0} .flow .tx b{display:block} .flow .tx span{color:var(--muted);font-size:14.5px}
+
+/* 원본 그림(PDF에서 잘라 낸 PNG): 다크모드에서도 흰 바탕 카드에 넣는다 */
+figure{margin:18px 0;counter-increment:fig}
+figure.src .img{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px}
+figure.src img{display:block;width:100%;height:auto}
+figure.src.narrow .img{max-width:560px;margin:0 auto}
+figcaption{font-size:14px;color:var(--muted);margin:6px 2px 0}
+figcaption::before{content:"그림 " counter(fig) ". ";font-weight:700;color:var(--fg)}
+.cite{display:block;font-family:var(--font-mono);font-size:12.5px;margin-top:2px}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.figs figure{margin:0}
+
+/* 등가 모델 SVG */
+.diag svg{display:block;width:100%;height:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.diag .bx{fill:var(--surface);stroke:var(--fg);stroke-width:1.4}
+.diag .hw{fill:var(--c3-soft);stroke:var(--c3)} .diag .sel{fill:var(--c1-soft);stroke:var(--c1)} .diag .flg{fill:var(--c2-soft);stroke:var(--c2)}
+.diag .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.diag .tc{font-family:var(--font-body);font-size:13px;fill:var(--fg);text-anchor:middle}
+.diag .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.diag .sc{font-family:var(--font-mono);font-size:11px;fill:var(--muted);text-anchor:middle}
+.diag .o{font-family:var(--font-mono);font-size:11px;fill:var(--c1)}
+.diag .w{stroke:var(--c0);stroke-width:1.8;fill:none}
+.diag .wc{stroke:var(--c1);stroke-width:1.5;fill:none}
+.diag .wm{stroke:var(--muted);stroke-width:1.3;fill:none}
+.diag .dash{stroke:var(--muted);stroke-width:1.2;fill:none;stroke-dasharray:5 4}
+.diag .ah{fill:var(--c0)} .diag .ahc{fill:var(--c1)} .diag .ahm{fill:var(--muted)}
+.diag .sig{stroke:var(--c0);stroke-width:2;fill:none} .diag .sig2{stroke:var(--c2);stroke-width:2;fill:none} .diag .sig3{stroke:var(--c3);stroke-width:2;fill:none}
+.diag .isr{fill:var(--c1-soft);stroke:var(--c1)}
+
+/* 시뮬레이터 */
+.sim{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:18px;margin:16px 0}
+.subhead{font-weight:700;margin:0 0 6px}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px 16px;margin:10px 0}
+.ctl label{display:block;font-size:14px;color:var(--muted)}
+.ctl select,.ctl input{font-family:inherit;font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl select:focus-visible,.ctl input:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+.regs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.stat{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.stat .k{font-size:12px;color:var(--muted);font-family:var(--font-mono)}
+.stat .v{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.35;overflow-wrap:anywhere}
+.note{font-size:14px;color:var(--muted);margin:8px 0 0}
+.verdict{font-weight:700} .verdict.good{color:var(--ok)} .verdict.bad{color:var(--warn)}
+
+details{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0}
+summary{cursor:pointer;padding:12px 16px;font-weight:500;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--c0)} details[open] summary::before{content:"▾ "}
+summary:focus-visible{outline:3px solid var(--fg);outline-offset:-3px;border-radius:8px}
+details .ans{padding:0 16px 14px} details .ans p{margin-bottom:8px}
+.nextprev{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+.nextprev a{border:1px solid var(--line);border-radius:8px;padding:8px 14px;text-decoration:none;color:var(--c0);background:var(--surface)}
+footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+footer ul{max-width:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">STM32F103RB · 08_Clock_System · 상위 교안</div>
+  <h1>클럭과 코어: 발진기 하나가 칩 전체의 박자가 되고, 사건이 CPU에 닿기까지</h1>
+  <p class="lead">마이크로컨트롤러 안의 모든 플립플롭은 클럭 에지에서만 움직인다. 이 교안은 STM32F103RB의 RCC(Reset and Clock Control, 리셋·클럭 제어)가 발진기 네 개(HSI·HSE·LSI·LSE)에서 나온 클럭을 PLL로 곱하고, 선택기(SYSCLK MUX)로 고르고, 분주기로 나누고, AND 게이트로 주변장치마다 열고 닫는 경로를 원본 클럭 트리 위에서 따라간다. 이어서 그 클럭으로 도는 Cortex-M3 코어가 사건(예외·인터럽트)을 받아들이는 길, 즉 벡터 테이블, NVIC 우선순위 판정, SysTick 카운터, 폴트 격상을 디지털논리 소자(카운터, 비교기, 선택기, 동기화기, 우선순위 인코더)로 풀어 본다. 레지스터 비트는 그 경로 위의 스위치·선택기·플래그로만 등장한다. 코드와 라이브러리는 하부 예제에서 다룬다.</p>
+  <nav class="toc" aria-label="목차">
+    <a href="#s1">1. 문제 정의</a><a href="#s2">2. 일반 개념</a><a href="#s3">3. F103 블록도</a><a href="#s4">4. 클럭과 시간</a><a href="#s5">5. 제어 요소</a><a href="#s6">6. 이벤트 생성</a><a href="#s7">7. 동작 시나리오</a><a href="#s8">8. 설계상 한계</a><a href="#s9">9. 확인 문제</a><a href="#s10">10. 하부 예제</a>
+  </nav>
+</header>
+
+<div class="box">
+  <div class="label">근거 문서 (저장소 Docs 폴더)</div>
+  <p>이 교안의 사실은 아래 다섯 문서에서만 가져왔다. 인용마다 문서, 쪽, Figure/Table 번호를 붙였고 링크를 누르면 해당 쪽이 열린다. 문서에 내부 구현이 나오지 않아 디지털논리 소자로 바꿔 그린 부분에는 <span class="eqv">등가 모델</span> 표시를 달았다. 다섯 문서에 없는 내용은 "문서에 없다"고 밝혔다. GPIO·EXTI·NVIC 벡터의 기초와 비트 밴딩은 <a href="../01_GPIO/01_GPIO%20교안.html">01_GPIO 상위 교안</a>에서, 보레이트가 APB 클럭에 따라 달라지는 문제는 <a href="../02_USART/02_USART%20교안.html">02_USART 상위 교안</a> 4장에서 다뤘으므로 여기서는 반복하지 않는다.</p>
+  <ul>
+    <li><a href="../../Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a>: 참조 매뉴얼(Reference Manual). 3장 메모리·버스 구조, 7장 RCC, 10장 인터럽트, 30장 전자 서명, 31장 디버그</li>
+    <li><a href="../../Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a>: STM32F103x8/xB 데이터시트. 이 칩 전용 클럭 트리, 메모리 맵, 발진기·PLL 전기적 특성, 최대 주파수</li>
+    <li><a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a>: Cortex-M3 프로그래밍 매뉴얼(Programming Manual). 프로그래머 모델, 예외 모델, 폴트, NVIC, SCB, SysTick</li>
+    <li><a href="../../Docs/PM0075-stm32f10xxx-flash-memory.pdf">PM0075 Rev 2</a>: STM32F10xxx Flash 메모리 프로그래밍 매뉴얼(Doc ID 17863). Flash 읽기 인터페이스, 프리페치 버퍼, 대기 사이클. RM0008 3.3.3이 Flash 세부 사항을 이 문서로 넘긴다</li>
+    <li><a href="../../Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a>: F103x8/xB 정오표(Errata sheet). 칩이 매뉴얼과 다르게 동작하는 알려진 결함과 회피 방법</li>
+  </ul>
+</div>
+
+<details class="gloss"><summary>약어 모음 (본문에서도 처음 나올 때 풀어 썼다)</summary><div class="ans"><div class="tablewrap"><table>
+<tr><th>약어</th><th>풀네임</th><th>뜻</th></tr>
+<tr><td class="m">RCC</td><td>Reset and Clock Control</td><td>리셋과 클럭을 만들고 나눠 주는 블록</td></tr>
+<tr><td class="m">HSI / HSE</td><td>High-Speed Internal / External</td><td>칩 안의 8 MHz RC 발진기 / 바깥 수정(4~16 MHz) 또는 외부 클럭</td></tr>
+<tr><td class="m">LSI / LSE</td><td>Low-Speed Internal / External</td><td>칩 안의 약 40 kHz RC 발진기 / 바깥 32.768 kHz 수정</td></tr>
+<tr><td class="m">RC</td><td>Resistor-Capacitor</td><td>저항·커패시터의 충방전 시간으로 주파수를 정하는 발진기</td></tr>
+<tr><td class="m">PLL · VCO</td><td>Phase-Locked Loop · Voltage-Controlled Oscillator</td><td>위상 고정 루프(주파수 곱셈기) · 전압으로 주파수가 바뀌는 발진기</td></tr>
+<tr><td class="m">PLLSRC · PLLXTPRE · PLLMUL</td><td>PLL source · PLL HSE prescaler · PLL multiplication factor</td><td>PLL 입력 선택 · HSE를 2로 나눌지 · 곱하는 수(×2~×16)</td></tr>
+<tr><td class="m">SYSCLK · HCLK · FCLK</td><td>System clock · AHB clock · free-running clock</td><td>시스템 클럭 · AHB 버스·코어·메모리 클럭 · 코어가 잠들어도 도는 클럭</td></tr>
+<tr><td class="m">PCLK1 / PCLK2</td><td>APB1 / APB2 peripheral clock</td><td>저속(최대 36 MHz) / 고속(최대 72 MHz) 주변장치 버스 클럭</td></tr>
+<tr><td class="m">AHB / APB</td><td>Advanced High-performance Bus / Advanced Peripheral Bus</td><td>고속 시스템 버스 / 주변장치 버스</td></tr>
+<tr><td class="m">HPRE · PPRE1 · PPRE2 · ADCPRE · USBPRE</td><td>AHB / APB1 / APB2 / ADC / USB prescaler</td><td>각 갈래의 분주비 선택 비트</td></tr>
+<tr><td class="m">SW / SWS</td><td>System clock Switch / Switch Status</td><td>SYSCLK 출처 선택(소프트웨어가 씀) / 실제로 쓰이는 출처(하드웨어가 알림)</td></tr>
+<tr><td class="m">…ON · …RDY</td><td>enable · ready</td><td>발진기·PLL을 켜는 비트 · 안정되었음을 알리는 플래그</td></tr>
+<tr><td class="m">CSS</td><td>Clock Security System</td><td>HSE가 멈추면 감지해 HSI로 바꾸고 NMI를 거는 감시기</td></tr>
+<tr><td class="m">MCO</td><td>Microcontroller Clock Output</td><td>내부 클럭 하나를 핀으로 내보내는 기능</td></tr>
+<tr><td class="m">ENR · RSTR</td><td>clock ENable Register · ReSeT Register</td><td>주변장치별 클럭 게이트 · 주변장치별 리셋 스위치</td></tr>
+<tr><td class="m">CR · CFGR · CIR · CSR · BDCR</td><td>Clock control · Clock configuration · Clock interrupt · Control/status · Backup domain control register</td><td>RCC의 주요 레지스터</td></tr>
+<tr><td class="m">FLITF · ACR</td><td>Flash memory interface · Access Control Register</td><td>Flash 읽기 인터페이스 · 대기 사이클·프리페치 설정</td></tr>
+<tr><td class="m">LATENCY · PRFTBE · HLFCYA</td><td>wait states · Prefetch buffer enable · Half cycle access</td><td>Flash 대기 사이클 수 · 프리페치 버퍼 · 반주기 접근</td></tr>
+<tr><td class="m">WS</td><td>Wait State</td><td>메모리가 늦어 CPU가 쉬는 클럭 수</td></tr>
+<tr><td class="m">NVIC</td><td>Nested Vectored Interrupt Controller</td><td>중첩 벡터 인터럽트 컨트롤러</td></tr>
+<tr><td class="m">SCB · AIRCR · PRIGROUP</td><td>System Control Block · Application Interrupt and Reset Control Register · priority grouping</td><td>코어 제어 블록 · 우선순위 분할과 소프트웨어 리셋 레지스터 · 그룹/서브 분할 위치</td></tr>
+<tr><td class="m">IRQ · ISR</td><td>Interrupt Request · Interrupt Service Routine</td><td>주변장치 인터럽트 번호 · 인터럽트 처리 함수</td></tr>
+<tr><td class="m">NMI</td><td>Non-Maskable Interrupt</td><td>막을 수 없는 인터럽트(우선순위 −2)</td></tr>
+<tr><td class="m">SVC · PendSV</td><td>Supervisor Call · Pendable Service</td><td>명령으로 일으키는 예외 · 미뤄 두는 시스템 서비스 예외</td></tr>
+<tr><td class="m">PRIMASK · BASEPRI · FAULTMASK</td><td>Priority mask · Base priority · Fault mask</td><td>예외를 막는 마스크 레지스터 세 가지</td></tr>
+<tr><td class="m">SysTick · STK_CTRL/LOAD/VAL/CALIB</td><td>System Tick timer · control / reload / current value / calibration</td><td>코어 내장 24비트 다운카운터와 그 레지스터</td></tr>
+<tr><td class="m">CFSR · HFSR</td><td>Configurable Fault Status Register · Hard Fault Status Register</td><td>폴트 원인 플래그 모음 · 하드 폴트 원인</td></tr>
+<tr><td class="m">MMFSR · BFSR · UFSR</td><td>MemManage / Bus / Usage Fault Status Register</td><td>CFSR의 세 부분 레지스터</td></tr>
+<tr><td class="m">BFAR · MMFAR</td><td>Bus Fault / MemManage Fault Address Register</td><td>폴트를 일으킨 주소</td></tr>
+<tr><td class="m">SHCSR · CCR</td><td>System Handler Control and State Register · Configuration and Control Register</td><td>폴트 처리기 허용 · 0 나눗셈·비정렬 트랩 설정</td></tr>
+<tr><td class="m">MSP / PSP · LR · PC · xPSR</td><td>Main / Process Stack Pointer · Link Register · Program Counter · Program Status Register</td><td>코어 레지스터(3장 그림)</td></tr>
+<tr><td class="m">EXC_RETURN</td><td>exception return value</td><td>예외 진입 때 LR에 들어가는 특수 복귀 값</td></tr>
+<tr><td class="m">PPB</td><td>Private Peripheral Bus</td><td>코어 내부 장치(NVIC·SCB·SysTick)가 놓인 0xE000 0000 영역</td></tr>
+<tr><td class="m">DWT · DEMCR · TRCENA</td><td>Data Watchpoint and Trace · Debug Exception and Monitor Control Register · trace enable</td><td>사이클 카운터를 가진 디버그 장치 · 그 사용을 켜는 레지스터와 비트</td></tr>
+<tr><td class="m">POR / PDR</td><td>Power-On / Power-Down Reset</td><td>전원 인가·저하 리셋</td></tr>
+<tr><td class="m">IWDG / WWDG</td><td>Independent / Window Watchdog</td><td>독립(LSI 구동) / 윈도 워치독</td></tr>
+<tr><td class="m">UID · F_SIZE</td><td>Unique device ID · Flash size</td><td>96비트 고유 번호 · Flash 용량(KB)</td></tr>
+<tr><td class="m">AFIO</td><td>Alternate Function I/O</td><td>핀 리맵·EXTI 포트 선택 블록</td></tr>
+<tr><td class="m">MUX</td><td>Multiplexer</td><td>선택기</td></tr>
+</table></div></div></details>
+
+<!-- ============================================================ 1 -->
+<section id="s1">
+<h2>1. 문제 정의: 클럭 시스템이 없다면 무엇이 곤란한가</h2>
+<p>디지털논리에서 만든 회로에는 클럭 핀이 하나 있었고, 함수 발생기가 그 핀에 정해진 주파수를 넣어 주었다. 마이크로컨트롤러는 그 함수 발생기까지 칩 안에 들고 있어야 한다. 그런데 칩 안의 소비자들은 원하는 박자가 서로 다르다. 발진기 하나를 그대로 모든 곳에 물리면 아래 문제가 한꺼번에 생긴다.</p>
+<div class="tablewrap"><table>
+<tr><th>요구</th><th>발진기 하나로 버틸 때의 문제</th><th>F103이 두는 소자</th></tr>
+<tr><td>빨리 깨어나기</td><td>수정 발진기는 안정될 때까지 약 2 ms가 걸린다(DS5319 Table 22). 리셋마다 그만큼 멈춰 있어야 한다</td><td>1~2 µs 만에 뜨는 내부 RC 발진기 HSI로 먼저 출발한다(DS5319 Table 24)</td></tr>
+<tr><td>정확한 시간</td><td>RC 발진기는 공장 보정 뒤에도 −2 %~+2.5 %(−40~105 °C) 흔들린다. USB처럼 정확한 48 MHz가 필요한 곳에 못 쓴다</td><td>수정을 쓰는 HSE, 그리고 HSE가 죽으면 알아채는 CSS</td></tr>
+<tr><td>여러 주파수</td><td>CPU는 72 MHz, APB1 주변장치는 36 MHz 이하, ADC는 14 MHz 이하, USB는 정확히 48 MHz가 필요하다</td><td>곱하는 PLL, 고르는 선택기, 나누는 분주기</td></tr>
+<tr><td>전력</td><td>쓰지 않는 주변장치까지 72 MHz로 토글하면 전류가 그대로 샌다. 같은 코드가 72 MHz에서 36 mA, 8 MHz에서 5.5 mA를 쓴다(모든 주변장치 켬, DS5319 Table 17)</td><td>주변장치마다 AND 게이트(클럭 허용 비트), 버스마다 분주기</td></tr>
+<tr><td>느린 Flash</td><td>Flash 읽기는 정해진 시간(나노초)이 걸린다. 클럭만 올리면 CPU가 데이터가 준비되기 전에 읽는다</td><td>대기 사이클(LATENCY)과 프리페치 버퍼</td></tr>
+<tr><td>항상 도는 느린 시계</td><td>워치독과 실시간 시계는 주 클럭이 멈춰도 돌아야 한다</td><td>LSI(40 kHz)와 LSE(32.768 kHz)</td></tr>
+</table></div>
+<p>클럭이 돌기 시작하면 다음 문제는 "사건이 언제 CPU에 닿는가"이다. 타이머가 0이 되었다, 클럭이 끊겼다, 0으로 나눴다 같은 사건은 CPU가 무엇을 하든 끼어들어야 한다. Cortex-M3 코어는 이를 위해 벡터 테이블, NVIC(Nested Vectored Interrupt Controller, 중첩 벡터 인터럽트 컨트롤러), SysTick 카운터, 폴트 상태 레지스터를 코어 안에 들고 있다. 이 그룹의 예제 16개는 이 두 층, 즉 "박자를 만드는 RCC"와 "박자 위에서 사건을 받는 코어"를 함께 다룬다. 그래서 이 교안은 클럭 경로를 줄기로 삼고, 코어의 예외 처리는 6장과 7장에서 "사건이 생기는 길"로 다룬다.</p>
+</section>
+
+<!-- ============================================================ 2 -->
+<section id="s2">
+<h2>2. 칩과 무관한 일반 개념</h2>
+<h3>발진기 두 종류: RC와 수정</h3>
+<p><b>RC 발진기</b>는 커패시터를 저항으로 충전하다가 문턱에 닿으면 방전하기를 되풀이한다. 주파수가 R·C 값으로 정해지므로 공정 편차, 온도, 전압에 따라 달라진다. 그래서 칩마다 공장에서 보정값을 넣어 둔다. F103의 HSI는 25 °C에서 1 %로 맞춰 출하되고, 이 보정값이 리셋 때 RCC_CR의 HSICAL에 실린다. 사용자는 HSITRIM으로 약 40 kHz 단위로 더 다듬을 수 있다(RM0008 7.2.2, <a href="../../Docs/RM0008_Reference_manual.pdf#page=95">p.95</a>; 7.3.1, <a href="../../Docs/RM0008_Reference_manual.pdf#page=100">p.100</a>).</p>
+<p><b>수정 발진기</b>는 수정(또는 세라믹) 진동자의 기계적 공진을 이용한다. 칩 안의 반전 증폭기가 진동자를 되먹임 경로에 두고 발진을 유지한다. 공진 주파수가 물리적으로 정해져 있어 RC보다 훨씬 정확하다. 대신 진폭이 자라 안정될 때까지 시간이 걸린다. 수정 자체의 정확도(ppm)는 수정 제조사가 정하는 값이라 DS5319에는 나오지 않는다.</p>
+<figure class="src"><div class="img"><a href="img/DS5319_Fig24_p53.png"><img src="img/DS5319_Fig24_p53.png" alt="8 MHz 수정 연결 예" width="1157" height="346" loading="lazy"></a></div>
+<figcaption>HSE 수정 발진기. 칩 안의 "Bias controlled gain" 증폭기와 되먹임 저항 R<sub>F</sub>(약 200 kΩ, Table 22)가 OSC_IN과 OSC_OUT 사이에 걸리고, 바깥에 수정과 부하 커패시터 C<sub>L1</sub>·C<sub>L2</sub>가 붙는다. 증폭기 출력은 슈미트 트리거(삼각형 기호)를 거쳐 디지털 클럭 f<sub>HSE</sub>가 된다. 사인파에 가까운 발진 파형을 0/1로 바꾸는 단계이다.
+<span class="cite">출처: <a href="../../Docs/Datasheet_stm32f103.pdf#page=53">DS5319 Rev 19, p.53</a>, Figure 24. Typical application with an 8 MHz crystal</span></figcaption></figure>
+<div class="tablewrap"><table>
+<tr><th>발진기</th><th>종류</th><th>주파수</th><th>정확도</th><th>기동 시간</th><th>근거</th></tr>
+<tr><td class="m">HSI</td><td>내부 RC</td><td>8 MHz</td><td>25 °C에서 −1.1~+1.8 %, −40~105 °C에서 −2~+2.5 %</td><td>1~2 µs</td><td>DS5319 Table 24, <a href="../../Docs/Datasheet_stm32f103.pdf#page=54">p.54</a></td></tr>
+<tr><td class="m">HSE</td><td>수정 / 외부 클럭</td><td>수정 4~16 MHz, 외부 클럭(바이패스) 1~25 MHz</td><td>수정에 따름</td><td>약 2 ms(전형값, 수정에 따라 크게 다름)</td><td>DS5319 Table 20·22, <a href="../../Docs/Datasheet_stm32f103.pdf#page=50">p.50</a>·<a href="../../Docs/Datasheet_stm32f103.pdf#page=52">52</a></td></tr>
+<tr><td class="m">LSI</td><td>내부 RC</td><td>30~60 kHz(전형 40 kHz)</td><td>넓다</td><td>최대 85 µs</td><td>DS5319 Table 25, <a href="../../Docs/Datasheet_stm32f103.pdf#page=55">p.55</a></td></tr>
+<tr><td class="m">LSE</td><td>수정 / 외부 클럭</td><td>32.768 kHz(외부 클럭은 최대 1 MHz)</td><td>수정에 따름</td><td>25 °C에서 약 2.5 s, −40 °C에서 약 60 s</td><td>DS5319 Table 21·23, <a href="../../Docs/Datasheet_stm32f103.pdf#page=53">p.53</a></td></tr>
+</table></div>
+<p>표에서 두 가지를 읽어 낸다. 첫째, 빨리 뜨는 것(HSI)과 정확한 것(HSE)이 다르므로 "HSI로 출발해 HSE로 갈아타는" 순서가 자연스럽다. 둘째, 발진기를 켠 직후의 파형은 아직 쓸 수 없으므로 "이제 써도 된다"는 신호가 필요하다. 이것이 <b>준비(ready) 플래그</b>이다. RM0008은 "At startup, the clock is not released until this bit is set by hardware"라고만 적는다(7.2.1, p.95). 몇 사이클을 세는지, 어떤 회로가 판단하는지는 문서에 없다. 디지털논리로 보면 "발진기 클럭을 정해진 수만큼 세는 카운터 + 그 결과를 시스템 클럭 영역으로 넘기는 2단 동기화기"로 생각할 수 있다 <span class="eqv">등가 모델</span>.</p>
+
+<h3>PLL: 주파수를 곱하는 되먹임 회로</h3>
+<p>분주기(카운터)는 주파수를 나눌 수만 있다. 8 MHz에서 72 MHz를 얻으려면 곱해야 한다. PLL(Phase-Locked Loop, 위상 고정 루프)은 빠른 발진기 VCO(Voltage-Controlled Oscillator, 전압 제어 발진기)의 출력을 ÷N 카운터로 나눠 입력과 비교하고, 둘이 같아지도록 VCO를 밀고 당긴다. 되먹임이 안정되면(잠금, lock) 나눈 결과가 입력과 같으므로 출력은 입력의 N배이다.</p>
+<figure class="diag"><svg viewBox="0 0 680 200" role="img" aria-label="PLL의 등가 구조: 비교기, 루프 필터, VCO, 분주 카운터">
+<text class="s" x="8" y="78">f_in</text><line class="w" x1="38" y1="74" x2="60" y2="74"/>
+<rect class="bx sel" x="60" y="48" width="140" height="52" rx="4"/><text class="tc" x="130" y="70">위상·주파수 비교기</text><text class="sc" x="130" y="88">두 에지의 앞뒤 비교</text>
+<line class="w" x1="200" y1="74" x2="230" y2="74"/>
+<rect class="bx" x="230" y="48" width="120" height="52" rx="4"/><text class="tc" x="290" y="70">루프 필터</text><text class="sc" x="290" y="88">저역 통과</text>
+<line class="w" x1="350" y1="74" x2="380" y2="74"/>
+<rect class="bx hw" x="380" y="48" width="140" height="52" rx="4"/><text class="tc" x="450" y="70">VCO</text><text class="sc" x="450" y="88">전압 → 주파수</text>
+<line class="w" x1="520" y1="74" x2="650" y2="74"/><polygon class="ah" points="656,74 648,69 648,79"/>
+<text class="s" x="536" y="64">f_out = N × f_in</text>
+<line class="w" x1="600" y1="74" x2="600" y2="165"/><line class="w" x1="600" y1="165" x2="370" y2="165"/>
+<rect class="bx hw" x="230" y="145" width="140" height="40" rx="4"/><text class="tc" x="300" y="163">÷ N 카운터</text><text class="sc" x="300" y="178">N = PLLMUL</text>
+<line class="w" x1="230" y1="165" x2="130" y2="165"/><line class="w" x1="130" y1="165" x2="130" y2="106"/><polygon class="ah" points="130,100 125,108 135,108"/>
+<text class="s" x="140" y="132">f_out / N 를 f_in과 비교</text>
+</svg><figcaption><span class="eqv">등가 모델</span> 교과서적인 정수배 PLL 구조이다. F103의 PLL 내부 회로는 RM0008·DS5319에 나오지 않는다. 문서에 있는 것은 바깥 동작뿐이다. 입력은 1~25 MHz, 출력은 16~72 MHz, 잠금 시간은 최대 200 µs, 사이클 간 지터는 최대 300 ps이다(DS5319 Table 27, <a href="../../Docs/Datasheet_stm32f103.pdf#page=56">p.56</a>). 곱하는 수 N은 ×2~×16이고, PLL이 꺼져 있을 때만 바꿀 수 있다(RM0008 7.2.3·7.3.2).</figcaption></figure>
+
+<h3>클럭 선택기와 글리치</h3>
+<p>두 클럭 중 하나를 고르는 선택기(MUX)를 아무 때나 전환하면 위험하다. 전환 순간에 옛 클럭이 High였다가 새 클럭이 Low이면 출력에 아주 짧은 펄스(런트 펄스, 글리치)가 나온다. 클럭으로 쓰는 신호에 짧은 펄스가 끼면 그 펄스를 받은 플립플롭 일부만 반응해 상태가 깨진다. 그래서 클럭 선택기는 "옛 클럭이 Low가 될 때까지 기다려 끄고, 새 클럭이 Low일 때 켠다"는 순서로 만든다. 각 클럭의 허용 신호를 그 클럭 영역의 동기화기로 넘겨 이 순서를 지킨다.</p>
+<figure class="diag"><svg viewBox="0 0 680 260" role="img" aria-label="단순 선택기와 글리치 없는 선택기의 출력 비교 타이밍">
+<text class="s" x="8" y="33">CLK_A (빠름)</text>
+<polyline class="sig" points="120,20 140,20 140,40 160,40 160,20 180,20 180,40 200,40 200,20 220,20 220,40 240,40 240,20 260,20 260,40 280,40 280,20 300,20 300,40 320,40 320,20 340,20 340,40 360,40 360,20 380,20 380,40 400,40 400,20 420,20 420,40 440,40 440,20 460,20 460,40 480,40 480,20 500,20 500,40 520,40 520,20 540,20 540,40 560,40 560,20 580,20 580,40 600,40 600,20 620,20 620,40 640,40 640,20 660,20 660,40 670,40"/>
+<text class="s" x="8" y="77">CLK_B (느림)</text>
+<polyline class="sig" points="120,64 180,64 180,84 240,84 240,64 300,64 300,84 360,84 360,64 420,64 420,84 480,84 480,64 540,64 540,84 600,84 600,64 660,64 660,84 670,84"/>
+<text class="s" x="8" y="121">SEL</text>
+<polyline class="sig3" points="120,128 330,128 330,108 670,108"/>
+<text class="s" x="8" y="165">단순 MUX</text>
+<polyline class="sig2" points="120,152 140,152 140,172 160,172 160,152 180,152 180,172 200,172 200,152 220,152 220,172 240,172 240,152 260,152 260,172 280,172 280,152 300,152 300,172 320,172 320,152 330,152 330,172 360,172 360,152 420,152 420,172 480,172 480,152 540,152 540,172 600,172 600,152 660,152 660,172 670,172"/>
+<text class="o" x="276" y="146">짧은 펄스(글리치)</text>
+<text class="s" x="8" y="209">글리치 없는 MUX</text>
+<polyline class="sig2" points="120,196 140,196 140,216 160,216 160,196 180,196 180,216 200,216 200,196 220,196 220,216 240,216 240,196 260,196 260,216 280,216 280,196 300,196 300,216 320,216 320,196 340,196 340,216 480,216 480,196 540,196 540,216 600,216 600,196 660,196 660,216 670,216"/>
+<line class="dash" x1="330" y1="12" x2="330" y2="226"/>
+<text class="s" x="130" y="248">A가 Low가 된 뒤 끄고(340), B가 Low인 구간에 넘긴다(420~480)</text>
+</svg><figcaption><span class="eqv">등가 모델</span> 일반적인 클럭 선택기 두 가지를 비교했다. 단순 선택기는 SEL이 바뀐 330에서 A의 High를 반쯤 자른 짧은 펄스를 낸다. 글리치 없는 선택기는 A를 다음 하강 에지(340)에서 끄고, B를 B의 하강 에지(420) 뒤에 잇기 때문에 출력이 잠시 Low로 머물 뿐 짧은 펄스가 없다. F103의 SYSCLK 선택기가 내부에서 어떻게 만들어졌는지는 문서에 없다. RM0008은 "목표 클럭이 준비되었을 때만 전환이 일어난다"고만 적는다(7.2.6, <a href="../../Docs/RM0008_Reference_manual.pdf#page=97">p.97</a>). 반면 MCO 핀 선택기는 "시작할 때나 출처를 바꿀 때 잘린 사이클이 나올 수 있다"고 명시되어 있다(RCC_CFGR MCO 주석, <a href="../../Docs/RM0008_Reference_manual.pdf#page=101">p.101</a>).</figcaption></figure>
+
+<h3>분주기와 클럭 게이트</h3>
+<p><b>분주기</b>는 카운터이다. ÷2는 T 플립플롭 하나, ÷2<sup>k</sup>는 k비트 카운터의 최상위 비트이다. ÷6 같은 비2의 거듭제곱은 "N까지 세고 0으로 돌아가는" 모듈로 카운터로 만든다. <b>클럭 게이트</b>는 AND 게이트이다. 허용 비트가 0이면 그 뒤의 플립플롭은 클럭 에지를 받지 못해 값을 그대로 유지한 채 멈춘다. 멈춘 회로는 토글하지 않으므로 동적 전력을 거의 쓰지 않는다. 클럭이 High인 동안 허용 비트가 바뀌면 이것도 짧은 펄스를 만들 수 있어서, 실제 칩은 허용 신호를 래치로 붙잡는 게이트를 쓰는 것이 보통이다. F103 게이트의 실제 회로는 문서에 없고, 원본 클럭 트리도 AND 기호로만 그린다.</p>
+
+<h3>Flash 대기 사이클과 프리페치</h3>
+<p>Flash 셀을 읽는 데는 정해진 시간(나노초)이 걸린다. 클럭이 빨라져 한 주기가 그 시간보다 짧아지면, CPU는 데이터가 나올 때까지 몇 주기를 쉬어야 한다. 이 쉬는 주기가 <b>대기 사이클(wait state)</b>이다. RM0008은 대기 사이클을 "SYSCLK 주기와 Flash 접근 시간의 비"라고 정의하고 경계를 24·48·72 MHz로 준다(3.3.3, <a href="../../Docs/RM0008_Reference_manual.pdf#page=58">p.58</a>). 0 대기가 24 MHz까지 허용되므로, 역산하면 Flash 한 번 읽기는 1/24 MHz ≈ 41.7 ns 안에 끝난다는 뜻이다. Flash 접근 시간 자체의 수치는 문서에 없다.</p>
+<p>대기 사이클이 그대로 드러나면 72 MHz CPU가 Flash에서는 24 MHz처럼 돈다. 그래서 <b>프리페치 버퍼</b>가 있다. Flash는 한 번 읽기에 64비트(8바이트, 명령 2~4개)를 내놓고, 프리페치 버퍼는 이 8바이트 블록 두 개로 되어 있다. 블록 크기가 Flash 한 번 읽기의 폭과 같아서 블록 하나가 읽기 한 번으로 통째로 채워진다. 프리페치 제어기는 버퍼에 빈 블록이 하나라도 생기면 다음 블록 읽기를 시작한다. CPU가 한 워드를 쓰는 동안 다음 워드가 이미 버퍼에 있으므로, 분기 없이 이어지는 코드에서는 대기가 거의 숨는다. PM0075는 분기 목적지가 64비트 경계에 맞춰져 있다고 가정할 때 가속 비율이 "2 정도"라고 적는다. 분기하면 버퍼 내용이 쓸모없어져 대기가 드러난다(PM0075 2.2.1, <a href="../../Docs/PM0075-stm32f10xxx-flash-memory.pdf#page=11">p.11</a>; RM0008 3.3.3).</p>
+<p>디지털논리로 보면 Flash 읽기 인터페이스는 세 덩어리이다(PM0075 2.2, <a href="../../Docs/PM0075-stm32f10xxx-flash-memory.pdf#page=11">p.11~12</a>). ① 프리페치 버퍼(직접 사상 방식 8바이트 레지스터 2개)와 그 제어기, ② "접근 시간 조정기(Access time tuner)": LATENCY 값만큼 Flash 제어 신호를 붙잡아 두는 카운터, ③ 중재기: 명령 인출(ICode, 프리페치)과 상수·데이터 읽기(DCode)가 동시에 Flash를 원하면 DCode에 우선권을 주는 고정 우선순위 중재기이다. 그 밖의 회로 구조는 문서에 없다.</p>
+
+<h3>예외와 우선순위의 기본 생각</h3>
+<p>인터럽트는 "하드웨어가 거는 함수 호출"이다. CPU는 지금 하던 일의 상태를 스택에 저장하고, 벡터 테이블(처리 함수 주소 배열)에서 주소를 읽어 점프한다. 여러 요청이 동시에 오면 <b>우선순위 인코더</b>가 하나를 고른다. 이미 처리 중인 일보다 급한 요청은 끼어들고(선점, 중첩), 덜 급한 요청은 기다린다(대기, pending). Cortex-M3에서는 우선순위 <b>숫자가 작을수록 급하다</b>. 외부 사건이 EXTI를 거쳐 NVIC에 닿는 경로는 <a href="../01_GPIO/01_GPIO%20교안.html#s6">01_GPIO 상위 교안 6장</a>에서 다뤘다. 이 교안은 NVIC 안에서 순서가 정해지는 규칙(6장)과 진입·복귀 과정(7장)을 다룬다.</p>
+</section>
+
+<!-- ============================================================ 3 -->
+<section id="s3">
+<h2>3. F103 내부 구현 블록도</h2>
+<h3>클럭 트리: 발진기에서 주변장치까지</h3>
+<figure class="src"><div class="img"><a href="img/DS5319_Fig2_p12.png"><img src="img/DS5319_Fig2_p12.png" alt="STM32F103x8/xB 클럭 트리" width="1157" height="1092" loading="lazy"></a></div>
+<figcaption>왼쪽 세로줄이 칩의 경계(핀)이다. 왼쪽 위의 HSI RC와 가운데의 HSE OSC가 출발점이고, 사다리꼴 PLLSRC·PLLXTPRE·SW·RTCSEL·MCO는 선택기, 사각형 /2·/8·/128과 Prescaler는 분주기, 끝의 AND 기호는 클럭 게이트이다. SW 선택기의 출력이 SYSCLK이고, AHB Prescaler를 지나 HCLK가 된 뒤 APB1·APB2로 갈라진다. RM0008에도 같은 클럭 트리(Figure 8, <a href="../../Docs/RM0008_Reference_manual.pdf#page=93">p.93</a>)가 있지만, 그 그림은 I2S·SDIO·FSMC·TIM8~14처럼 F103xB에 없는 고집적 제품 블록까지 그린 공용 그림이라 이 칩 전용인 데이터시트 그림을 실었다. 데이터시트 그림에는 RM 그림의 "ADCCLK 14 MHz max" 표기가 빠져 있는데, 이 한계는 DS5319 Table 47(<a href="../../Docs/Datasheet_stm32f103.pdf#page=74">p.74</a>)에 있다.
+<span class="cite">출처: <a href="../../Docs/Datasheet_stm32f103.pdf#page=12">DS5319 Rev 19, p.12</a>, Figure 2. Clock tree</span></figcaption></figure>
+
+<p>신호를 클럭 소스 → 곱하기 → 고르기 → 나누기 → 게이트 → 주변장치 순서로 따라간다.</p>
+<ol class="flow">
+  <li><span class="n">1</span><div class="tx"><b>소스: HSI 8 MHz, HSE 4~16 MHz, LSE 32.768 kHz, LSI 40 kHz</b><span>HSE는 수정 대신 외부 클럭을 OSC_IN에 넣을 수도 있다(바이패스, 최대 25 MHz, RM0008 7.2.1). 각 소스는 따로 켜고 끌 수 있고, 준비 플래그가 서기 전에는 클럭을 내보내지 않는다.</span></div></li>
+  <li><span class="n">2</span><div class="tx"><b>곱하기: PLLSRC가 HSI/2 또는 HSE(PLLXTPRE로 ÷1·÷2)를 골라 PLL에 넣고, PLLMUL배 한다</b><span>HSI는 반드시 2로 나눠 들어가므로 HSI만으로는 4 MHz × 16 = 64 MHz가 최대이다(RM0008 Figure 8 주석 1). PLL 출력은 72 MHz를 넘으면 안 된다(RM0008 7.3.2 PLLMUL 주의, <a href="../../Docs/RM0008_Reference_manual.pdf#page=102">p.102</a>).</span></div></li>
+  <li><span class="n">3</span><div class="tx"><b>고르기: SW 선택기가 HSI·HSE·PLLCLK 중 하나를 SYSCLK로 고른다 (최대 72 MHz)</b><span>리셋 직후에는 HSI가 선택된다. 목표 소스가 준비되지 않았으면 전환은 준비될 때까지 미뤄지고, 실제로 쓰이는 소스는 SWS로 알 수 있다(RM0008 7.2.6).</span></div></li>
+  <li><span class="n">4</span><div class="tx"><b>나누기 ①: AHB Prescaler(÷1, 2, 4, 8, 16, 64, 128, 256, 512) → HCLK</b><span>HCLK는 코어, 메모리, DMA, AHB 버스로 간다. 같은 지점에서 ÷8 갈래가 SysTick의 외부 기준 클럭이 되고, FCLK는 코어가 잠들어도 계속 도는 클럭이다(RM0008 <a href="../../Docs/RM0008_Reference_manual.pdf#page=93">p.93~94</a>). ÷32는 없다(HPRE 표, p.103).</span></div></li>
+  <li><span class="n">5</span><div class="tx"><b>나누기 ②: APB1 Prescaler → PCLK1 (최대 36 MHz), APB2 Prescaler → PCLK2 (최대 72 MHz)</b><span>타이머 클럭은 따로 만든다. APB 분주가 1이면 PCLK 그대로, 아니면 PCLK의 2배이다(RM0008 p.94). ADC는 PCLK2를 다시 ÷2·4·6·8 한다.</span></div></li>
+  <li><span class="n">6</span><div class="tx"><b>게이트: 주변장치마다 AND 게이트 하나 (APB1 13개, APB2 11개, 타이머 갈래와 AHB 갈래 몇 개)</b><span>그림의 "Peripheral Clock Enable (13 bits)" 같은 숫자가 그 게이트 수이다. 리셋 직후에는 SRAM과 FLITF를 빼고 모두 닫혀 있다(RM0008 3.1, <a href="../../Docs/RM0008_Reference_manual.pdf#page=49">p.49</a>).</span></div></li>
+  <li><span class="n">7</span><div class="tx"><b>곁가지: USB(PLLCLK ÷1 또는 ÷1.5 → 48 MHz), RTC(LSE·LSI·HSE/128 중 선택), IWDG(LSI 고정), MCO(핀 출력), FLITFCLK(HSI 고정), CSS(HSE 감시)</b><span>Flash 프로그래밍 인터페이스 클럭은 SYSCLK가 무엇이든 항상 HSI이다(RM0008 p.93). 그래서 Flash에 쓰거나 지울 때는 HSI가 켜져 있어야 한다(3.3.3, <a href="../../Docs/RM0008_Reference_manual.pdf#page=59">p.59</a>).</span></div></li>
+</ol>
+
+<div class="tablewrap"><table>
+<tr><th>Figure 2의 블록</th><th>디지털논리 등가</th><th>근거</th></tr>
+<tr><td>HSI RC, HSE OSC, LSI RC, LSE OSC</td><td>클럭 소스 + 준비 플래그(안정 확인 카운터 + 동기화기) <span class="eqv">등가 모델</span></td><td>RM0008 7.2.1~7.2.5</td></tr>
+<tr><td>사다리꼴 PLLSRC, PLLXTPRE, RTCSEL, MCO</td><td>2:1~4:1 선택기(MUX)</td><td>RM0008 7.3.2, 7.3.9</td></tr>
+<tr><td>사다리꼴 SW</td><td>3:1 선택기. "목표가 준비되어야 전환"되는 글리치 없는 선택기 <span class="eqv">등가 모델</span></td><td>RM0008 7.2.6</td></tr>
+<tr><td>PLL (x2 … x16)</td><td>되먹임 경로에 ÷N 카운터가 있는 주파수 곱셈기 <span class="eqv">등가 모델</span></td><td>RM0008 7.2.3, DS5319 Table 27</td></tr>
+<tr><td>/2, /8, /128, AHB·APB·ADC Prescaler</td><td>T 플립플롭, 2<sup>k</sup> 카운터, 모듈로 카운터 분주기</td><td>RM0008 7.3.2</td></tr>
+<tr><td>USB Prescaler (/1, 1.5)</td><td>÷1.5 비정수 분주기. 구현은 문서에 없다</td><td>RM0008 7.3.2 USBPRE</td></tr>
+<tr><td>TIMxCLK 상자 "If (APB prescaler = 1) x1 else x2"</td><td>APB 분주가 1이 아니면 한 단계 덜 나눈 클럭을 고르는 선택기 <span class="eqv">등가 모델</span></td><td>RM0008 p.94</td></tr>
+<tr><td>AND 기호 "Peripheral Clock Enable"</td><td>클럭 게이트(AND). 허용 비트는 RCC_AHBENR·APB1ENR·APB2ENR</td><td>RM0008 7.3.6~7.3.8</td></tr>
+<tr><td>CSS</td><td>HSE 클럭이 끊겼는지 보는 검출기(정해진 시간 안에 에지가 안 오면 경보) <span class="eqv">등가 모델</span></td><td>RM0008 7.2.7</td></tr>
+</table></div>
+
+<h3>버스 구조: HCLK와 PCLK가 닿는 곳</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig1_p47.png"><img src="img/RM0008_Fig1_p47.png" alt="시스템 구조" width="1157" height="872" loading="lazy"></a></div>
+<figcaption>코어는 버스 세 개(ICode, DCode, System)를 가진다. ICode는 Flash 인터페이스(FLITF)로 곧장 가서 명령을 가져오고, DCode와 System 버스는 DMA 버스와 함께 버스 행렬(Bus matrix)에 들어간다. 버스 행렬 뒤에 SRAM, FLITF, AHB 시스템 버스가 있고, AHB 시스템 버스에서 다리(Bridge) 두 개가 APB2와 APB1로 갈라진다. 그림에서 Bridge 1이 APB2로, Bridge 2가 APB1로 이어진다. 이 그림도 고집적 제품 공용이라 DMA2, FSMC, SDIO, ADC3, TIM8, GPIOE~G 등 F103xB에 없는 블록이 함께 그려져 있다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=47">RM0008 Rev 21, p.47</a>, Figure 1. System architecture (low-, medium-, XL-density devices)</span></figcaption></figure>
+<p>버스 행렬은 코어와 DMA가 같은 슬레이브를 노릴 때 라운드 로빈으로 중재한다(RM0008 3.1, <a href="../../Docs/RM0008_Reference_manual.pdf#page=49">p.49</a>). AHB/APB 다리는 "완전 동기" 연결이고 APB1은 36 MHz, APB2는 72 MHz가 한계이다. 즉 APB1 주변장치 레지스터를 한 번 읽으면 HCLK가 아니라 PCLK1 박자로 기다려야 한다. 같은 읽기 명령이라도 SRAM, Flash, APB2, APB1 순으로 오래 걸리는 이유가 여기 있다(13번 예제가 이를 잰다). 또 APB 레지스터에 8·16비트로 쓰면 다리가 그 값을 복제해 32비트로 만든다(RM0008 3.1 주석). DMA의 버스 중재는 <a href="../07_DMA/07_DMA%20교안.html">07_DMA 상위 교안</a>의 몫이다.</p>
+
+<h3>메모리 맵: 주소 디코더가 보는 칩</h3>
+<figure class="src narrow"><div class="img"><a href="img/DS5319_Fig11_p34.png"><img src="img/DS5319_Fig11_p34.png" alt="STM32F103xB 메모리 맵" width="1153" height="1550" loading="lazy"></a></div>
+<figcaption>왼쪽은 4 GB 주소 공간을 512 MB 블록 8개(0~7)로 나눈 것이고, 가운데는 블록 0(Flash, 시스템 메모리, 옵션 바이트), 오른쪽은 주변장치 주소이다. 0x0000 0000은 BOOT 핀에 따라 Flash나 시스템 메모리가 겹쳐 보이는 별칭 영역이다. 블록 7의 0xE000 0000~0xE010 0000이 Cortex-M3 내부 장치(NVIC·SCB·SysTick·DWT) 자리이다. 오른쪽 열 제목은 "APB memory space"이지만 그 안의 0x4002 xxxx(DMA, RCC, Flash interface, CRC)는 RM0008 Table 3에서 AHB 소속이다. 제목은 "주변장치 주소 공간"으로 읽는 것이 맞다.
+<span class="cite">출처: <a href="../../Docs/Datasheet_stm32f103.pdf#page=34">DS5319 Rev 19, p.34</a>, Figure 11. Memory map</span></figcaption></figure>
+<p>CPU 입장에서 레지스터와 메모리의 차이는 없다. 주소 디코더가 상위 주소 비트를 보고 SRAM, Flash, 다리, 코어 내부 장치 중 하나를 고를 뿐이다. 그래서 RCC 레지스터(0x4002 1000)도, NVIC(코어 내부 영역)도 같은 읽기·쓰기 명령으로 다룬다. 데이터는 리틀 엔디안으로 놓인다(RM0008 3.2). 비트 밴딩은 SRAM(0x2000 0000~0x200F FFFF)과 주변장치(0x4000 0000~0x400F FFFF)의 비트 하나하나를 별칭 영역(0x2200 0000~, 0x4200 0000~)의 32비트 워드 하나에 대응시킨다(PM0056 Table 13·14, <a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf#page=28">p.28</a>). 주소 계산과 활용은 <a href="../01_GPIO/01_GPIO%20교안.html#s10">01_GPIO 상위 교안</a>에서 다뤘다.</p>
+<figure class="src"><div class="img"><a href="img/PM0056_Fig10_p29.png"><img src="img/PM0056_Fig10_p29.png" alt="비트 밴드 대응" width="1159" height="712" loading="lazy"></a></div>
+<figcaption>위의 32 MB 별칭 영역 워드 하나가 아래 1 MB SRAM 비트 밴드 영역의 비트 하나에 대응한다. 예: 별칭 0x2200 0000 ↔ 0x2000 0000의 비트 0, 별칭 0x2200 001C ↔ 같은 바이트의 비트 7. 별칭 주소 = 0x2200 0000 + 바이트 오프셋 × 32 + 비트 번호 × 4이다. 주변장치 쪽도 같은 식에 기준 주소만 0x4000 0000 / 0x4200 0000이다. 별칭에 쓰면 버스에서는 읽기-수정-쓰기로 처리되며, DMA 같은 다른 마스터는 이 기능을 쓸 수 없다(RM0008 3.3.2).
+<span class="cite">출처: <a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf#page=29">PM0056 Rev 7, p.29</a>, Figure 10. Bit-band mapping</span></figcaption></figure>
+
+<h3>코어 레지스터: CPU가 들고 있는 상태</h3>
+<figure class="src narrow"><div class="img"><a href="img/PM0056_Fig2_p14.png"><img src="img/PM0056_Fig2_p14.png" alt="코어 레지스터" width="1157" height="1160" loading="lazy"></a></div>
+<figcaption>R0~R12는 범용 레지스터, R13은 스택 포인터(SP), R14는 링크 레지스터(LR), R15는 프로그램 카운터(PC)이다. SP는 같은 이름 아래 두 벌이 있다. 원본 그림의 "MSB*"는 "MSP*"(Main Stack Pointer)의 오기이다(본문 2.1.3 "Stack pointer"에서 MSP와 PSP로 설명). 아래쪽 특수 레지스터 중 PRIMASK·FAULTMASK·BASEPRI는 예외를 막는 마스크(6장), CONTROL은 스레드 모드의 스택과 권한을 고른다.
+<span class="cite">출처: <a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf#page=14">PM0056 Rev 7, p.14</a>, Figure 2. Processor core registers</span></figcaption></figure>
+<p>코어는 두 모드로 돈다. 리셋 뒤의 일반 프로그램은 스레드 모드(Thread mode), 예외 처리 중에는 핸들러 모드(Handler mode)이다. 핸들러 모드는 항상 MSP를 쓰고, 스레드 모드는 CONTROL 설정에 따라 MSP 또는 PSP를 쓴다(PM0056 2.1.1·2.1.2, <a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf#page=13">p.13~14</a>). 예외가 들어오면 이 레지스터 중 8개(R0~R3, R12, LR, PC, xPSR)를 하드웨어가 스택에 저장한다(7장 ④).</p>
+
+<h3>칩이 자기 자신을 알려 주는 곳: 전자 서명</h3>
+<p>Flash의 시스템 메모리 영역에는 공장에서 기록한 식별 정보가 있다. 읽기 전용이며 사용자가 바꿀 수 없다(RM0008 30장, <a href="../../Docs/RM0008_Reference_manual.pdf#page=1076">p.1076~1078</a>).</p>
+<div class="tablewrap"><table>
+<tr><th>정보</th><th>주소</th><th>내용</th></tr>
+<tr><td>Flash 크기 F_SIZE</td><td class="m">0x1FFF F7E0 (16비트)</td><td>KB 단위. 예: 0x0080 = 128 KB</td></tr>
+<tr><td>고유 ID U_ID</td><td class="m">0x1FFF F7E8 ~ (96비트)</td><td>칩마다 다른 번호. 시리얼 번호, 보안 키 재료 등으로 쓴다. 바이트·하프워드·워드로 나눠 읽을 수 있다</td></tr>
+</table></div>
+<p>디버그 블록의 DBGMCU_IDCODE에도 장치 ID가 있지만, 정오표 ES096 2.2.2(<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=7">p.7</a>)에 따르면 이 칩에서 DBGMCU_IDCODE와 DBGMCU_CR은 디버그 모드에서만 읽히고 사용자 소프트웨어가 읽으면 0x00이 나온다. 회피책은 없다.</p>
+</section>
+
+<!-- ============================================================ 4 -->
+<section id="s4">
+<h2>4. 클럭 경로와 시간 계산</h2>
+<div class="eq">f_PLLin  = HSI / 2            (PLLSRC = 0)
+         = HSE / (1 또는 2)    (PLLSRC = 1, PLLXTPRE = 0 또는 1)
+PLLCLK   = f_PLLin × PLLMUL     (PLLMUL = 2 … 16)
+SYSCLK   = HSI | HSE | PLLCLK  (SW)
+HCLK     = SYSCLK / HPRE        (1, 2, 4, 8, 16, 64, 128, 256, 512)
+PCLK1    = HCLK / PPRE1          PCLK2 = HCLK / PPRE2      (1, 2, 4, 8, 16)
+TIM2·3·4 = PCLK1 × (PPRE1 = 1 ? 1 : 2)     TIM1 = PCLK2 × (PPRE2 = 1 ? 1 : 2)
+ADCCLK   = PCLK2 / ADCPRE      (2, 4, 6, 8)
+USBCLK   = PLLCLK / 1.5 또는 PLLCLK / 1     (USBPRE)
+SysTick  = HCLK / 8 또는 HCLK  (STK_CTRL.CLKSOURCE)</div>
+<p>근거: RM0008 7.2(<a href="../../Docs/RM0008_Reference_manual.pdf#page=93">p.93~94</a>), 7.3.2(<a href="../../Docs/RM0008_Reference_manual.pdf#page=101">p.101~103</a>), PM0056 4.5.1(<a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf#page=151">p.151</a>).</p>
+
+<h3>지켜야 할 한계</h3>
+<div class="tablewrap"><table>
+<tr><th>클럭</th><th>범위</th><th>근거</th></tr>
+<tr><td>SYSCLK, HCLK, PCLK2</td><td>≤ 72 MHz</td><td>DS5319 Table 9, <a href="../../Docs/Datasheet_stm32f103.pdf#page=38">p.38</a></td></tr>
+<tr><td>PCLK1</td><td>≤ 36 MHz</td><td>DS5319 Table 9, RM0008 PPRE1 경고(p.103)</td></tr>
+<tr><td>PLL 입력 / 출력</td><td>1~25 MHz / 16~72 MHz</td><td>DS5319 Table 27, <a href="../../Docs/Datasheet_stm32f103.pdf#page=56">p.56</a></td></tr>
+<tr><td>HSI만 쓸 때 SYSCLK</td><td>≤ 64 MHz (4 MHz × 16)</td><td>RM0008 Figure 8 주석 1, DS5319 Figure 2 주석 1</td></tr>
+<tr><td>ADCCLK</td><td>0.6~14 MHz</td><td>DS5319 Table 47, <a href="../../Docs/Datasheet_stm32f103.pdf#page=74">p.74</a></td></tr>
+<tr><td>USBCLK</td><td>정확히 48 MHz, HSE와 PLL을 모두 켜야 함 (PLL 출력 48 또는 72 MHz)</td><td>RM0008 7.2.3(<a href="../../Docs/RM0008_Reference_manual.pdf#page=96">p.96</a>), DS5319 Figure 2 주석 2, 2.3.20</td></tr>
+<tr><td>MCO로 SYSCLK 내보내기</td><td>≤ 50 MHz (입출력 핀 최대 속도)</td><td>RM0008 RCC_CFGR MCO 주석, <a href="../../Docs/RM0008_Reference_manual.pdf#page=101">p.101</a></td></tr>
+<tr><td>HSE</td><td>수정 4~16 MHz, 외부 클럭 1~25 MHz</td><td>DS5319 Table 20·22, RM0008 7.2.1</td></tr>
+</table></div>
+
+<h3>Flash 대기 사이클은 SYSCLK로 정한다</h3>
+<div class="tablewrap"><table>
+<tr><th>SYSCLK</th><th>FLASH_ACR.LATENCY</th><th>한 주기</th></tr>
+<tr><td>0 &lt; SYSCLK ≤ 24 MHz</td><td class="m">000 (0 대기)</td><td>≥ 41.7 ns</td></tr>
+<tr><td>24 &lt; SYSCLK ≤ 48 MHz</td><td class="m">001 (1 대기)</td><td>≥ 20.8 ns</td></tr>
+<tr><td>48 &lt; SYSCLK ≤ 72 MHz</td><td class="m">010 (2 대기)</td><td>≥ 13.9 ns</td></tr>
+</table></div>
+<p>근거: RM0008 3.3.3(<a href="../../Docs/RM0008_Reference_manual.pdf#page=58">p.58</a>)과 FLASH_ACR(<a href="../../Docs/RM0008_Reference_manual.pdf#page=60">p.60</a>). 기준은 HCLK가 아니라 SYSCLK이다. 대기를 필요보다 많이 두는 것은 느릴 뿐 안전하고, 적게 두는 것은 잘못된 명령을 읽게 한다. 그래서 클럭을 올릴 때는 LATENCY를 <b>먼저</b> 올리고, 내릴 때는 클럭을 내린 <b>뒤에</b> LATENCY를 낮춘다(7장). 프리페치는 리셋 직후 켜져 있고(FLASH_ACR 리셋 값 0x30), AHB 분주가 1이 아니면 반드시 켜 둬야 하며, 켜고 끄는 일은 SYSCLK &lt; 24 MHz이고 AHB 분주가 1일 때만 할 수 있다. 반주기 접근(HLFCYA)은 HSI나 HSE를 그대로 쓰는 저주파 클럭에서만, AHB 분주 1일 때만 쓸 수 있다(p.58~59). 같은 내용이 PM0075 2.2.1(<a href="../../Docs/PM0075-stm32f10xxx-flash-memory.pdf#page=11">p.11~12</a>)과 FLASH_ACR 설명(<a href="../../Docs/PM0075-stm32f10xxx-flash-memory.pdf#page=23">p.23~24</a>)에도 있는데, 경계를 RM0008은 "8 MHz or less", PM0075는 "less than 8 MHz"라고 서로 다르게 적는다. 8 MHz HSI가 정확히 경계에 걸리므로, 이 교안의 계산기는 RM0008(8 MHz 포함)을 따랐다. PM0075는 LATENCY를 "Flash 제어 신호를 유지하는 사이클 수"로 설명하며, 리셋 직후 값은 0이고 한 사이클로 읽는다고 적는다.</p>
+
+<h3>대표 구성</h3>
+<div class="tablewrap"><table>
+<tr><th>구성</th><th>SYSCLK</th><th>PCLK1 / TIM2~4</th><th>PCLK2 / TIM1</th><th>ADCCLK</th><th>USB</th><th>LATENCY</th></tr>
+<tr><td>리셋 직후 (HSI, 분주 모두 1, ADCPRE ÷2)</td><td class="m">8</td><td class="m">8 / 8</td><td class="m">8 / 8</td><td class="m">4</td><td>불가</td><td class="m">0</td></tr>
+<tr><td>HSI/2 × 12, APB1 ÷2</td><td class="m">48</td><td class="m">24 / 48</td><td class="m">48 / 48</td><td class="m">12 (÷4)</td><td>48 MHz가 나오지만 HSE가 아니라 불가</td><td class="m">1</td></tr>
+<tr><td>HSI/2 × 16, APB1 ÷2</td><td class="m">64</td><td class="m">32 / 64</td><td class="m">64 / 64</td><td class="m">10.67 (÷6)</td><td>불가</td><td class="m">2</td></tr>
+<tr><td>HSE 8 MHz × 9, APB1 ÷2</td><td class="m">72</td><td class="m">36 / 72</td><td class="m">72 / 72</td><td class="m">12 (÷6)</td><td>÷1.5 → 48</td><td class="m">2</td></tr>
+</table></div>
+<p>단위는 MHz이다. 72 MHz 구성에서 APB1을 ÷2로 내려도 TIM2~4는 ×2 규칙 덕분에 72 MHz로 돈다. 이 규칙 때문에 "APB1 클럭"과 "APB1 타이머 클럭"이 다를 수 있으므로, 타이머 주기를 계산할 때는 반드시 TIMxCLK를 써야 한다.</p>
+
+<h3>SysTick 주기</h3>
+<div class="eq">주기 = (RELOAD + 1) / f_SysTick      RELOAD = N − 1  (N 클럭마다 반복)      1 ≤ RELOAD ≤ 0xFF FFFF
+예: HCLK = 72 MHz, CLKSOURCE = 0 (HCLK/8 = 9 MHz) → 1 ms = 9000 클럭 → RELOAD = 8999</div>
+<p>근거: PM0056 4.5.2(<a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf#page=152">p.152</a>). RM0008 10.1.1(<a href="../../Docs/RM0008_Reference_manual.pdf#page=197">p.197</a>)은 SysTick 보정값(STK_CALIB.TENMS)이 9000이며 "최대 HCLK/8 = 9 MHz에서 1 ms 기준"이라고 적는다. PM0056의 STK_CALIB 리셋 값 0x0002328도 9000이다. 24비트이므로 HCLK 72 MHz를 그대로 쓰면 최장 주기는 2<sup>24</sup>/72 MHz ≈ 233 ms, HCLK/8이면 약 1.86 s이다.</p>
+
+<div class="sim" id="ccalc">
+  <div class="subhead">계산기: 클럭 트리 전체와 한계 검사</div>
+  <div class="ctl">
+    <div><label for="csw">SYSCLK 출처 (SW)</label><select id="csw"><option value="hsi">HSI 8 MHz</option><option value="hse">HSE</option><option value="pll" selected>PLLCLK</option></select></div>
+    <div><label for="chse">HSE 주파수 (MHz)</label><input id="chse" type="number" min="1" max="25" step="0.001" value="8"></div>
+    <div><label for="cbyp">HSE 형태</label><select id="cbyp"><option value="xtal" selected>수정 (4~16 MHz)</option><option value="byp">외부 클럭, HSEBYP (1~25 MHz)</option></select></div>
+    <div><label for="csrc">PLLSRC</label><select id="csrc"><option value="hsi">HSI / 2</option><option value="hse" selected>HSE</option></select></div>
+    <div><label for="cxt">PLLXTPRE</label><select id="cxt"><option value="1" selected>÷1</option><option value="2">÷2</option></select></div>
+    <div><label for="cmul">PLLMUL</label><select id="cmul"></select></div>
+    <div><label for="chpre">HPRE (AHB)</label><select id="chpre"><option>1</option><option>2</option><option>4</option><option>8</option><option>16</option><option>64</option><option>128</option><option>256</option><option>512</option></select></div>
+    <div><label for="cp1">PPRE1 (APB1)</label><select id="cp1"><option>1</option><option selected>2</option><option>4</option><option>8</option><option>16</option></select></div>
+    <div><label for="cp2">PPRE2 (APB2)</label><select id="cp2"><option selected>1</option><option>2</option><option>4</option><option>8</option><option>16</option></select></div>
+    <div><label for="cadc">ADCPRE</label><select id="cadc"><option>2</option><option>4</option><option selected>6</option><option>8</option></select></div>
+    <div><label for="cusb">USB</label><select id="cusb"><option value="0">쓰지 않음</option><option value="1.5" selected>사용, USBPRE ÷1.5</option><option value="1">사용, USBPRE ÷1</option></select></div>
+    <div><label for="cstk">SysTick CLKSOURCE</label><select id="cstk"><option value="8" selected>0: HCLK / 8</option><option value="1">1: HCLK</option></select></div>
+    <div><label for="ctick">SysTick 목표 주기 (ms)</label><input id="ctick" type="number" min="0.001" step="0.001" value="1"></div>
+  </div>
+  <div class="regs">
+    <div class="stat"><div class="k">PLL 입력</div><div class="v" id="c_pllin">-</div></div>
+    <div class="stat"><div class="k">PLLCLK</div><div class="v" id="c_pll">-</div></div>
+    <div class="stat"><div class="k">SYSCLK</div><div class="v" id="c_sys">-</div></div>
+    <div class="stat"><div class="k">HCLK</div><div class="v" id="c_hclk">-</div></div>
+    <div class="stat"><div class="k">PCLK1</div><div class="v" id="c_p1">-</div></div>
+    <div class="stat"><div class="k">TIM2·3·4 클럭</div><div class="v" id="c_t1">-</div></div>
+    <div class="stat"><div class="k">PCLK2</div><div class="v" id="c_p2">-</div></div>
+    <div class="stat"><div class="k">TIM1 클럭</div><div class="v" id="c_t2">-</div></div>
+    <div class="stat"><div class="k">ADCCLK</div><div class="v" id="c_adc">-</div></div>
+    <div class="stat"><div class="k">USBCLK</div><div class="v" id="c_usb">-</div></div>
+    <div class="stat"><div class="k">필요한 LATENCY</div><div class="v" id="c_lat">-</div></div>
+    <div class="stat"><div class="k">SysTick RELOAD</div><div class="v" id="c_rel">-</div></div>
+  </div>
+  <ul id="c_checks" style="font-size:14.5px;margin-top:10px"></ul>
+  <p class="note" id="c_note"></p>
+</div>
+
+<h3>시간을 재는 또 하나의 도구: DWT 사이클 카운터</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig361_p1080.png"><img src="img/RM0008_Fig361_p1080.png" alt="디버그 지원 블록도" width="1157" height="828" loading="lazy"></a></div>
+<figcaption>코어 옆 내부 PPB(Private Peripheral Bus)에 NVIC, DWT, FPB, ITM이 나란히 붙어 있다. DWT(Data Watchpoint and Trace)는 원래 디버그용 장치이지만, 클럭 사이클 수를 세는 카운터를 갖고 있어 코드 실행 시간을 재는 데 쓴다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=1080">RM0008 Rev 21, p.1080</a>, Figure 361. Block diagram of STM32 MCU and Cortex®-M3-level debug support</span></figcaption></figure>
+<p>다섯 문서 중 DWT를 설명하는 곳은 RM0008 31장뿐이다. 31.13(<a href="../../Docs/RM0008_Reference_manual.pdf#page=1097">p.1097</a>)은 DWT가 비교기 4개와 함께 클럭 사이클, 접힌(folded) 명령, 적재·저장 연산, 수면 사이클, CPI, 인터럽트 오버헤드를 세는 카운터를 가진다고 적는다. 31.14(<a href="../../Docs/RM0008_Reference_manual.pdf#page=1098">p.1098</a>)는 "DWT 제어 레지스터의 CYCCNTENA(bit 0)"를, Table 228(<a href="../../Docs/RM0008_Reference_manual.pdf#page=1095">p.1095</a>)은 DEMCR 레지스터에 추적 기능을 켜는 TRCENA 비트가 있다고 적는다. 그러나 사이클 카운터의 주소, 폭(몇 비트인지), 넘침 동작은 다섯 문서 어디에도 없다(PM0056은 Figure 1에 "Data watchpoints" 상자만 그리고 레지스터 장이 없다). 이 교안은 그 값들을 단정하지 않는다. 10번 예제와 13~15번 예제가 이 카운터를 쓰므로, 그 값은 예제 소스의 주석과 실측으로 확인한다.</p>
+</section>
+
+<!-- ============================================================ 5 -->
+<section id="s5">
+<h2>5. 제어 요소의 역할: 블록도의 스위치와 레지스터 비트</h2>
+<figure class="src narrow"><div class="img"><a href="img/DS5319_Fig2_p12_src.png"><img src="img/DS5319_Fig2_p12_src.png" alt="클럭 트리 중 소스·PLL·SW 부분" width="432" height="588" loading="lazy"></a></div>
+<figcaption>Figure 2의 왼쪽 위 부분만 잘랐다. 선택기 PLLSRC·PLLXTPRE·SW와 곱셈기 PLL, 감시기 CSS가 모두 이 안에 있다. SW의 세 입력이 위에서부터 HSI, PLLCLK, HSE 순이다.
+<span class="cite">출처: <a href="../../Docs/Datasheet_stm32f103.pdf#page=12">DS5319 Rev 19, p.12</a>, Figure 2. Clock tree (부분)</span></figcaption></figure>
+<p>그림의 각 스위치가 어떤 레지스터 비트인지 정리한다(RM0008 7.3, <a href="../../Docs/RM0008_Reference_manual.pdf#page=99">p.99~121</a>).</p>
+<div class="tablewrap"><table>
+<tr><th>블록도 위의 요소</th><th>비트</th><th>동작</th></tr>
+<tr><td>발진기 전원 스위치</td><td class="m">CR.HSION, CR.HSEON, CSR.LSION, BDCR.LSEON</td><td>켜면 기동, 준비되면 …RDY = 1. 끄면 HSI·HSE·LSE는 6클럭, LSI는 3클럭 뒤에 RDY가 내려간다</td></tr>
+<tr><td>HSE 증폭기 우회</td><td class="m">CR.HSEBYP</td><td>1이면 수정 대신 OSC_IN의 외부 클럭을 쓴다. HSE가 꺼져 있을 때만 바꿀 수 있다</td></tr>
+<tr><td>PLL 입력 선택기, HSE ÷2</td><td class="m">CFGR.PLLSRC, PLLXTPRE</td><td>PLLSRC 0 = HSI/2, 1 = HSE. PLL이 꺼져 있을 때만 쓸 수 있다</td></tr>
+<tr><td>PLL 곱셈 수</td><td class="m">CFGR.PLLMUL[3:0]</td><td>0000 = ×2 … 1110 = ×16 (1111도 ×16). PLL이 꺼져 있을 때만</td></tr>
+<tr><td>PLL 전원</td><td class="m">CR.PLLON → CR.PLLRDY</td><td>잠기면 PLLRDY = 1</td></tr>
+<tr><td>SYSCLK 선택기</td><td class="m">CFGR.SW[1:0] → SWS[1:0]</td><td>00 HSI, 01 HSE, 10 PLL, 11 금지. SWS가 실제 출처를 알려 준다</td></tr>
+<tr><td>분주기</td><td class="m">CFGR.HPRE, PPRE1, PPRE2, ADCPRE, USBPRE</td><td>HPRE ÷1~512, PPRE ÷1~16, ADCPRE ÷2~8, USBPRE ÷1.5 또는 ÷1</td></tr>
+<tr><td>MCO 선택기</td><td class="m">CFGR.MCO[2:0]</td><td>0xx 없음, 100 SYSCLK, 101 HSI, 110 HSE, 111 PLLCLK/2</td></tr>
+<tr><td>HSE 감시기</td><td class="m">CR.CSSON</td><td>켜 두면 HSE가 준비된 뒤부터 감시한다(6장 ①)</td></tr>
+<tr><td>RTC 클럭 선택기</td><td class="m">BDCR.RTCSEL[1:0]</td><td>LSE, LSI, HSE/128. 백업 영역을 리셋하지 않으면 다시 바꿀 수 없다(7.2.8)</td></tr>
+<tr><td>클럭 게이트 / 리셋 스위치</td><td class="m">AHBENR, APB1ENR, APB2ENR / APB1RSTR, APB2RSTR</td><td>주변장치마다 비트 하나씩</td></tr>
+<tr><td>Flash 대기 · 프리페치</td><td class="m">FLASH_ACR.LATENCY, PRFTBE (PRFTBS)</td><td>4장 표. PRFTBS는 실제 상태를 알려 주는 읽기 전용 비트</td></tr>
+</table></div>
+
+<h3>보호 장치: 쓰고 있는 것은 끌 수 없다</h3>
+<p>RCC에는 소프트웨어 실수로 시스템이 멈추지 않게 하는 연동 장치가 여러 개 있다. 문서의 문장을 디지털논리 조건으로 옮기면 다음과 같다 <span class="eqv">등가 모델</span>.</p>
+<ul>
+  <li><b>HSION·HSEON·PLLON 지우기 차단</b>: "SYSCLK로 직접·간접 쓰이거나 쓰이도록 선택된 소스는 끌 수 없다"(RM0008 7.3.1). 클리어 허용 = ¬(그 소스가 SWS 또는 SW가 가리키는 경로 위에 있음).</li>
+  <li><b>PLL 설정 잠금</b>: PLLSRC·PLLXTPRE·PLLMUL의 쓰기 허용 = ¬PLLON (7.3.2). 돌고 있는 PLL의 배수를 바꿔 출력이 튀는 일을 막는다.</li>
+  <li><b>HSEBYP 잠금</b>: 쓰기 허용 = ¬HSEON (7.3.1).</li>
+  <li><b>전환 보류</b>: SW에 아직 준비되지 않은 소스를 쓰면 전환은 그 소스의 RDY가 1이 될 때까지 미뤄진다(7.2.6). 즉 SW는 "요청", SWS는 "결과"이다.</li>
+  <li><b>하드웨어 강제</b>: Stop·Standby에서 깨어날 때와 CSS가 고장을 잡았을 때는 하드웨어가 HSION을 켜고 SW를 HSI로 되돌린다(7.3.1 HSION, 7.3.2 SW).</li>
+</ul>
+
+<h3>전환 절차를 상태기계로 보기</h3>
+<figure class="diag"><svg viewBox="0 0 680 240" role="img" aria-label="HSI에서 PLL로 SYSCLK를 올리는 상태기계">
+<rect class="bx" x="20" y="30" width="130" height="60" rx="8"/><text class="tc" x="85" y="56">HSI 8 MHz 동작</text><text class="sc" x="85" y="76">리셋 직후 SWS=00</text>
+<line class="w" x1="150" y1="60" x2="184" y2="60"/><polygon class="ah" points="190,60 182,55 182,65"/>
+<rect class="bx hw" x="190" y="30" width="130" height="60" rx="8"/><text class="tc" x="255" y="56">HSE 기동</text><text class="sc" x="255" y="76">HSERDY=1 대기</text>
+<line class="w" x1="320" y1="60" x2="354" y2="60"/><polygon class="ah" points="360,60 352,55 352,65"/>
+<rect class="bx sel" x="360" y="30" width="130" height="60" rx="8"/><text class="tc" x="425" y="56">PLL 설정</text><text class="sc" x="425" y="76">PLLSRC·PLLMUL 씀</text>
+<line class="w" x1="490" y1="60" x2="524" y2="60"/><polygon class="ah" points="530,60 522,55 522,65"/>
+<rect class="bx hw" x="530" y="30" width="130" height="60" rx="8"/><text class="tc" x="595" y="56">PLL 켜고 잠금</text><text class="sc" x="595" y="76">PLLRDY=1 대기</text>
+<line class="w" x1="595" y1="90" x2="595" y2="154"/><polygon class="ah" points="595,160 590,152 600,152"/>
+<rect class="bx sel" x="530" y="160" width="130" height="60" rx="8"/><text class="tc" x="595" y="186">Flash 대기 올림</text><text class="sc" x="595" y="206">LATENCY, PPRE1</text>
+<line class="w" x1="530" y1="190" x2="496" y2="190"/><polygon class="ah" points="490,190 498,185 498,195"/>
+<rect class="bx sel" x="360" y="160" width="130" height="60" rx="8"/><text class="tc" x="425" y="186">SW=10 씀</text><text class="sc" x="425" y="206">SWS=10 대기</text>
+<line class="w" x1="360" y1="190" x2="326" y2="190"/><polygon class="ah" points="320,190 328,185 328,195"/>
+<rect class="bx flg" x="190" y="160" width="130" height="60" rx="8"/><text class="tc" x="255" y="186">PLL로 동작</text><text class="sc" x="255" y="206">SYSCLK = PLLCLK</text>
+<polyline class="dash" points="190,212 40,212 40,98"/><polygon class="ahm" points="40,92 35,100 45,100"/>
+<text class="o" x="50" y="130">HSE 고장(CSS)</text><text class="o" x="50" y="146">SW를 HSI로 강제</text>
+</svg><figcaption><span class="eqv">등가 모델</span> HSE 8 MHz에서 72 MHz로 올리는 순서를 상태기계로 그렸다. 각 상태는 "조건이 참이 될 때까지 기다리는" 상태이고, 다음 상태로 가는 조건은 상자 아래 줄이다. 4번째 상자에서 Flash 대기(LATENCY)와 APB1 분주(PCLK1 ≤ 36 MHz)를 SYSCLK가 오르기 <b>전에</b> 맞춘다. 점선은 소프트웨어 순서와 무관하게 하드웨어가 일으키는 전이이다. 순서의 근거는 RM0008 7.2.3(PLL 설정은 켜기 전에), 7.2.6(준비된 소스로만 전환), 3.3.3(SYSCLK에 맞는 대기)이다. 문서가 이 순서를 한 곳에 절차로 적어 두지는 않았으므로, 위 그림은 그 조건들을 이어 붙인 것이다.</figcaption></figure>
+
+<h3>클럭 게이트와 리셋 스위치</h3>
+<figure class="src narrow"><div class="img"><a href="img/DS5319_Fig2_p12_bus.png"><img src="img/DS5319_Fig2_p12_bus.png" alt="클럭 트리 중 AHB·APB 분주기와 게이트 부분" width="526" height="518" loading="lazy"></a></div>
+<figcaption>Figure 2의 오른쪽 부분이다. AHB Prescaler 뒤에서 HCLK, SysTick용 ÷8, FCLK가 갈라지고, APB1·APB2 Prescaler 뒤의 AND 기호가 주변장치 클럭 게이트이다. 타이머 갈래는 "APB 분주 = 1이면 ×1, 아니면 ×2" 상자를 지나 따로 게이트된다.
+<span class="cite">출처: <a href="../../Docs/Datasheet_stm32f103.pdf#page=12">DS5319 Rev 19, p.12</a>, Figure 2. Clock tree (부분)</span></figcaption></figure>
+<p>게이트가 닫힌 주변장치는 플립플롭이 멈춰 있으므로 레지스터 접근에도 응답하지 못한다. RM0008은 "주변장치 클럭이 꺼져 있으면 레지스터 값을 읽지 못할 수 있고 돌아오는 값은 항상 0x0"이라고 적는다(7.3.6 주석, <a href="../../Docs/RM0008_Reference_manual.pdf#page=111">p.111</a>). 쓰기가 무시되는지, 게이트를 다시 열면 이전 값이 남아 있는지는 문서에 없다. 14번 예제가 이를 실측한다.</p>
+<p>RCC_AHBENR의 리셋 값은 0x0000 0014이다. 켜져 있는 두 비트 FLITFEN과 SRAMEN은 다른 게이트와 성격이 다르다. 이 둘은 "Sleep 모드 동안" Flash 인터페이스와 SRAM 인터페이스 클럭을 유지할지를 고른다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=112">p.112</a>). 평소 실행 중의 클럭과는 무관하다. 정오표 ES096 2.2.1은 2 대기 + 프리페치 상태에서 Sleep 중 FLITF 클럭을 끄면 깨어난 뒤 명령을 잘못 읽을 수 있으니 FLITFEN을 리셋 값(1)대로 두라고 한다(8장).</p>
+<p>리셋 스위치(APB1RSTR, APB2RSTR)는 "1을 쓰면 리셋, 0을 쓰면 해제"이다. 소프트웨어가 1을 썼다가 0으로 되돌리는 펄스로 주변장치 하나만 리셋값으로 돌린다. 클럭 게이트가 "멈춤"이라면 리셋 스위치는 "초기화"이다. AFIO도 APB2의 게이트 뒤에 있으므로 리맵 선택기(AFIO_MAPR)를 쓰기 전에 AFIO 게이트를 먼저 열어야 한다. 리맵 선택기 자체는 <a href="../01_GPIO/01_GPIO%20교안.html#s5">01_GPIO 상위 교안 5장</a>에서 다뤘다.</p>
+</section>
+
+<!-- ============================================================ 6 -->
+<section id="s6">
+<h2>6. 이벤트 생성 기전: 클럭 사건, SysTick, 예외, 폴트, 리셋</h2>
+<h3>① RCC가 내는 사건: 준비 인터럽트와 CSS</h3>
+<figure class="diag"><svg viewBox="0 0 680 250" role="img" aria-label="RCC 준비 인터럽트와 CSS가 NMI로 가는 경로">
+<rect class="bx hw" x="10" y="20" width="170" height="52" rx="4"/><text class="tc" x="95" y="42">준비 사건 5개</text><text class="sc" x="95" y="60">LSI·LSE·HSI·HSE·PLL</text>
+<line class="w" x1="180" y1="46" x2="204" y2="46"/><polygon class="ah" points="210,46 202,41 202,51"/>
+<rect class="bx sel" x="210" y="20" width="120" height="52" rx="4"/><text class="tc" x="270" y="42">AND</text><text class="sc" x="270" y="60">…RDYIE</text>
+<line class="w" x1="330" y1="46" x2="354" y2="46"/><polygon class="ah" points="360,46 352,41 352,51"/>
+<rect class="bx flg" x="360" y="20" width="120" height="52" rx="4"/><text class="tc" x="420" y="42">…RDYF</text><text class="sc" x="420" y="60">RCC_CIR</text>
+<line class="w" x1="480" y1="46" x2="504" y2="46"/><polygon class="ah" points="510,46 502,41 502,51"/>
+<rect class="bx isr" x="510" y="20" width="160" height="52" rx="4"/><text class="tc" x="590" y="42">RCC 인터럽트</text><text class="sc" x="590" y="60">IRQ 5 · 0x0000 0054</text>
+<rect class="bx hw" x="10" y="110" width="170" height="52" rx="4"/><text class="tc" x="95" y="132">HSE 끊김 검출</text><text class="sc" x="95" y="150">CSS (CSSON=1)</text>
+<line class="w" x1="180" y1="136" x2="354" y2="136"/><polygon class="ah" points="360,136 352,131 352,141"/>
+<text class="o" x="196" y="128">허용 비트 없음</text>
+<rect class="bx flg" x="360" y="110" width="120" height="52" rx="4"/><text class="tc" x="420" y="132">CSSF</text><text class="sc" x="420" y="150">CSSC=1로 지움</text>
+<line class="w" x1="480" y1="136" x2="504" y2="136"/><polygon class="ah" points="510,136 502,131 502,141"/>
+<rect class="bx isr" x="510" y="110" width="160" height="52" rx="4"/><text class="tc" x="590" y="132">NMI</text><text class="sc" x="590" y="150">0x0000 0008</text>
+<polyline class="wm" points="150,162 150,176 585,176 585,186"/><polygon class="ahm" points="585,192 580,184 590,184"/>
+<polyline class="wm" points="95,162 95,214 124,214"/><polygon class="ahm" points="130,214 122,209 122,219"/>
+<rect class="bx" x="130" y="192" width="340" height="46" rx="4"/><text class="tc" x="300" y="211">하드웨어 조치</text><text class="sc" x="300" y="228">HSE 끔 · SW→HSI · PLL 끔(HSE 입력일 때)</text>
+<rect class="bx" x="500" y="192" width="170" height="46" rx="4"/><text class="tc" x="585" y="211">TIM1 브레이크 입력</text><text class="sc" x="585" y="228">고급 타이머 출력 차단</text>
+</svg><figcaption><span class="eqv">등가 모델</span> RM0008 7.2.7(<a href="../../Docs/RM0008_Reference_manual.pdf#page=97">p.97</a>)과 RCC_CIR(7.3.3, <a href="../../Docs/RM0008_Reference_manual.pdf#page=104">p.104~105</a>)을 소자로 옮겼다. 준비 플래그(…RDYF)는 USART 플래그와 달리 "사건 AND 허용 비트"일 때만 선다. RM 본문은 이 허용 비트를 "PLLRDYDIE", "HSERDYDIE"처럼 적었는데, 레지스터 그림의 이름은 PLLRDYIE, HSERDYIE이다(오기). CSSF에는 허용 비트가 없고, RCC 인터럽트가 아니라 NMI로 간다. 벡터 주소는 RM0008 Table 63(<a href="../../Docs/RM0008_Reference_manual.pdf#page=204">p.204</a>)이다.</figcaption></figure>
+<p>CSS는 "HSE가 준비된 뒤부터 감시하고, HSE를 끄면 감시도 멈춘다". HSE가 끊긴 것이 감지되면 하드웨어가 HSE를 끄고, HSE가 SYSCLK로 직접 또는 PLL을 거쳐 쓰이던 중이면 SYSCLK를 HSI로 바꾸고 그 PLL도 끈다. 그리고 NMI를 건다. 주의할 점은 RM0008의 주석이다. "CSS 인터럽트 대기 비트를 지우지 않으면 NMI가 끝없이 실행된다." NMI 처리기 안에서 CSSC에 1을 써서 CSSF를 지워야 한다. NMI는 막을 수 없으므로 이 실수는 시스템을 NMI 안에 가둔다. CSS가 감지하는 방법(몇 클럭 동안 에지가 없으면 고장으로 보는지)은 문서에 없다.</p>
+
+<h3>② MCO: 내부 클럭을 핀으로 보내는 선택기</h3>
+<figure class="src narrow"><div class="img"><a href="img/DS5319_Fig2_p12_mco.png"><img src="img/DS5319_Fig2_p12_mco.png" alt="클럭 트리 중 MCO 선택기" width="440" height="185" loading="lazy"></a></div>
+<figcaption>MCO 선택기는 PLLCLK/2, HSI, HSE, SYSCLK 중 하나를 MCO 핀으로 보낸다. PLL은 항상 2로 나눠서만 나간다.
+<span class="cite">출처: <a href="../../Docs/Datasheet_stm32f103.pdf#page=12">DS5319 Rev 19, p.12</a>, Figure 2. Clock tree (부분)</span></figcaption></figure>
+<p>MCO는 "보이지 않는 클럭을 측정기로 보는 창"이다. 핀은 GPIO 대체 기능 출력으로 설정해야 하고(RM0008 7.2.10, <a href="../../Docs/RM0008_Reference_manual.pdf#page=98">p.98</a>), SYSCLK를 내보낼 때는 50 MHz(입출력 핀 최대 속도)를 넘지 않아야 한다. 출처를 바꾸는 순간과 시작 순간에는 잘린 사이클이 나올 수 있다(RCC_CFGR 주석, p.101). 즉 MCO 선택기는 SW 선택기와 달리 글리치 없는 전환을 보장하지 않는다.</p>
+
+<h3>③ SysTick: 코어에 붙은 24비트 다운카운터</h3>
+<figure class="diag"><svg viewBox="0 0 680 190" role="img" aria-label="SysTick 등가 회로: 선택기, 다운카운터, 0 검출, 플래그, 예외">
+<rect class="bx sel" x="10" y="30" width="130" height="56" rx="4"/><text class="tc" x="75" y="54">CLKSOURCE</text><text class="sc" x="75" y="72">HCLK/8 · HCLK</text>
+<line class="w" x1="140" y1="58" x2="164" y2="58"/><polygon class="ah" points="170,58 162,53 162,63"/>
+<rect class="bx hw" x="170" y="26" width="190" height="64" rx="4"/><text class="tc" x="265" y="48">24비트 다운카운터</text><text class="sc" x="265" y="66">VAL: … → 1 → 0</text><text class="sc" x="265" y="82">ENABLE=1일 때만 셈</text>
+<line class="w" x1="360" y1="58" x2="384" y2="58"/><polygon class="ah" points="390,58 382,53 382,63"/>
+<rect class="bx" x="390" y="34" width="90" height="48" rx="4"/><text class="tc" x="435" y="63">= 0 검출</text>
+<line class="w" x1="480" y1="58" x2="499" y2="58"/><polygon class="ah" points="505,58 497,53 497,63"/>
+<rect class="bx sel" x="505" y="34" width="70" height="48" rx="4"/><text class="tc" x="540" y="54">AND</text><text class="sc" x="540" y="72">TICKINT</text>
+<line class="w" x1="575" y1="58" x2="594" y2="58"/><polygon class="ah" points="600,58 592,53 592,63"/>
+<rect class="bx isr" x="600" y="34" width="75" height="48" rx="4"/><text class="tc" x="637" y="54">예외</text><text class="sc" x="637" y="72">#15</text>
+<rect class="bx" x="170" y="130" width="190" height="44" rx="4"/><text class="tc" x="265" y="150">LOAD (RELOAD)</text><text class="sc" x="265" y="166">0 다음 에지에 다시 적재</text>
+<line class="w" x1="265" y1="130" x2="265" y2="98"/><polygon class="ah" points="265,92 260,100 270,100"/>
+<line class="wm" x1="435" y1="82" x2="435" y2="124"/><polygon class="ahm" points="435,130 430,122 440,122"/>
+<rect class="bx flg" x="380" y="130" width="140" height="44" rx="4"/><text class="tc" x="450" y="150">COUNTFLAG</text><text class="sc" x="450" y="166">읽으면 0으로</text>
+</svg><figcaption><span class="eqv">등가 모델</span> PM0056 4.5(<a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf#page=150">p.150~154</a>)를 소자로 옮겼다. 카운터는 RELOAD에서 0까지 내려간 뒤 다음 클럭 에지에 RELOAD를 다시 싣는다. 0에 닿으면 COUNTFLAG가 서고(마지막으로 읽은 뒤 0을 지났는지 알려 주는 비트), TICKINT가 1이면 SysTick 예외(예외 번호 15, 벡터 0x3C)를 요청한다. VAL에 아무 값이나 쓰면 카운터가 0이 되고 COUNTFLAG도 지워진다. CLKSOURCE = 0은 RCC가 주는 HCLK/8, 1은 HCLK 그대로이다(RM0008 p.93).</figcaption></figure>
+<p>SysTick은 코어 안에 있어 RCC의 주변장치 게이트와 무관하다. 대신 두 가지를 알아 둔다. 디버거가 코어를 멈추면 카운터도 멈춘다(PM0056 4.5). 그리고 "SysTick은 프로세서 클럭으로 돌아서 저전력 모드에서 이 클럭이 멈추면 카운터도 멈춘다"(4.5.5). Stop 모드 디버그 중에는 SysTick 인터럽트가 시스템을 깨울 수 있다는 정오표도 있다(ES096 2.2.3).</p>
+
+<h3>④ 예외의 종류와 벡터 테이블</h3>
+<figure class="src narrow"><div class="img"><a href="img/PM0056_Fig12_p35.png"><img src="img/PM0056_Fig12_p35.png" alt="벡터 테이블" width="1157" height="1037" loading="lazy"></a></div>
+<figcaption>주소 0x0000에는 처리 함수 주소가 아니라 스택 포인터의 초기값이 있고, 0x0004부터 예외별 처리 함수 주소가 4바이트씩 놓인다. 각 주소의 최하위 비트는 Thumb 코드임을 뜻하는 1이어야 한다. 예외 번호 16부터가 주변장치 IRQ 0번이다. 이 그림은 Cortex-M3 공용이라 IRQ67까지 그렸다. F103xB의 실제 개수는 DS5319 2.3.5가 "마스크 가능 인터럽트 43개", RM0008 10.1이 "68개"(계열 전체 기준)라고 서로 다르게 적는다. 이 칩의 벡터 배치는 RM0008 Table 63(<a href="../../Docs/RM0008_Reference_manual.pdf#page=204">p.204~206</a>)을 기준으로 본다.
+<span class="cite">출처: <a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf#page=35">PM0056 Rev 7, p.35</a>, Figure 12. Vector table</span></figcaption></figure>
+<div class="tablewrap"><table>
+<tr><th>예외 번호</th><th>종류</th><th>우선순위</th><th>벡터</th><th>무엇이 일으키나</th></tr>
+<tr><td class="m">1</td><td>Reset</td><td class="m">−3 (고정)</td><td class="m">0x04</td><td>전원·핀·워치독·소프트웨어 리셋(⑦)</td></tr>
+<tr><td class="m">2</td><td>NMI</td><td class="m">−2 (고정)</td><td class="m">0x08</td><td>F103에서는 CSS가 연결됨(①)</td></tr>
+<tr><td class="m">3</td><td>HardFault</td><td class="m">−1 (고정)</td><td class="m">0x0C</td><td>격상된 폴트, 벡터 읽기 버스 오류(⑥)</td></tr>
+<tr><td class="m">4 · 5 · 6</td><td>MemManage · BusFault · UsageFault</td><td>설정 가능</td><td class="m">0x10 · 0x14 · 0x18</td><td>메모리 보호 위반 · 버스 오류 · 명령 실행 오류</td></tr>
+<tr><td class="m">11</td><td>SVCall</td><td>설정 가능</td><td class="m">0x2C</td><td>SVC 명령</td></tr>
+<tr><td class="m">14 · 15</td><td>PendSV · SysTick</td><td>설정 가능</td><td class="m">0x38 · 0x3C</td><td>소프트웨어 요청 · SysTick이 0에 닿음(③)</td></tr>
+<tr><td class="m">16 +</td><td>IRQ 0, 1, …</td><td>설정 가능</td><td class="m">0x40 +</td><td>주변장치. 예: IRQ 5 = RCC(0x54)</td></tr>
+</table></div>
+<p>근거: PM0056 2.3.2 Table 16(<a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf#page=33">p.33~34</a>). RM0008 Table 63은 SVCall을 "System service call via SWI instruction"이라고 적는데, Cortex-M3의 명령 이름은 SVC이다(SWI는 옛 ARM 명령 이름).</p>
+
+<h3>⑤ NVIC 우선순위 판정: 누가 먼저, 누가 끼어드나</h3>
+<p>F103은 우선순위 필드 8비트 중 위 4비트만 쓴다. 그래서 값은 0~15이고, 0이 가장 급하다(RM0008 10.1, PM0056 2.3.5). AIRCR의 PRIGROUP은 이 4비트를 <b>그룹 우선순위</b>와 <b>서브 우선순위</b>로 나누는 위치를 정한다. AIRCR에 쓸 때는 위 16비트에 키 0x5FA를 함께 써야 하며, 아니면 쓰기가 무시된다(PM0056 4.4.5, <a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf#page=134">p.134</a>).</p>
+<div class="tablewrap"><table>
+<tr><th>PRIGROUP</th><th>PRI[7:4]</th><th>그룹 / 서브 비트</th><th>그룹 수 / 서브 수</th></tr>
+<tr><td class="m">0b011</td><td class="m">xxxx</td><td>4 / 0</td><td>16 / 1</td></tr>
+<tr><td class="m">0b100</td><td class="m">xxx.y</td><td>3 / 1</td><td>8 / 2</td></tr>
+<tr><td class="m">0b101</td><td class="m">xx.yy</td><td>2 / 2</td><td>4 / 4</td></tr>
+<tr><td class="m">0b110</td><td class="m">x.yyy</td><td>1 / 3</td><td>2 / 8</td></tr>
+<tr><td class="m">0b111</td><td class="m">.yyyy</td><td>0 / 4</td><td>1 / 16</td></tr>
+</table></div>
+<p>PM0056 Table 45(<a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf#page=135">p.135</a>)를 그대로 옮겼다. 0b000~0b010은 표에 없다(4비트만 구현하므로 0b011과 같은 결과일 것으로 보이지만 문서에 적혀 있지 않다). 규칙은 세 줄이다(PM0056 2.3.5·2.3.6).</p>
+<ul>
+  <li><b>선점</b>은 그룹 우선순위만으로 정한다. 실행 중인 예외보다 그룹 값이 <b>작아야</b> 끼어든다. 같으면 서브가 높아도 기다린다.</li>
+  <li><b>대기 중인 것끼리의 순서</b>는 그룹 → 서브 → 예외 번호가 작은 것 순이다.</li>
+  <li><b>마스크</b>: PRIMASK = 1이면 NMI와 HardFault를 뺀 모든 예외, BASEPRI ≠ 0이면 그 값 이상(덜 급한)의 예외, FAULTMASK = 1이면 NMI를 뺀 모든 예외가 막힌다. 막힌 요청은 대기 상태로 남는다(PM0056 2.1.3, <a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf#page=20">p.20~21</a>).</li>
+</ul>
+<figure class="diag"><svg viewBox="0 0 680 230" role="img" aria-label="NVIC 우선순위 판정의 등가 회로">
+<rect class="bx" x="10" y="20" width="160" height="34" rx="4"/><text class="tc" x="90" y="42">IRQ i: 대기 ∧ 허용</text>
+<rect class="bx" x="10" y="62" width="160" height="34" rx="4"/><text class="tc" x="90" y="84">IRQ j: 대기 ∧ 허용</text>
+<rect class="bx" x="10" y="104" width="160" height="34" rx="4"/><text class="tc" x="90" y="126">시스템 예외들</text>
+<line class="w" x1="170" y1="37" x2="200" y2="37"/><line class="w" x1="170" y1="79" x2="200" y2="79"/><line class="w" x1="170" y1="121" x2="200" y2="121"/>
+<rect class="bx hw" x="200" y="20" width="170" height="118" rx="4"/><text class="tc" x="285" y="48">우선순위 인코더</text><text class="sc" x="285" y="72">작은 그룹 값 먼저</text><text class="sc" x="285" y="90">같으면 작은 서브 값</text><text class="sc" x="285" y="108">같으면 작은 번호</text>
+<line class="w" x1="370" y1="79" x2="394" y2="79"/><polygon class="ah" points="400,79 392,74 392,84"/>
+<rect class="bx sel" x="400" y="40" width="140" height="78" rx="4"/><text class="tc" x="470" y="66">선점 판정</text><text class="sc" x="470" y="86">그룹 값 &lt; 현재</text><text class="sc" x="470" y="102">실행 우선순위?</text>
+<line class="w" x1="540" y1="62" x2="574" y2="62"/><polygon class="ah" points="580,62 572,57 572,67"/><text class="o" x="548" y="56">예</text>
+<rect class="bx flg" x="580" y="44" width="90" height="36" rx="4"/><text class="tc" x="625" y="67">예외 진입</text>
+<line class="wm" x1="540" y1="104" x2="574" y2="104"/><polygon class="ahm" points="580,104 572,99 572,109"/><text class="o" x="542" y="120">아니오</text>
+<rect class="bx" x="580" y="86" width="90" height="36" rx="4"/><text class="tc" x="625" y="109">대기 유지</text>
+<rect class="bx hw" x="200" y="164" width="170" height="44" rx="4"/><text class="tc" x="285" y="184">현재 실행 우선순위</text><text class="sc" x="285" y="200">처리 중인 예외의 그룹</text>
+<polyline class="wm" points="285,164 285,148 415,148 415,124"/><polygon class="ahm" points="415,118 410,126 420,126"/>
+<rect class="bx sel" x="430" y="164" width="140" height="44" rx="4"/><text class="tc" x="500" y="184">PRIMASK·BASEPRI</text><text class="sc" x="500" y="200">문턱을 높인다</text>
+<line class="wc" x1="500" y1="164" x2="500" y2="124"/><polygon class="ahc" points="500,118 495,126 505,126"/>
+</svg><figcaption><span class="eqv">등가 모델</span> NVIC 내부 회로는 문서에 없다. PM0056 2.3.5~2.3.7의 규칙을 "대기 ∧ 허용인 요청 중 최솟값을 고르는 우선순위 인코더 + 현재 실행 우선순위와의 비교기"로 옮겼다. 마스크 레지스터는 비교 문턱을 끌어올리는 역할이다.</figcaption></figure>
+
+<div class="sim" id="nvsim">
+  <div class="subhead">판정기: 두 인터럽트 A, B의 순서와 선점</div>
+  <div class="ctl">
+    <div><label for="npg">PRIGROUP</label><select id="npg"><option value="3">0b011 (그룹 4 / 서브 0)</option><option value="4">0b100 (그룹 3 / 서브 1)</option><option value="5" selected>0b101 (그룹 2 / 서브 2)</option><option value="6">0b110 (그룹 1 / 서브 3)</option><option value="7">0b111 (그룹 0 / 서브 4)</option></select></div>
+    <div><label for="naq">A의 IRQ 번호</label><input id="naq" type="number" min="0" max="67" value="28"></div>
+    <div><label for="nap">A의 우선순위 값 (0~15)</label><select id="nap"></select></div>
+    <div><label for="nbq">B의 IRQ 번호</label><input id="nbq" type="number" min="0" max="67" value="29"></div>
+    <div><label for="nbp">B의 우선순위 값 (0~15)</label><select id="nbp"></select></div>
+  </div>
+  <div class="regs">
+    <div class="stat"><div class="k">A: 그룹 / 서브 (IP 바이트)</div><div class="v" id="n_a">-</div></div>
+    <div class="stat"><div class="k">B: 그룹 / 서브 (IP 바이트)</div><div class="v" id="n_b">-</div></div>
+    <div class="stat"><div class="k">A 처리 중 B가 오면</div><div class="v" id="n_pre">-</div></div>
+    <div class="stat"><div class="k">둘 다 대기 중이면 먼저</div><div class="v" id="n_first">-</div></div>
+  </div>
+  <p class="note" id="n_note"></p>
+</div>
+
+<h3>⑥ 폴트와 격상: 처리할 수 없으면 HardFault로</h3>
+<p>폴트는 "명령이 실패했다"는 사건이다. Cortex-M3는 원인별로 MemManage(메모리 보호), BusFault(버스 오류), UsageFault(정의되지 않은 명령, 잘못된 상태, 0 나누기, 비정렬 접근)를 나눈다. 0 나누기와 비정렬 접근은 SCB_CCR의 DIV_0_TRP·UNALIGN_TRP를 켜야 폴트가 된다(끄면 0 나누기는 몫 0을 돌려준다, PM0056 4.4.7). 세 폴트는 우선순위를 바꿀 수 있고 SHCSR의 USGFAULTENA·BUSFAULTENA·MEMFAULTENA로 켜야 각자의 처리기로 간다. 다음 경우에는 <b>HardFault로 격상</b>된다(PM0056 2.4.2, <a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf#page=40">p.40</a>).</p>
+<ul>
+  <li>해당 폴트 처리기가 꺼져 있다.</li>
+  <li>폴트 처리기가 자기와 같은 종류의 폴트를 다시 일으켰다(자기 자신을 선점할 수 없으므로).</li>
+  <li>예외 처리기가 자기보다 우선순위가 같거나 낮은 폴트를 일으켰다.</li>
+</ul>
+<p>격상되면 HFSR의 FORCED가 1이 된다. 벡터 테이블을 읽다가 버스 오류가 나면 VECTTBL이 1이 되고 항상 HardFault로 간다. 원래 원인은 CFSR에 남아 있으므로, HardFault 처리기에서도 CFSR을 읽으면 무슨 일이 있었는지 알 수 있다. 예외: 버스 폴트 처리기에 들어가며 스택에 쓰다가 난 버스 폴트는 격상되지 않는다. HardFault나 NMI 처리 중에 또 HardFault가 나면 코어는 잠금(lockup) 상태로 멈추고, 리셋이나 NMI로만 빠져나온다(2.4.4, p.41).</p>
+<figure class="src"><div class="img"><a href="img/PM0056_Fig20_p142.png"><img src="img/PM0056_Fig20_p142.png" alt="CFSR 부분 레지스터" width="1150" height="252" loading="lazy"></a></div>
+<figcaption>CFSR은 32비트 하나에 세 폴트의 상태 레지스터를 이어 붙였다. 위 16비트 UFSR(UsageFault), 다음 8비트 BFSR(BusFault), 아래 8비트 MMFSR(MemManage)이다. 바이트·하프워드 단위로 따로 읽을 수 있다(MMFSR 0xE000 ED28, BFSR 0xE000 ED29, UFSR 0xE000 ED2A). BFSR의 BFARVALID가 1일 때만 BFAR의 주소가 유효하다(PM0056 4.4.10).
+<span class="cite">출처: <a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf#page=142">PM0056 Rev 7, p.142</a>, Figure 20. CFSR subregisters (위쪽 구조도만 실음)</span></figcaption></figure>
+<p>폴트 정보를 읽는 두 번째 단서는 스택 프레임이다. 정밀(precise) 폴트에서는 스택에 저장된 PC가 폴트를 낸 명령을 가리킨다(DIVBYZERO, PRECISERR 설명, p.142~143). 부정밀(imprecise) 버스 오류는 비동기 폴트여서 BFAR에 주소가 남지 않고, 저장된 PC도 원인 명령과 무관하다(IMPRECISERR 설명, p.143).</p>
+
+<h3>⑦ 리셋도 사건이다</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig7_p91.png"><img src="img/RM0008_Fig7_p91.png" alt="리셋 회로" width="1156" height="429" loading="lazy"></a></div>
+<figcaption>내부 리셋 원인(WWDG, IWDG, 전원, 소프트웨어, 저전력 관리)은 OR 게이트로 모여 펄스 발생기(최소 20 µs)를 거쳐 NRST 핀을 Low로 끌어내린다. NRST 핀은 내부 풀업 R<sub>PU</sub>를 가진 양방향 핀이어서, 바깥에서 누르는 외부 리셋도 같은 선을 탄다. 그 선이 슈미트 트리거와 필터를 지나 시스템 리셋이 된다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=91">RM0008 Rev 21, p.91</a>, Figure 7. Simplified diagram of the reset circuit</span></figcaption></figure>
+<p>어떤 원인으로 리셋되었는지는 RCC_CSR의 플래그 LPWRRSTF, WWDGRSTF, IWDGRSTF, SFTRSTF, PORRSTF, PINRSTF가 알려 준다. 이 플래그는 시스템 리셋으로는 지워지지 않고 전원 리셋으로만 지워지며, 소프트웨어는 RMVF에 1을 써서 지운다(RM0008 7.3.10, <a href="../../Docs/RM0008_Reference_manual.pdf#page=119">p.119~120</a>). 소프트웨어 리셋은 AIRCR의 SYSRESETREQ에 1을 써서 일으킨다(RM0008 7.1.1, PM0056 4.4.5). 리셋이 풀리면 SYSCLK는 HSI이고, BOOT 핀이 SYSCLK 네 번째 상승 에지에서 래치된 뒤 CPU가 0x0000 0000에서 스택 포인터 초기값을, 0x0000 0004에서 리셋 벡터를 읽는다(RM0008 3.4, <a href="../../Docs/RM0008_Reference_manual.pdf#page=61">p.61</a>). 워치독 리셋과 저전력 모드는 <a href="../09_WatchDog_Sleep/09_WatchDog_Sleep%20교안.html">09_WatchDog_Sleep 상위 교안</a>에서 이어진다.</p>
+</section>
+
+<!-- ============================================================ 7 -->
+<section id="s7">
+<h2>7. 동작 시나리오 추적</h2>
+<h3>시나리오 ① 전원 투입에서 72 MHz까지</h3>
+<ol class="flow">
+  <li><span class="n">1</span><div class="tx"><b>전원 리셋 해제</b><span>VDD가 POR 문턱(상승 시 약 1.92 V)을 넘고 리셋 지연(전형 2.5 ms)이 지나면 리셋이 풀린다(DS5319 Table 11, <a href="../../Docs/Datasheet_stm32f103.pdf#page=39">p.39</a>). 이때 SYSCLK = HSI 8 MHz, 분주 모두 1, LATENCY = 0, 프리페치 켬이다.</span></div></li>
+  <li><span class="n">2</span><div class="tx"><b>BOOT 핀 래치 → 벡터 읽기</b><span>SYSCLK 네 번째 상승 에지에서 BOOT 핀을 래치하고, 0x0000 0000의 스택 포인터 초기값과 0x0000 0004의 리셋 벡터를 읽어 실행을 시작한다(RM0008 3.4).</span></div></li>
+  <li><span class="n">3</span><div class="tx"><b>HSEON = 1 → HSERDY = 1 기다림</b><span>수정이 안정될 때까지 약 2 ms(전형값). 그동안 CPU는 HSI로 계속 돈다.</span></div></li>
+  <li><span class="n">4</span><div class="tx"><b>PLL 설정 (PLLON = 0인 상태에서) → PLLON = 1 → PLLRDY = 1 기다림</b><span>PLLSRC = HSE, PLLMUL = ×9. 잠금은 최대 200 µs.</span></div></li>
+  <li><span class="n">5</span><div class="tx"><b>LATENCY = 2, PPRE1 = ÷2</b><span>SYSCLK가 72 MHz가 되기 <b>전에</b> Flash 대기와 APB1 한계를 맞춘다.</span></div></li>
+  <li><span class="n">6</span><div class="tx"><b>SW = 10 → SWS = 10 확인</b><span>SWS가 바뀐 뒤부터 SYSCLK = 72 MHz이다. 이후 SysTick RELOAD, 보레이트 등 클럭에 기대는 설정을 새 클럭에 맞춰 다시 계산한다.</span></div></li>
+</ol>
+<figure class="diag"><svg viewBox="0 0 680 316" role="img" aria-label="HSI에서 HSE·PLL 72 MHz로 올라가는 타이밍">
+<text class="s" x="8" y="32">리셋(NRST)</text><polyline class="sig" points="130,36 160,36 160,20 670,20"/>
+<text class="s" x="8" y="62">HSEON</text><polyline class="sig3" points="130,66 200,66 200,50 670,50"/>
+<text class="s" x="8" y="92">HSERDY</text><polyline class="sig2" points="130,96 300,96 300,80 670,80"/>
+<text class="s" x="8" y="122">PLLON</text><polyline class="sig3" points="130,126 350,126 350,110 670,110"/>
+<text class="o" x="262" y="106">PLLSRC·PLLMUL</text>
+<text class="s" x="8" y="152">PLLRDY</text><polyline class="sig2" points="130,156 430,156 430,140 670,140"/>
+<text class="s" x="8" y="182">LATENCY</text>
+<polygon class="bx" points="130,178 134,170 456,170 460,178 456,186 134,186"/><text class="sc" x="295" y="182">0</text>
+<polygon class="bx sel" points="460,178 464,170 666,170 670,178 666,186 464,186"/><text class="sc" x="565" y="182">2</text>
+<text class="s" x="8" y="212">SW</text>
+<polygon class="bx" points="130,208 134,200 496,200 500,208 496,216 134,216"/><text class="sc" x="315" y="212">00 (HSI)</text>
+<polygon class="bx sel" points="500,208 504,200 666,200 670,208 666,216 504,216"/><text class="sc" x="585" y="212">10 (PLL)</text>
+<text class="s" x="8" y="242">SWS</text>
+<polygon class="bx" points="130,238 134,230 526,230 530,238 526,246 134,246"/><text class="sc" x="330" y="242">00</text>
+<polygon class="bx flg" points="530,238 534,230 666,230 670,238 666,246 534,246"/><text class="sc" x="600" y="242">10</text>
+<text class="s" x="8" y="272">SYSCLK</text>
+<polygon class="bx" points="130,268 134,260 526,260 530,268 526,276 134,276"/><text class="sc" x="330" y="272">HSI 8 MHz</text>
+<polygon class="bx hw" points="530,268 534,260 666,260 670,268 666,276 534,276"/><text class="sc" x="600" y="272">PLL 72 MHz</text>
+<text class="o" x="244" y="76">①</text><text class="o" x="384" y="136">②</text><text class="o" x="508" y="226">③</text>
+<text class="s" x="130" y="296">① 약 2 ms (DS5319 Table 22)   ② 최대 200 µs (Table 27)</text>
+<text class="s" x="130" y="311">③ SW를 쓴 뒤 SWS가 바뀌기까지의 지연은 문서에 없다</text>
+</svg><figcaption><span class="eqv">등가 모델</span> 시간 축은 비례가 아니다. HSE 기동(①)은 PLL 잠금(②)보다 열 배쯤 길다. 각 단계에서 소프트웨어는 RDY·SWS를 읽어 다음 단계로 넘어간다. 기다리는 대신 HSERDYIE·PLLRDYIE를 켜서 RCC 인터럽트로 알림을 받을 수도 있다(6장 ①). ③의 길이와, 그 사이 SYSCLK가 어떻게 이어지는지는 문서에 없다. RCC_CFGR 접근 자체가 "클럭 전환 중에만" 1~2 대기가 붙는다는 기록만 있다(7.3.2, <a href="../../Docs/RM0008_Reference_manual.pdf#page=101">p.101</a>).</figcaption></figure>
+
+<h3>시나리오 ② 클럭을 내릴 때는 거꾸로</h3>
+<p>SW = 00(HSI)을 쓰고 SWS = 00을 확인한 뒤 PLL을 끄고, 마지막에 LATENCY를 낮춘다. PLL을 먼저 끄려 하면 PLLON 클리어가 막혀 있어(5장 보호 장치) 아무 일도 일어나지 않는다. LATENCY를 먼저 낮추면 아직 빠른 SYSCLK에서 Flash를 너무 빨리 읽는다. 04번 예제가 이 두 방향을 버튼으로 번갈아 실행한다.</p>
+
+<h3>시나리오 ③ 72 MHz로 도는 중에 수정이 멈춘다</h3>
+<ol class="flow">
+  <li><span class="n">1</span><div class="tx"><b>CSS가 HSE 끊김을 감지</b><span>CSSON = 1이고 HSE가 준비된 뒤라야 감시 중이다.</span></div></li>
+  <li><span class="n">2</span><div class="tx"><b>하드웨어 조치: HSE 끔, SW·SWS → HSI, PLL 끔</b><span>SYSCLK는 72 MHz에서 8 MHz로 떨어진다. 이 순간부터 보레이트, 타이머 주기, SysTick 주기가 모두 1/9이 된다. LATENCY는 2 그대로이므로 느려도 안전하다.</span></div></li>
+  <li><span class="n">3</span><div class="tx"><b>CSSF = 1 → NMI, 동시에 TIM1 브레이크</b><span>고급 타이머의 출력이 안전 상태로 꺼진다(모터 구동 등에서 중요).</span></div></li>
+  <li><span class="n">4</span><div class="tx"><b>NMI 처리기: CSSC = 1로 CSSF를 지우고, 비상 동작</b><span>지우지 않으면 NMI가 끝없이 반복된다(RM0008 7.2.7 주석). 그 뒤 HSI 기준으로 클럭을 다시 짜거나 안전 정지한다.</span></div></li>
+</ol>
+
+<h3>시나리오 ④ 예외 진입, 테일 체이닝, 늦게 도착한 예외</h3>
+<figure class="diag"><svg viewBox="0 0 680 210" role="img" aria-label="두 인터럽트의 테일 체이닝 타임라인">
+<text class="s" x="8" y="32">IRQ A 대기</text><polyline class="sig2" points="130,36 180,36 180,20 250,20 250,36 670,36"/>
+<text class="s" x="8" y="68">IRQ B 대기</text><polyline class="sig2" points="130,72 300,72 300,56 410,56 410,72 670,72"/>
+<text class="s" x="8" y="117">CPU: 테일 체이닝</text>
+<rect class="bx" x="130" y="100" width="60" height="26"/><text class="tc" x="160" y="118">스레드</text>
+<rect class="bx hw" x="190" y="100" width="60" height="26"/><text class="tc" x="220" y="118">저장</text>
+<rect class="bx isr" x="250" y="100" width="130" height="26"/><text class="tc" x="315" y="118">ISR A</text>
+<rect class="bx sel" x="380" y="100" width="30" height="26"/><text class="tc" x="395" y="118">전환</text>
+<rect class="bx isr" x="410" y="100" width="110" height="26"/><text class="tc" x="465" y="118">ISR B</text>
+<rect class="bx hw" x="520" y="100" width="60" height="26"/><text class="tc" x="550" y="118">복원</text>
+<rect class="bx" x="580" y="100" width="90" height="26"/><text class="tc" x="625" y="118">스레드</text>
+<text class="s" x="8" y="167">CPU: 없다고 가정</text>
+<rect class="bx" x="130" y="150" width="60" height="26"/><text class="tc" x="160" y="168">스레드</text>
+<rect class="bx hw" x="190" y="150" width="60" height="26"/><text class="tc" x="220" y="168">저장</text>
+<rect class="bx isr" x="250" y="150" width="130" height="26"/><text class="tc" x="315" y="168">ISR A</text>
+<rect class="bx hw" x="380" y="150" width="50" height="26"/><text class="tc" x="405" y="168">복원</text>
+<rect class="bx hw" x="430" y="150" width="50" height="26"/><text class="tc" x="455" y="168">저장</text>
+<rect class="bx isr" x="480" y="150" width="110" height="26"/><text class="tc" x="535" y="168">ISR B</text>
+<rect class="bx hw" x="590" y="150" width="60" height="26"/><text class="tc" x="620" y="168">복원</text>
+<text class="s" x="130" y="200">B는 A와 같은 그룹이라 A가 끝날 때까지 대기 → 복원·재저장 없이 바로 B로</text>
+</svg><figcaption><span class="eqv">등가 모델</span> PM0056 2.3.7(<a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf#page=37">p.37~38</a>)의 정의를 시간 축에 놓았다. 예외에 들어갈 때 하드웨어는 R0~R3, R12, LR, 복귀 주소(PC), xPSR 8워드를 스택에 쌓고(스태킹), 동시에 벡터 테이블에서 처리기 주소를 읽는다. LR에는 EXC_RETURN 값(0xFFFF FFF1·F9·FD)이 들어가고, 처리기가 이 값을 PC에 넣는 순간이 "복귀하라"는 신호이다. 처리기가 끝날 때 조건을 만족하는 대기 예외가 있으면 스택 복원을 건너뛰고 곧장 다음 처리기로 간다(테일 체이닝). 블록 길이는 개념을 보이기 위한 것이다. 진입 지연, 전환 시간 같은 사이클 수는 다섯 문서 어디에도 없다.</figcaption></figure>
+<p><b>늦게 도착한 예외(late-arriving)</b>: A를 위해 스태킹하는 도중에 더 급한 C가 오면, 코어는 스태킹을 그대로 계속하면서 벡터만 C의 것으로 바꿔 읽는다. 저장할 내용이 같기 때문이다. C가 끝나면 테일 체이닝 규칙에 따라 A로 넘어간다. 이 늦은 도착은 "원래 예외 처리기의 첫 명령이 실행 단계에 들어가기 전까지" 받아들여진다(PM0056 2.3.7). 15번 예제는 소프트웨어로 대기 비트를 세워 이 순서들을 기록한다.</p>
+</section>
+
+<!-- ============================================================ 8 -->
+<section id="s8">
+<h2>8. 설계상 한계와 이유</h2>
+<div class="tablewrap"><table>
+<tr><th>설계 선택</th><th>얻은 것</th><th>감수한 것</th><th>근거</th></tr>
+<tr><td>리셋 후 HSI로 출발</td><td>1~2 µs 만에 실행 시작, 외부 부품 없이도 동작</td><td>정확도 −2~+2.5 %. USB에는 못 쓰고, UART 허용 오차(약 3 %)의 상당 부분을 혼자 쓴다</td><td>DS5319 Table 24, 02_USART 교안 4장</td></tr>
+<tr><td>HSI는 ÷2 뒤에만 PLL로</td><td>PLL 입력 범위 맞추기</td><td>HSI만으로는 최대 64 MHz. 72 MHz는 HSE가 있어야 한다</td><td>RM0008 Figure 8 주석 1</td></tr>
+<tr><td>APB1은 최대 36 MHz</td><td>저속 주변장치 묶음의 전력·배선 절약</td><td>APB1 레지스터 접근이 느리다. 타이머는 ×2 규칙으로 보정하지만 USART2/3, I2C, SPI2의 입력 클럭은 절반이다</td><td>RM0008 3.1, p.94</td></tr>
+<tr><td>Flash 대기 사이클</td><td>느린 Flash로도 72 MHz CPU</td><td>48 MHz 초과에서 2 대기. 프리페치가 직선 코드는 숨기지만 분기마다 대기가 드러난다</td><td>RM0008 3.3.3</td></tr>
+<tr><td>PLL 설정은 PLL이 꺼져 있을 때만</td><td>도는 중 출력이 튀지 않음</td><td>배수를 바꾸려면 SYSCLK를 HSI로 옮기고 PLL을 껐다 켜야 한다(잠금 최대 200 µs)</td><td>RM0008 7.3.2, DS5319 Table 27</td></tr>
+<tr><td>RTCSEL은 한 번 정하면 고정</td><td>RTC 시계가 실수로 바뀌지 않음</td><td>바꾸려면 백업 영역 전체를 리셋해야 한다</td><td>RM0008 7.2.8</td></tr>
+<tr><td>MCO는 PLL/2, SYSCLK ≤ 50 MHz</td><td>핀 속도 한계 안에서 관찰</td><td>72 MHz SYSCLK는 그대로 못 내보낸다. 출처 전환 때 잘린 사이클</td><td>RM0008 7.3.2 MCO</td></tr>
+<tr><td>CSS는 HSE만 감시, NMI로 알림</td><td>주 클럭 고장에서 자동 복구</td><td>NMI 처리기에서 CSSF를 안 지우면 NMI가 무한 반복. LSE 고장은 이 장치가 보지 않는다</td><td>RM0008 7.2.7</td></tr>
+<tr><td>우선순위 4비트</td><td>NVIC 하드웨어 절약</td><td>값 16단계뿐. 그룹을 늘리면 서브가 줄어든다. 서브는 선점하지 못한다</td><td>RM0008 10.1, PM0056 Table 45</td></tr>
+<tr><td>SysTick 24비트</td><td>코어마다 같은 틱 타이머</td><td>HCLK 72 MHz 직결 시 최장 약 233 ms. 프로세서 클럭이 멈추는 저전력 모드에서 함께 멈춘다</td><td>PM0056 4.5</td></tr>
+<tr><td>클럭 게이트 기본값 닫힘</td><td>쓰지 않는 장치 전력 0</td><td>게이트를 안 열고 레지스터를 쓰면 아무 오류 없이 무시되는 것처럼 보이고 읽으면 0이다</td><td>RM0008 3.1, 7.3.6 주석</td></tr>
+<tr><td colspan="4"><b>정오표 ES096 Rev 15</b></td></tr>
+<tr><td>2.2.1 WFI/WFE 뒤 Flash 읽기</td><td colspan="2">2 대기 + 프리페치에서 Sleep 중 FLITF 클럭을 끄면, 아주 짧은 Sleep 뒤 명령 인출이 깨질 수 있다. 회피: RCC_AHBENR.FLITFEN을 리셋 값(1)대로 둔다</td><td><a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=7">p.7</a></td></tr>
+<tr><td>2.2.2 디버그 레지스터를 사용자가 못 읽음</td><td colspan="2">DBGMCU_IDCODE, DBGMCU_CR은 디버그 모드에서만 읽히고 사용자 소프트웨어에는 0x00이 돌아온다. 회피책 없음</td><td><a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=7">p.7</a></td></tr>
+<tr><td>2.2.3 Stop 모드 디버그와 SysTick</td><td colspan="2">Stop 모드를 디버그하는 동안 SysTick 인터럽트가 켜져 있으면 Stop에서 깨어난다. 회피: SysTick 인터럽트를 끈다</td><td><a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=7">p.7</a></td></tr>
+<tr><td>2.2.6 LSE 기동</td><td colspan="2">코팅 없는 기판, 습한 환경에서 LSE가 처음 기동하지 않을 수 있다. 회피: 16~22 MΩ 병렬 되먹임 저항 추가</td><td><a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=8">p.8</a></td></tr>
+<tr><td>2.2.12 LSI 안정 시간</td><td colspan="2">LSIRDY가 선 직후에도 주파수가 규격 밖일 수 있다. 회피: 100 µs를 더 기다린다</td><td><a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=10">p.10</a></td></tr>
+<tr><td>2.1.3 SP로 직접 적재 중 인터럽트</td><td colspan="2">SP에 직접 읽어 들이는 명령이 인터럽트되면 복귀 후 한 번 더 실행되어 SP가 틀어질 수 있다. 손으로 쓴 어셈블리에서만 생긴다. 회피: 범용 레지스터로 읽은 뒤 SP로 옮긴다</td><td><a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=5">p.5~6</a></td></tr>
+<tr><td>2.1.4 SVC와 BusFault/MemManage 순서</td><td colspan="2">SVC 다음 명령의 인출이 폴트이면, 실행되지 않았어야 할 그 명령 때문에 폴트 처리기가 먼저 불릴 수 있다. 회피: SVC 뒤에 NOP 등으로 간격</td><td><a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=6">p.6</a></td></tr>
+<tr><td>2.12.4 USB와 APB1 클럭</td><td colspan="2">APB1이 13 MHz보다 낮으면 USB 수신 바이트 수가 하나 적게 보고될 수 있다. 회피: APB1 ≥ 13 MHz</td><td><a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=24">p.24</a></td></tr>
+</table></div>
+</section>
+
+<!-- ============================================================ 9 -->
+<section id="s9">
+<h2>9. 이해 확인 문제</h2>
+<details><summary>Q1. HSE 8 MHz, PLLXTPRE ÷1, PLLMUL ×9, HPRE ÷1, PPRE1 ÷2, PPRE2 ÷1, ADCPRE ÷6이다. SYSCLK, PCLK1, PCLK2, TIM2 클럭, TIM1 클럭, ADCCLK, 필요한 LATENCY는?</summary><div class="ans">
+<p>SYSCLK = 8 × 9 = 72 MHz, HCLK = 72, PCLK1 = 36, PCLK2 = 72 MHz이다. TIM2는 APB1 분주가 1이 아니므로 2 × 36 = 72 MHz, TIM1은 APB2 분주가 1이므로 72 MHz이다. ADCCLK = 72 / 6 = 12 MHz(≤ 14 MHz). SYSCLK가 48 MHz를 넘으므로 LATENCY = 2이다. 4장 계산기의 기본값이 이 구성이다.</p></div></details>
+<details><summary>Q2. 외부 수정이 없는 보드에서 낼 수 있는 최대 SYSCLK는? 그 상태에서 USB를 쓸 수 있는가?</summary><div class="ans">
+<p>HSI는 ÷2 뒤에 PLL로 들어가므로 4 MHz × 16 = 64 MHz가 최대이다. HSI/2 × 12 = 48 MHz로 USBCLK 48 MHz를 숫자로는 만들 수 있지만, DS5319 Figure 2 주석 2와 2.3.20은 USB에 HSE와 PLL이 모두 필요하다고 적는다. HSI 정확도(최대 ±2.5 %)로는 USB 클럭 요건을 맞출 수 없기 때문으로 읽힌다. 쓸 수 없다.</p></div></details>
+<details><summary>Q3. PCLK2 = 72 MHz일 때 ADCPRE를 ÷4로 두면 무엇이 문제인가?</summary><div class="ans">
+<p>ADCCLK = 18 MHz로 DS5319 Table 47의 최대 14 MHz를 넘는다. ÷6(12 MHz) 이상이어야 한다. DS5319 Figure 2 주석 3이 "변환 시간 1 µs를 내려면 APB2가 14, 28, 56 MHz여야 한다"고 적는 이유도 14 MHz를 정확히 맞추기 위해서이다.</p></div></details>
+<details><summary>Q4. HCLK = 72 MHz에서 SysTick으로 1 ms 주기 인터럽트를 만들려 한다. CLKSOURCE = 0과 1 각각의 RELOAD는? 1 s 주기는 가능한가?</summary><div class="ans">
+<p>CLKSOURCE = 0이면 9 MHz이므로 N = 9000, RELOAD = 8999이다(STK_CALIB의 9000과 같다). CLKSOURCE = 1이면 72 MHz, N = 72 000, RELOAD = 71 999이다. 1 s는 CLKSOURCE = 0에서 N = 9 000 000이고 0xFF FFFF(16 777 215)보다 작으므로 RELOAD = 8 999 999로 가능하다. CLKSOURCE = 1에서는 72 000 000이 24비트를 넘어 불가능하다.</p></div></details>
+<details><summary>Q5. SYSCLK를 HSI에서 72 MHz PLL로 올리면서 LATENCY를 0으로 둔 채 SW를 바꿨다. 무슨 일이 생길 수 있는가? 반대로 내릴 때 LATENCY를 맨 먼저 0으로 바꾸면?</summary><div class="ans">
+<p>올릴 때: 72 MHz 한 주기(13.9 ns) 안에 Flash 읽기가 끝나지 않으므로 CPU가 아직 준비되지 않은 데이터를 명령으로 읽는다. 결과는 예측할 수 없고 폴트로 이어질 수 있다. 내릴 때 LATENCY를 먼저 낮추면 SYSCLK가 아직 72 MHz인 동안 같은 문제가 생긴다. 규칙은 "대기는 넉넉히 먼저 늘리고, 줄이는 것은 마지막에"이다(RM0008 3.3.3).</p></div></details>
+<details><summary>Q6. PLLRDY = 0인데 SW에 10을 썼다. 즉시 무슨 일이 일어나는가? 소프트웨어는 무엇을 봐야 하는가?</summary><div class="ans">
+<p>전환은 PLL이 준비될 때까지 미뤄진다(RM0008 7.2.6). 그동안 SYSCLK는 이전 소스 그대로이다. SW는 요청일 뿐이므로 SWS가 10이 된 것을 확인해야 실제로 PLL로 도는 것이다.</p></div></details>
+<details><summary>Q7. PRIGROUP = 0b101이다. 우선순위 값이 A = 4(0b0100), B = 5(0b0101), C = 8(0b1000)이다. A 처리 중 B가 오면? A 처리 중 C가 오면? C 처리 중 A가 오면?</summary><div class="ans">
+<p>0b101은 위 2비트가 그룹, 아래 2비트가 서브이다. A = 그룹 1/서브 0, B = 그룹 1/서브 1, C = 그룹 2/서브 0이다. A 처리 중 B: 그룹이 같아 선점하지 못하고 대기한다(서브는 선점과 무관). A 처리 중 C: C의 그룹 값이 더 크므로 대기한다. C 처리 중 A: A의 그룹 값 1 &lt; 2이므로 선점한다. 6장 판정기로 확인할 수 있다.</p></div></details>
+<details><summary>Q8. 우선순위가 모두 같은 IRQ 9, 8, 7을 이 순서로 대기시킨 뒤 PRIMASK를 풀었다. 실행 순서는? 처리기 사이에서 스택 복원이 일어나는가?</summary><div class="ans">
+<p>같은 우선순위면 예외 번호가 작은 것이 먼저이므로 7 → 8 → 9이다(PM0056 2.3.5). 하나가 끝날 때마다 다음 대기 예외가 진입 조건을 만족하므로 스택 복원 없이 테일 체이닝으로 넘어간다. 15번 예제의 실험 2가 이 결과를 기록한다.</p></div></details>
+<details><summary>Q9. CCR.DIV_0_TRP = 1이고 SHCSR.USGFAULTENA = 0인 상태에서 0으로 나눴다. 어느 처리기가 불리고, HFSR과 CFSR에는 무엇이 남는가?</summary><div class="ans">
+<p>UsageFault 처리기가 꺼져 있으므로 HardFault로 격상된다(PM0056 2.4.2). HFSR.FORCED = 1이고, CFSR의 UFSR 부분에 DIVBYZERO = 1이 남는다. 스택에 저장된 PC는 나눗셈 명령을 가리킨다.</p></div></details>
+<details><summary>Q10. HSE로 72 MHz를 쓰다가 수정 배선이 끊겼다. CPU가 NMI 처리기에서 빠져나오지 못한다. 원인과 해결은? 그 사이 UART는 어떻게 되었는가?</summary><div class="ans">
+<p>CSS가 HSE 고장을 잡아 SYSCLK를 HSI 8 MHz로 바꾸고 NMI를 걸었다. NMI 처리기가 RCC_CIR.CSSC에 1을 써서 CSSF를 지우지 않으면 NMI가 끝없이 반복된다(RM0008 7.2.7). 또 SYSCLK가 1/9로 떨어졌으므로 BRR을 다시 계산하지 않은 UART의 보레이트도 1/9이 되어 통신이 깨진다.</p></div></details>
+<details><summary>Q11. TIM2의 레지스터에 값을 쓰고 다시 읽었더니 0이 나왔다. 버스 오류도, 폴트도 없었다. 가장 먼저 의심할 것은?</summary><div class="ans">
+<p>RCC_APB1ENR의 TIM2 게이트가 닫혀 있는 것이다. 클럭이 꺼진 주변장치의 레지스터는 읽으면 0x0이다(RM0008 7.3.6 주석). 폴트가 나지 않으므로 알아채기 어렵다.</p></div></details>
+<details><summary>Q12. 사용자 프로그램에서 DBGMCU_IDCODE를 읽었더니 0이었다. 칩이 잘못된 것인가? 이 칩이 128 KB 제품인지 알고 싶다면 어디를 읽는가?</summary><div class="ans">
+<p>칩 결함이 아니라 알려진 제한이다. ES096 2.2.2에 따라 이 레지스터는 디버그 모드에서만 읽히고 사용자 소프트웨어에는 0x00이 돌아온다. Flash 크기는 전자 서명의 F_SIZE(0x1FFF F7E0)를 읽는다. 0x0080이면 128 KB이다(RM0008 30.1.1).</p></div></details>
+</section>
+
+<!-- ============================================================ 10 -->
+<section id="s10">
+<h2>10. 하부 예제 연결</h2>
+<p>각 예제가 이 교안의 어느 경로를 쓰는지 정리했다. 아직 예제별 교안이 없어 링크는 예제 폴더로 간다. 코드, 계층 비교, 배선은 각 예제의 README와 소스 주석에서 다룬다.</p>
+<div class="tablewrap"><table>
+<tr><th>예제</th><th>지나가는 경로</th><th>이 교안의 장</th></tr>
+<tr><td><a href="01_CoreRegisters_Instructions_Reg_c/">01_CoreRegisters_Instructions_Reg_c</a></td><td>코어 레지스터: R0~R12, SP(MSP/PSP), LR, PC, 조건 플래그, 조건부 실행 블록, 스택 쌓기와 꺼내기, 하드웨어 나눗셈</td><td><a href="#s3">3</a></td></tr>
+<tr><td><a href="02_MemoryMap_Reg_c/">02_MemoryMap_Reg_c</a></td><td>4 GB 주소 공간과 버스별 주소 블록, 메모리 맵 입출력, 리틀 엔디안</td><td><a href="#s3">3</a></td></tr>
+<tr><td><a href="03_ExceptionModel_VectorTable_Reg_c/">03_ExceptionModel_VectorTable_Reg_c</a></td><td>벡터 테이블 읽기, 예외 진입 때 자동으로 쌓이는 8워드, EXC_RETURN, SVC 예외</td><td><a href="#s6">6④</a>, <a href="#s7">7④</a></td></tr>
+<tr><td><a href="04_Clock_Config_Reg_c/">04_Clock_Config_Reg_c</a></td><td>HSI 8 MHz ↔ HSI/2 × 12 = 48 MHz 전환. 올릴 때 LATENCY(1 대기)·PPRE1 먼저, 내릴 때 역순. MCO로 SYSCLK 확인</td><td><a href="#s4">4</a>, <a href="#s5">5</a>, <a href="#s7">7①②</a></td></tr>
+<tr><td><a href="05_SysTick_Reg_c/">05_SysTick_Reg_c</a></td><td>HCLK 8 MHz를 그대로 받는 SysTick, RELOAD = 7999로 1 ms 예외, 틱 카운트 비교로 기다리지 않는 반복 작업</td><td><a href="#s4">4</a>, <a href="#s6">6③</a></td></tr>
+<tr><td><a href="06_NVIC_Priority_c/">06_NVIC_Priority_c</a></td><td>PRIGROUP = 0b101(그룹 2비트 + 서브 2비트), 긴 처리기와 짧은 처리기의 선점/서브 우선순위 비교, 진입 간격 측정</td><td><a href="#s6">6⑤</a></td></tr>
+<tr><td><a href="07_AFIO_Remap_Reg_c/">07_AFIO_Remap_Reg_c</a></td><td>AFIO 게이트를 먼저 열고 AFIO_MAPR 선택기로 디버그 포트 핀 일부를 GPIO로 돌리고 타이머 채널을 리맵</td><td><a href="#s5">5</a>, <a href="../01_GPIO/01_GPIO%20교안.html#s5">01_GPIO 5장</a></td></tr>
+<tr><td><a href="08_HardFault_Diagnosis_Reg_c/">08_HardFault_Diagnosis_Reg_c</a></td><td>SHCSR로 세부 폴트 처리기 허용, CCR 트랩(0 나누기, 비정렬), CFSR·HFSR·BFAR 해석, EXC_RETURN 비트 2로 MSP/PSP 판별, 저장된 PC</td><td><a href="#s6">6⑥</a></td></tr>
+<tr><td><a href="09_MCO_ClockOut_c/">09_MCO_ClockOut_c</a></td><td>MCO 선택기를 HSI → PLLCLK/2 → HSE로 돌려 핀에서 측정. HSE를 외부 클럭(HSEBYP)으로 받는 경우 포함</td><td><a href="#s6">6②</a>, <a href="#s5">5</a></td></tr>
+<tr><td><a href="10_DWT_Profiling_Reg_c/">10_DWT_Profiling_Reg_c</a></td><td>DWT 사이클 카운터로 연산별 실행 사이클 측정(FPU 없음, 64비트 나눗셈은 소프트웨어). 카운터 주소·폭은 다섯 문서에 없으므로 소스 주석 참고</td><td><a href="#s4">4</a></td></tr>
+<tr><td><a href="11_NonBlocking_StateMachine_c/">11_NonBlocking_StateMachine_c</a></td><td>SysTick 1 ms 틱 위에서 도는 신호등 상태기계와 "N회 연속 일치" 디바운스</td><td><a href="#s6">6③</a></td></tr>
+<tr><td><a href="12_DeviceInfo_UniqueID_Reg_c/">12_DeviceInfo_UniqueID_Reg_c</a></td><td>U_ID 96비트, F_SIZE, 코어 식별 레지스터, RCC_CSR 리셋 원인 플래그와 RMVF. 주의: 장치 ID 레지스터(DBGMCU_IDCODE)는 ES096 2.2.2에 따라 사용자 모드에서 0이 읽힐 수 있다</td><td><a href="#s3">3</a>, <a href="#s6">6⑦</a>, <a href="#s8">8</a></td></tr>
+<tr><td><a href="13_BusAccess_Latency_Reg_c/">13_BusAccess_Latency_Reg_c</a></td><td>SRAM·Flash·APB2·APB1 접근 사이클 차이, APB 다리의 8/16비트 → 32비트 복제, 비트 밴딩 별칭</td><td><a href="#s3">3</a></td></tr>
+<tr><td><a href="14_Clock_Gating_FlashWait_Reg_c/">14_Clock_Gating_FlashWait_Reg_c</a></td><td>게이트를 닫으면 읽기 0, 리셋 스위치로 초기화, LATENCY × 프리페치 조합별 실행 사이클(직선 코드 대 분기 코드)</td><td><a href="#s4">4</a>, <a href="#s5">5</a></td></tr>
+<tr><td><a href="15_NVIC_Pending_TailChain_Reg_c/">15_NVIC_Pending_TailChain_Reg_c</a></td><td>대기 비트로 IRQ를 직접 세워 번호 순서, 우선순위 순서, 선점, 테일 체이닝, BASEPRI 문턱, 서브 우선순위를 기록. README의 "최소 12사이클" 진입 지연은 다섯 문서에 없는 값이다</td><td><a href="#s6">6⑤</a>, <a href="#s7">7④</a></td></tr>
+<tr><td><a href="16_EXTI_Shared_PR_Reg_c/">16_EXTI_Shared_PR_Reg_c</a></td><td>EXTI 라인 10~15가 벡터 하나를 공유할 때 대기 레지스터로 라인 판별, 대기 비트를 지우는 시점, 접점 튐</td><td><a href="#s6">6⑤</a>, <a href="../01_GPIO/01_GPIO%20교안.html#s6">01_GPIO 6장</a></td></tr>
+</table></div>
+
+<div class="box ok">
+  <div class="label">정리</div>
+  <ul>
+    <li>클럭 트리는 발진기(HSI·HSE·LSI·LSE) → PLL(곱셈) → SW 선택기 → AHB·APB 분주기 → AND 게이트이다. SYSCLK·HCLK·PCLK2 ≤ 72 MHz, PCLK1 ≤ 36 MHz, ADCCLK ≤ 14 MHz, USB는 HSE 기반 48 MHz.</li>
+    <li>APB 분주가 1이 아니면 타이머 클럭은 PCLK의 2배이다. HSI만으로는 64 MHz가 최대이다.</li>
+    <li>클럭을 올릴 때는 LATENCY(SYSCLK 기준)와 APB1 분주를 먼저, 내릴 때는 마지막에 바꾼다. SW는 요청, SWS는 결과이다.</li>
+    <li>CSS는 HSE 고장 때 HSI로 되돌리고 NMI를 건다. CSSF를 지우지 않으면 NMI가 반복된다.</li>
+    <li>SysTick은 24비트 다운카운터, RELOAD = N − 1. NVIC는 그룹 값으로 선점을, 그룹 → 서브 → 번호 순으로 대기 순서를 정한다. 처리기가 끝날 때 대기 예외가 있으면 테일 체이닝한다.</li>
+    <li>처리할 수 없는 폴트는 HardFault로 격상되고(FORCED), 원인은 CFSR에 남는다.</li>
+  </ul>
+</div>
+<div class="nextprev"><a href="../07_DMA/07_DMA%20교안.html">← 07_DMA 상위 교안</a><a href="01_CoreRegisters_Instructions_Reg_c/">첫 예제: 01_CoreRegisters_Instructions_Reg_c →</a><a href="../09_WatchDog_Sleep/09_WatchDog_Sleep%20교안.html">다음 그룹: 09_WatchDog_Sleep 상위 교안 →</a></div>
+</section>
+
+<footer>
+  <p>그림 출처: STMicroelectronics RM0008 Rev 21, DS5319 Rev 19, PM0056 Rev 7(저장소 <code>Docs/</code>). 원본 그림은 PDF의 해당 쪽을 잘라 실었고(DS5319 Figure 2는 전체와 부분 세 장, PM0056 Figure 20은 위쪽 구조도만), 등가 모델 그림은 이 교안에서 새로 그렸다.</p>
+</footer>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  function r3(x){return Math.round(x*1000)/1000}
+  function fm(x){ if(!isFinite(x)) return "-"; return x>=1? r3(x).toLocaleString('ko-KR')+" MHz" : r3(x*1000).toLocaleString('ko-KR')+" kHz"; }
+  function on(ids,fn){ids.forEach(function(id){$(id).addEventListener("input",fn);$(id).addEventListener("change",fn)});}
+
+  /* ---------- 4장 클럭 트리 계산기 ---------- */
+  (function(){var s=$("cmul"); for(var m=2;m<=16;m++){var o=document.createElement("option"); o.value=m; o.textContent="×"+m; if(m===9) o.selected=true; s.appendChild(o);}})();
+  function calcC(){
+    var sw=$("csw").value, hse=+$("chse").value||0, byp=$("cbyp").value, src=$("csrc").value, xt=+$("cxt").value, mul=+$("cmul").value;
+    var hpre=+$("chpre").value, p1=+$("cp1").value, p2=+$("cp2").value, adcp=+$("cadc").value, usb=$("cusb").value, stk=+$("cstk").value, tick=+$("ctick").value;
+    var usbOn=usb!=="0", pllUsed=(sw==="pll")||usbOn, hseUsed=(sw==="hse")||(pllUsed&&src==="hse");
+    var pllin=(src==="hsi")?4:hse/xt, pll=pllin*mul;
+    var sys=(sw==="hsi")?8:((sw==="hse")?hse:pll);
+    var hclk=sys/hpre, pc1=hclk/p1, pc2=hclk/p2, t1=pc1*(p1===1?1:2), t2=pc2*(p2===1?1:2), adc=pc2/adcp;
+    var usbclk=usbOn?pll/(+usb):NaN, lat=sys<=24?0:(sys<=48?1:2);
+    $("c_pllin").textContent=pllUsed?fm(pllin):"(PLL 꺼짐)";
+    $("c_pll").textContent=pllUsed?fm(pll):"(PLL 꺼짐)";
+    $("c_sys").textContent=fm(sys); $("c_hclk").textContent=fm(hclk);
+    $("c_p1").textContent=fm(pc1); $("c_t1").textContent=fm(t1)+(p1===1?" (×1)":" (×2)");
+    $("c_p2").textContent=fm(pc2); $("c_t2").textContent=fm(t2)+(p2===1?" (×1)":" (×2)");
+    $("c_adc").textContent=fm(adc); $("c_usb").textContent=usbOn?fm(usbclk):"사용 안 함";
+    $("c_lat").textContent=lat+" ("+["0 대기","1 대기","2 대기"][lat]+")";
+    var L=[];
+    function chk(ok,msg){L.push([ok?"good":"bad",(ok?"통과":"위반")+": "+msg]);}
+    function info(msg){L.push(["",("참고")+": "+msg]);}
+    if(hseUsed){
+      if(byp==="xtal") chk(hse>=4&&hse<=16,"HSE 수정 "+r3(hse)+" MHz, 허용 4~16 MHz (DS5319 Table 22)");
+      else chk(hse>=1&&hse<=25,"HSE 외부 클럭 "+r3(hse)+" MHz, 허용 1~25 MHz (DS5319 Table 20)");
+    }
+    if(pllUsed){
+      chk(pllin>=1&&pllin<=25,"PLL 입력 "+fm(pllin)+", 허용 1~25 MHz (DS5319 Table 27)");
+      chk(pll>=16&&pll<=72,"PLL 출력 "+fm(pll)+", 허용 16~72 MHz (DS5319 Table 27)");
+    }
+    chk(sys<=72,"SYSCLK "+fm(sys)+" ≤ 72 MHz");
+    chk(pc1<=36,"PCLK1 "+fm(pc1)+" ≤ 36 MHz (DS5319 Table 9)");
+    chk(pc2<=72,"PCLK2 "+fm(pc2)+" ≤ 72 MHz (DS5319 Table 9)");
+    chk(adc>=0.6&&adc<=14,"ADCCLK "+fm(adc)+", 허용 0.6~14 MHz (DS5319 Table 47)");
+    if(usbOn){
+      chk(src==="hse","USB에는 HSE 기반 PLL이 필요하다 (DS5319 Figure 2 주석 2)");
+      chk(Math.abs(usbclk-48)<1e-9,"USBCLK "+fm(usbclk)+" = 48 MHz (RM0008 7.2.3)");
+      chk(pc1>=13,"USB 사용 시 APB1 "+fm(pc1)+" ≥ 13 MHz 권장 (ES096 2.12.4)");
+    }
+    if(hpre!==1) info("AHB 분주가 1이 아니므로 프리페치를 켜 둬야 한다 (RM0008 3.3.3)");
+    var hlf=(sys<=8)&&(sw!=="pll")&&(hpre===1);
+    info("반주기 접근(HLFCYA): "+(hlf?"쓸 수 있는 조건(8 MHz 이하, PLL 아님, AHB ÷1)":"쓸 수 없다")+" (RM0008 3.3.3)");
+    info("MCO로 SYSCLK 내보내기: "+(sys<=50?"가능":"불가, 50 MHz 초과")+(pllUsed?", MCO의 PLL 선택은 PLLCLK/2 = "+fm(pll/2):"")+" (RM0008 7.3.2)");
+    /* SysTick */
+    var fst=(stk===8?hclk/8:hclk)*1e6, N=fst*tick/1000, Ni=Math.round(N), rel=Ni-1, relTxt;
+    if(!(tick>0)){relTxt="-";}
+    else if(rel<1||rel>0xFFFFFF){relTxt="범위 밖"; L.push(["bad","위반: SysTick N = "+Ni.toLocaleString('ko-KR')+" 클럭, RELOAD는 1~16 777 215 (PM0056 4.5.2)"]);}
+    else{
+      relTxt=rel.toLocaleString('ko-KR');
+      if(Math.abs(N-Ni)>1e-6){var real=(rel+1)/fst*1000; L.push(["bad","위반: SysTick 클럭 "+fm(fst/1e6)+"로는 "+tick+" ms가 정수 클럭이 아니다. RELOAD "+rel+"이면 실제 "+r3(real)+" ms"]);}
+      else L.push(["good","통과: SysTick 클럭 "+fm(fst/1e6)+", N = "+Ni.toLocaleString('ko-KR')+", RELOAD = N − 1 = "+relTxt]);
+    }
+    $("c_rel").textContent=relTxt;
+    var ul=$("c_checks"); ul.innerHTML="";
+    L.forEach(function(x){var li=document.createElement("li"); var sp=document.createElement("span"); sp.className="verdict "+x[0]; sp.textContent=x[1]; li.appendChild(sp); ul.appendChild(li);});
+    $("c_note").textContent="LATENCY는 SYSCLK "+fm(sys)+" 기준이다(HCLK 아님). 0 대기 ≤ 24 MHz, 1 대기 ≤ 48 MHz, 2 대기 ≤ 72 MHz (RM0008 3.3.3). 대기를 더 크게 두는 것은 느릴 뿐 안전하다.";
+  }
+  on(["csw","chse","cbyp","csrc","cxt","cmul","chpre","cp1","cp2","cadc","cusb","cstk","ctick"],calcC);
+  calcC();
+
+  /* ---------- 6장 NVIC 판정기 ---------- */
+  ["nap","nbp"].forEach(function(id,k){var s=$(id); for(var v=0;v<16;v++){var o=document.createElement("option"); o.value=v; o.textContent=v+" (0b"+v.toString(2).padStart(4,"0")+")"; if(v===(k?4:8)) o.selected=true; s.appendChild(o);}});
+  function calcN(){
+    var pg=+$("npg").value, gb=7-pg, sb=4-gb, mask=(1<<sb)-1;
+    var qa=Math.max(0,Math.min(67,Math.floor(+$("naq").value||0))), qb=Math.max(0,Math.min(67,Math.floor(+$("nbq").value||0)));
+    var a=+$("nap").value, b=+$("nbp").value;
+    var ga=a>>sb, sa=a&mask, gB=b>>sb, sB=b&mask;
+    function ip(v){return "0x"+(v<<4).toString(16).toUpperCase().padStart(2,"0")}
+    $("n_a").textContent=ga+" / "+sa+" ("+ip(a)+")";
+    $("n_b").textContent=gB+" / "+sB+" ("+ip(b)+")";
+    var e=$("n_pre");
+    if(gB<ga){e.textContent="B가 선점한다"; e.className="v verdict good";}
+    else {e.textContent=(gB===ga?"B는 대기 (그룹이 같음)":"B는 대기 (그룹 값이 큼)"); e.className="v verdict bad";}
+    var first, why;
+    if(ga!==gB){first=ga<gB?"A":"B"; why="그룹 값이 작다";}
+    else if(sa!==sB){first=sa<sB?"A":"B"; why="그룹이 같고 서브 값이 작다";}
+    else if(qa!==qb){first=qa<qb?"A":"B"; why="그룹·서브가 같고 IRQ 번호가 작다";}
+    else {first="-"; why="같은 IRQ이다";}
+    $("n_first").textContent=first==="-"?"같은 IRQ":first+" ("+why+")";
+    $("n_note").textContent="PRIGROUP "+"0b"+pg.toString(2)+"은 우선순위 값 4비트 중 위 "+gb+"비트를 그룹, 아래 "+sb+"비트를 서브로 쓴다(PM0056 Table 45). IP 바이트는 값을 4비트 왼쪽으로 민 것이다(F103은 [7:4]만 구현). 선점은 그룹만 보고, 대기 순서는 그룹 → 서브 → 번호 순이다. IRQ 번호 칸은 Cortex-M3 공용 범위 0~67로 막아 두었다.";
+  }
+  on(["npg","naq","nap","nbq","nbp"],calcN);
+  calcN();
+})();
+</script>
+</body></html>

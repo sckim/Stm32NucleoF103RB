@@ -88,3 +88,7 @@ Docs/The Definitive Guide*.pdf
 
 # 용량이 커서(77MB) 저장소에 넣지 않는 문서. README는 st.com 링크로 연결한다.
 Docs/UM1718_STM32CubeMX_User_Manual.pdf
+
+# 학생용 안내서는 HTML 원본을 로컬에서만 관리하고, 저장소에는 PDF로 올린다
+/Git_개념과_기본사용법.html
+/Examples/실습자료_최신화.html

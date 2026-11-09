@@ -158,7 +158,11 @@ footer ul{max-width:none}
 <tr><td class="m">CCxS · CCxP · CCxE</td><td>Capture/Compare x Selection · Polarity · Enable</td><td>채널 방향(입력·출력)과 입력 선택 · 극성 · 채널 허용</td></tr>
 <tr><td class="m">ICxF · ICxPSC</td><td>Input Capture x Filter · Input Capture x Prescaler</td><td>입력 디지털 필터 · 캡처 분주(엣지 몇 번마다 캡처)</td></tr>
 <tr><td class="m">CCxIF · CCxOF</td><td>Capture/Compare x Interrupt Flag · Overcapture Flag</td><td>비교 일치·캡처 발생 · 읽기 전에 또 캡처됨</td></tr>
-<tr><td class="m">TIx · TIxFPy</td><td>Timer Input x · TIx Filtered, Polarity-selected, for channel y</td><td>타이머 입력 핀 신호 · 필터·극성 처리 뒤 채널 y로 가는 신호</td></tr>
+<tr><td class="m">TI / TIx</td><td>Timer Input (channel x)</td><td>채널 x의 <b>입력 신호선</b>. 채널 핀(TIMx_CHx)을 입력으로 쓸 때 핀 신호가 입력 필터로 가는 경로의 이름이다. 출력으로 쓰면 OCx라고 부른다. 타이머 블록 전체를 가리키는 TIM과 다르다(TIM = 타이머 장치, TIx = 그 장치의 채널 x 입력 단자). 예: TI1, TI2</td></tr>
+<tr><td class="m">TIxF</td><td>TIx Filtered</td><td>TIx를 디지털 입력 필터(ICxF)에 통과시킨 신호</td></tr>
+<tr><td class="m">TIxFPy</td><td>TIx Filtered, Polarity-selected, for channel y</td><td>TIxF에서 극성(CCxP)으로 상승·하강 엣지를 고른 뒤 채널 y로 보내는 신호. 예: TI1FP1(채널 1 입력 신호를 채널 1로), TI1FP2(채널 1 입력 신호를 채널 2로, PWM 입력 모드에서 쓴다)</td></tr>
+<tr><td class="m">TI1F_ED</td><td>TI1 Filtered, Edge Detector</td><td>필터링한 TI1의 상승·하강 엣지 어느 쪽이든 한 번 펄스가 나오는 신호. 트리거(TS) 선택지의 하나</td></tr>
+<tr><td class="m">TRC</td><td>(RM0008이 풀어 쓰지 않음)</td><td>슬레이브 모드 제어기에서 나와 캡처 입력(ICx)으로 가는 선(블록도의 "TRC (from slave mode controller)"). CCxS = 11이면 ICx가 TRC에 연결된다. 내부 트리거(ITRx)를 TS로 골라 두었을 때만 동작한다(RM0008 15.4.7)</td></tr>
 <tr><td class="m">ETR</td><td>External Trigger input</td><td>외부 트리거 핀 입력</td></tr>
 <tr><td class="m">TRGO · TRGI · ITRx</td><td>Trigger Output · Trigger Input · Internal Trigger x</td><td>다른 장치로 보내는 트리거 · 슬레이브가 받는 트리거 · 타이머끼리 잇는 내부 선</td></tr>
 <tr><td class="m">MMS · SMS · TS · MSM</td><td>Master Mode Selection · Slave Mode Selection · Trigger Selection · Master/Slave Mode</td><td>TRGO로 무엇을 보낼지 · 트리거로 무엇을 할지 · 어느 트리거를 받을지 · 동시 출발 보정</td></tr>
@@ -210,6 +214,12 @@ footer ul{max-width:none}
 <p>카운터 값과 미리 정한 수를 <b>일치 비교기</b>(CNT = CCR)에 넣으면, 같아지는 순간에 사건이 생긴다. 이 사건으로 핀을 세우거나(set), 내리거나(reset), 뒤집을(toggle) 수 있다. 이것이 <b>출력 비교</b>(OC, Output Compare)이다. 카운터가 시계라면 비교 레지스터는 알람 시각이다.</p>
 <p><b>크기 비교기</b>(CNT &lt; CCR)를 쓰면 카운터 한 바퀴 동안 앞부분은 1, 뒷부분은 0인 파형이 나온다. 이것이 <b>PWM</b>(Pulse Width Modulation, 펄스 폭 변조)이다. 주기는 카운터 길이(ARR+1)가 정하고, High 구간은 비교값(CCR)이 정한다.</p>
 <div class="eq">PWM 주기 = (ARR + 1) / f_CNT        듀티 = CCR / (ARR + 1)        (가장자리 정렬, PWM 모드 1)</div>
+<div class="box"><div class="label">계산 예</div>
+<p>타이머 클럭 64 MHz, PSC = 63이면 f_CNT = 64 MHz / (63 + 1) = 1 MHz이고, 카운트 하나가 1 µs이다.</p>
+<div class="eq">ARR = 999 →  PWM 주기 = (999 + 1) / 1 MHz = 1 000 µs = 1 ms   (PWM 주파수 1 kHz)
+CCR = 250 →  듀티 = 250 / 1 000 = 25 %   → 한 주기 1 ms 중 High 250 µs, Low 750 µs
+CCR = 750 →  듀티 75 %,   CCR = 0 → 항상 Low(0 %),   CCR ≥ 1 000(= ARR + 1) → 항상 High(100 %)</div>
+<p>카운터가 0, 1, …, 249인 250카운트 동안 CNT &lt; CCR이 참이라 High이고, 250부터 999까지 750카운트 동안 Low이다. 이렇게 CCR이 곧 High 구간의 카운트 수이므로, 듀티를 바꾸려면 CCR만 바꾸면 된다. CCR이 0이면 출력은 항상 0이고, CCR이 ARR보다 크면 항상 1이다(RM0008 15.3.9, <a href="../../Docs/RM0008_Reference_manual.pdf#page=388">p.388</a>). 같은 f_CNT에서 ARR을 99로 줄이면 주기는 100 µs(10 kHz)가 되고, CCR = 25가 25 %이다. 주파수는 10배가 되었지만 듀티를 1 % 단위로밖에 조절할 수 없다. 바로 아래 "분해능과 주파수의 맞바꿈"이 이 관계이다.</p></div>
 
 <h3>캡처: "그 일이 언제 일어났나"</h3>
 <p>반대 방향도 가능하다. 입력 핀에 엣지가 오는 순간 카운터 값을 레지스터에 <b>래치</b>하면, 그 사건의 타임스탬프가 남는다. 이것이 <b>입력 캡처</b>(IC, Input Capture)이다. 두 캡처값의 차가 주기이고, 상승·하강 엣지 캡처값의 차가 펄스 폭이다. 카운터가 한 바퀴 돌아 0으로 넘어가도, 차이를 16비트 부호 없는 뺄셈으로 구하면 한 번의 넘어감은 저절로 보정된다(모듈로 2<sup>16</sup> 산술). 같은 레지스터가 출력에서는 "이 시각에 이 일을 하라", 입력에서는 "그 일이 이 시각에 일어났다"는 뜻이 된다.</p>
@@ -219,7 +229,11 @@ footer ul{max-width:none}
 <p>카운터 클럭 f_CNT가 정해지면 PWM 주파수와 듀티 분해능은 서로 묶인다. 한 주기 안의 카운트 수가 곧 듀티의 단계 수이기 때문이다.</p>
 <div class="eq">듀티 단계 수 = ARR + 1 = f_CNT / f_PWM          분해능(비트) = log2(ARR + 1)
 예) f_CNT = 64 MHz:  1 kHz → 64 000단계(약 16비트),  20 kHz → 3 200단계(약 11.6비트),  1 MHz → 64단계(6비트)</div>
-<p>입력 캡처도 같다. f_CNT가 높으면 타임스탬프가 세밀하지만(1/f_CNT), 16비트 카운터가 금방 한 바퀴 돌아 잴 수 있는 가장 긴 간격(65 536/f_CNT)이 짧아진다.</p>
+<p>여기서 f_PWM은 만들려는 <b>PWM의 주파수</b>, 즉 1 / PWM 주기이다(최대 주기가 아니다). 위 식 "PWM 주기 = (ARR + 1) / f_CNT"를 뒤집은 것이다. 한 주기가 ARR + 1카운트로 이루어지므로 듀티는 0/(ARR+1), 1/(ARR+1), …, (ARR+1)/(ARR+1)처럼 1/(ARR+1) 단위로만 바꿀 수 있다. 예를 들어 f_CNT = 64 MHz에서 20 kHz PWM을 내려면 ARR + 1 = 64 000 000 / 20 000 = 3 200이므로, 듀티의 최소 변화 폭은 1/3 200 ≈ 0.03 %이다. 같은 f_CNT에서 PWM 주파수를 높일수록 한 주기 안의 카운트 수가 줄어 듀티를 거칠게만 조절할 수 있다.</p>
+<p>입력 캡처도 같은 맞바꿈이 있다. f_CNT가 높으면 타임스탬프가 세밀하다(분해능 1/f_CNT). 그러나 16비트 카운터는 65 536카운트마다 한 바퀴 돌기 때문에, 넘어감을 따로 세지 않고 두 캡처값의 뺄셈만으로 잴 수 있는 <b>가장 긴 간격은 65 536/f_CNT보다 짧아야 한다</b>. 이보다 긴 간격은 카운터가 두 바퀴 이상 돌아 차이값이 모호해진다. 즉 캡처할 수 있는 최대 시간이 짧아진다.</p>
+<div class="eq">f_CNT = 64 MHz →  분해능 15.6 ns,  최대 간격 65 536 / 64 MHz ≈ 1.02 ms
+f_CNT =  1 MHz →  분해능 1 µs,     최대 간격 65 536 / 1 MHz  ≈ 65.5 ms</div>
+<p>더 긴 간격을 재려면 분주기(PSC)를 키워 f_CNT를 낮추거나, 갱신 인터럽트로 넘어감 횟수를 따로 세어 2<sup>16</sup>배씩 더한다. 하부 예제 03_TIM_Overflow_Counter가 이렇게 16비트 카운터를 32비트 µs 시계로 늘린다.</p>
 
 <h3>RTC와 32.768 kHz</h3>
 <p>시계용 수정 진동자는 32 768 Hz = 2<sup>15</sup> Hz이다. 15비트 이진 카운터를 거치면 정확히 1 Hz가 나온다. 주파수가 낮아 소비 전력이 아주 작으므로 배터리로 몇 년씩 돌릴 수 있다. RTC는 이 1 Hz로 초 카운터를 올리고, 날짜·시각은 그 초 수에서 계산한다. 수정의 오차는 보통 ppm(백만분율) 단위로 말한다. 20 ppm이면 하루에 약 1.7초가 어긋난다.</p>
@@ -698,7 +712,7 @@ RTC:  f_TR_CLK = f_RTCCLK / (PRL + 1)                     (RM0008 18.4.3, p.489)
 <details><summary>Q6. f_CNT = 1 MHz, ARR = 0xFFFF에서 연속한 두 상승 엣지의 캡처값이 0xFF00, 0x0100이었다. 주기는? 이 방법이 틀리는 경우는?</summary><div class="ans">
 <p>16비트 부호 없는 뺄셈 0x0100 − 0xFF00 = 0x0200 = 512이므로 512 µs이다. 카운터가 그 사이 한 번 넘어간 것이 저절로 보정된다. 실제 주기가 65 536 µs보다 길면 넘침이 두 번 이상이라 구분할 수 없다. 이때는 넘침을 함께 세거나 PSC를 키운다.</p></div></details>
 <details><summary>Q7. 타이머 클럭 64 MHz, CKD = 00에서 ICxF = 0011과 0101은 각각 대략 몇 ns보다 짧은 펄스를 거르는가? 187.5 ns 폭 펄스는 각각 통과하는가?</summary><div class="ans">
-<p>0011은 f_SAMPLING = f_CK_INT = 64 MHz, N = 8이므로 약 125 ns, 0101은 f_DTS/2 = 32 MHz, N = 8이므로 약 250 ns이다(RM0008 15.4.7). 187.5 ns는 첫째는 통과하고 둘째에서는 걸린다. 예제 16의 측정이 이 계산과 같다. 경계 가까운 폭에서는 표본 위상에 따라 결과가 달라질 수 있다.</p></div></details>
+<p>0011은 f_SAMPLING = f_CK_INT = 64 MHz, N = 8이므로 약 125 ns, 0101은 f_DTS/2 = 32 MHz, N = 8이므로 약 250 ns이다(RM0008 15.4.7). CKD를 01(×2)로 바꾸면 f_DTS가 32 MHz로 낮아지므로 0101은 f_DTS/2 = 16 MHz, 약 500 ns로 넓어진다. 0011은 f_CK_INT로 표본화하므로 CKD와 무관하게 125 ns 그대로이다. 187.5 ns는 첫째는 통과하고 둘째에서는 걸린다. 예제 16의 측정이 이 계산과 같다. 경계 가까운 폭에서는 표본 위상에 따라 결과가 달라질 수 있다.</p></div></details>
 <details><summary>Q8. f_CNT = 1 MHz, PWM 모드 2 + 원 펄스, CCR1 = 2, ARR = 12이다. 지연과 펄스 폭은?</summary><div class="ans">
 <p>지연은 CNT 0, 1 동안이므로 2 µs이다. 활성 구간은 CNT = 2~12(양 끝 포함) 11카운트이므로 RM0008 15.3.10의 식(ARR − CCR1 + 1)으로 11 µs이다. 14장의 식(ARR − CCR1)을 따르면 10 µs가 되므로, 정확한 폭이 중요하면 측정으로 확인한다. 하부 예제 10_TIM_OnePulse_HCSR04_c는 이 계산에 따라 ARR을 11로 고쳐 (11 − 2 + 1) = 10 µs 펄스를 낸다.</p></div></details>
 <details><summary>Q9. LSE로 RTC를 돌리는데 PRL을 리셋값 그대로 두었다. 하루에 얼마나 어긋나는가? LSI(실제 30 kHz)에 PRL = 39 999를 쓰면 RTC의 1초는 실제 몇 초인가?</summary><div class="ans">
@@ -736,14 +750,28 @@ RTC:  f_TR_CLK = f_RTCCLK / (PRL + 1)                     (RM0008 18.4.3, p.489)
 </table></div>
 
 <div class="box ok">
-  <div class="label">정리</div>
+  <div class="label">정리 — 반드시 알아야 할 5가지</div>
+  <ol>
+    <li><b>타이머는 "클럭을 세는 카운터"이다.</b> 먼저 PSC(분주기)가 클럭을 느리게 만들고, 카운터가 0부터 ARR까지 센 뒤 다시 0으로 돌아간다.
+      <div class="eq">카운터 클럭 f_CNT = f_CK / (PSC + 1)          한 바퀴 시간 = (ARR + 1) / f_CNT</div>
+      예: 64 MHz, PSC = 63, ARR = 999 → f_CNT = 1 MHz(1카운트 = 1 µs), 한 바퀴 = 1000 µs = 1 ms. 이 1 ms마다 인터럽트를 받는 것이 주기 타이머이다.</li>
+    <li><b>같은 카운터로 세 가지 일을 한다.</b> 카운터 값을 비교값 CCR과 견주어 출력을 만들거나, 입력 핀의 엣지가 온 순간의 카운터 값을 기록한다.
+      <ul>
+        <li><b>출력 비교(OC)</b>: 카운터가 CCR과 같아지는 순간에 핀을 켜거나 끄거나 뒤집는다.</li>
+        <li><b>PWM</b>: 카운터가 CCR보다 작은 동안 High이다. <code>듀티 = CCR / (ARR + 1)</code>. 예: ARR = 999, CCR = 250이면 25 %이다.</li>
+        <li><b>입력 캡처(IC)</b>: 엣지가 온 순간의 카운터 값을 CCR에 저장한다. 두 값의 차가 두 엣지 사이의 시간(주기, 펄스 폭)이다.</li>
+      </ul></li>
+    <li><b>주파수를 높이면 듀티를 세밀하게 조절할 수 없다.</b> 한 주기의 카운트 수(ARR + 1)가 듀티의 단계 수이기 때문이다. 같은 f_CNT = 64 MHz에서 1 kHz PWM은 64 000단계, 20 kHz PWM은 3 200단계, 1 MHz PWM은 64단계이다. 입력 캡처는 반대로, f_CNT가 높으면 시간을 세밀하게 재지만 16비트 카운터가 한 바퀴 도는 시간(65 536 / f_CNT) 안의 간격만 잴 수 있다.</li>
+    <li><b>새 설정은 한 주기가 끝날 때 적용된다.</b> ARR과 CCR은 "대기 칸"에 먼저 쓰이고, 카운터가 한 바퀴를 마치는 순간(갱신 이벤트, UEV)에 실제 레지스터로 옮겨진다. 그래서 PWM 주기 도중에 값을 바꿔도 파형이 중간에 깨지지 않는다. 이 방식을 켜는 스위치가 ARPE(ARR용)와 OCxPE(CCR용)이다.</li>
+    <li><b>RTC는 1초를 세는 32비트 카운터이다.</b> 32.768 kHz 시계 수정(LSE)을 32768로 나누어 1초마다 1씩 센다. 분주값 PRL에 <code>0x7FFF</code>(= 32767)를 써야 정확히 1 Hz가 된다. 주 전원이 꺼져도 백업 전원(VBAT)이 있으면 계속 센다.</li>
+  </ol>
+  <div class="label" style="margin-top:14px">한 걸음 더 — 필요할 때 해당 장에서 찾아본다</div>
   <ul>
-    <li>타이머는 분주 카운터(PSC) + 모듈로 카운터(CNT, ARR) + 채널마다 비교기·캡처 래치이다. f_CNT = f_CK_PSC/(PSC+1), 갱신률 = f_CNT/(ARR+1).</li>
-    <li>APB 분주비가 1이 아니면 타이머 클럭은 APB 클럭의 두 배이다. TIM1은 APB2, TIM2~4는 APB1에 있다.</li>
-    <li>PSC는 늘, ARR·CCR은 ARPE·OCxPE로 이중 버퍼링된다. 새 값은 UEV, 즉 주기 경계에서 들어가므로 파형이 깨지지 않는다. UG도 UEV이며 URS = 0이면 UIF를 세운다.</li>
-    <li>같은 CCRx가 출력에서는 "그 시각에 하라", 입력에서는 "그 시각에 일어났다"이다. PWM은 크기 비교, OC는 일치 비교, IC는 엣지에 CNT를 래치하는 것이다. 래치가 한 칸이라 늦게 읽으면 CCxOF이다.</li>
-    <li>입력은 필터(N회 연속 일치 디바운서) → 엣지 → 극성 → MUX → 분주를 지나고, 슬레이브 제어기는 트리거로 카운터를 리셋·게이트·시작·클럭한다. TRGO는 다른 타이머와 ADC를 깨운다.</li>
-    <li>RTC는 RTCCLK ÷ (PRL+1) = 1 Hz로 32비트 초를 세는 백업 도메인 카운터이다. LSE + PRL 0x7FFF가 정확한 1 Hz이고, 읽기는 RSF, 쓰기는 RTOFF·CNF 절차를 따른다.</li>
+    <li><b>타이머 클럭 계산 주의</b>(4장): APB 분주비가 1이 아니면 타이머 클럭은 APB 클럭의 2배이다. TIM1은 APB2에, TIM2~TIM4는 APB1에 있다.</li>
+    <li><b>입력 필터</b>(5장): 핀 신호가 N번 연속 같은 값이어야 변화로 인정한다. 마이크로초 이하의 짧은 잡음 스파이크를 거르는 용도이다(버튼의 ms 단위 튐은 못 거른다).</li>
+    <li><b>캡처값을 늦게 읽으면</b>(7장): 저장 칸이 하나라 다음 엣지가 값을 덮어쓴다. 이때 CCxOF 플래그가 선다.</li>
+    <li><b>타이머끼리, 타이머와 ADC 연결</b>(6장): 한 타이머의 TRGO 신호로 다른 타이머나 ADC를 시작시킬 수 있다.</li>
+    <li><b>RTC 레지스터 읽고 쓰기</b>(5장): 읽기 전에는 RSF가 1이 될 때까지, 쓰기 전후에는 RTOFF와 CNF 절차를 지킨다.</li>
   </ul>
 </div>
 <div class="nextprev"><a href="../05_SPI_Communication/05_SPI_Communication%20교안.html">← 05_SPI_Communication 상위 교안</a><a href="01_TIM_TimeBase/01_TIM_TimeBase%20교안.html">첫 예제: 01_TIM_TimeBase →</a><a href="../07_DMA/07_DMA%20교안.html">다음 그룹: 07_DMA 상위 교안 →</a></div>
@@ -869,7 +897,8 @@ RTC:  f_TR_CLK = f_RTCCLK / (PRL + 1)                     (RM0008 18.4.3, p.489)
       $("fl_note").textContent="ICxF = 0000은 f_DTS로 표본화만 하고 필터는 쓰지 않는다(RM0008 15.4.7)."; return; }
     $("fl_n").textContent=t[2];
     $("fl_w").textContent="약 "+ftime(t[2]/fs);
-    $("fl_note").textContent="새 레벨이 표본 "+t[2]+"개 연속으로 보여야 전이로 인정된다. 통과하는 엣지도 약 "+ftime(t[2]/fs)+" 늦어진다. 경계 근처 폭에서 통과 여부는 표본 위상에 따라 달라질 수 있으며, 그 세부 동작은 문서에 없다.";
+    $("fl_note").textContent="새 레벨이 표본 "+t[2]+"개 연속으로 보여야 전이로 인정된다. 통과하는 엣지도 약 "+ftime(t[2]/fs)+" 늦어진다. 경계 근처 폭에서 통과 여부는 표본 위상에 따라 달라질 수 있으며, 그 세부 동작은 문서에 없다."+
+      (t[1]===0 ? " 이 설정(ICxF = "+t[0]+")은 표본 주파수가 f_CK_INT로 고정이라 CKD를 바꿔도 걸러 내는 폭이 변하지 않는다. CKD는 f_DTS만 바꾸고, f_DTS를 쓰는 ICxF = 0100 이상(f_DTS/2 ~ f_DTS/32)에서만 영향을 준다." : " 이 설정은 f_DTS를 분주해 표본화하므로 CKD를 키우면 f_DTS가 낮아져 걸러 내는 폭이 넓어진다.");
   }
   on(["fl_f","fl_ck","fl_ckd"],calcF); calcF();
 })();

@@ -2,7 +2,7 @@
 
 > 계층: **HAL** (STM32CubeMX 생성 프로젝트, `PCF8574_Output.ioc`). 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `03_PCF8574_LCD`의 것을 복사해 프로젝트 이름만 바꿨다.
 
-교안: [02_PCF8574_Output 교안.html](02_PCF8574_Output%20교안.html)
+예제설명: [02_PCF8574_Output 예제설명.html](02_PCF8574_Output%20예제설명.html)
 
 I2C 입출력 확장 IC **PCF8574**의 가장 기본 동작을 시험한다. I2C로 1바이트를 쓰면 그 비트가 그대로 핀 P7~P0에 나온다. 쓴 뒤 다시 읽어 실제 핀 레벨과 비교한다. 다음 예제 `03_PCF8574_LCD`는 이 원리로 문자 LCD를 구동한다.
 

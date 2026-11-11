@@ -4,7 +4,7 @@
 
 > CubeMX(`ADC_DMA_TimTrigger.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `01_USART_printf`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
 
-교안: [ADC 타이머 트리거 DMA 교안.html](ADC%20타이머%20트리거%20DMA%20교안.html) (짝 교안: [03_ADC_Multi/ADC 다채널 교안.html](../03_ADC_Multi/ADC%20다채널%20교안.html))
+예제설명: [ADC 타이머 트리거 DMA 예제설명.html](ADC%20타이머%20트리거%20DMA%20예제설명.html) (짝 예제설명: [03_ADC_Multi/ADC 다채널 예제설명.html](../03_ADC_Multi/ADC%20다채널%20예제설명.html))
 
 타이머가 정확한 주기(1kHz)로 ADC 변환을 시작시키고, DMA가 결과를 원형 버퍼에 저장한다. CPU는 버퍼가 반/전부 찼을 때만 개입한다.
 

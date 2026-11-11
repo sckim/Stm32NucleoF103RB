@@ -2,7 +2,7 @@
 
 > 계층: **HAL** (STM32CubeMX 생성 프로젝트) + 사용자 LCD 라이브러리
 
-교안: [03_PCF8574_LCD 교안.html](03_PCF8574_LCD%20교안.html)
+예제설명: [03_PCF8574_LCD 예제설명.html](03_PCF8574_LCD%20예제설명.html)
 
 PCF8574 I2C 입출력 확장 IC가 붙은 **문자 LCD(16x2)** 를 I2C로 제어한다. 시작 시 I2C 주소 스캐너도 실행한다.
 

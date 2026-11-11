@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>01_TIM_TimeBase 예제설명</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+
+/* Layout: 한 열 예제설명(최대 860px) — 문제 → 시퀀스 → 모드 비교 → 시뮬레이터 → HAL 흐름 → Vrefint → 코드 → 실험 → 문제 순서.
+   채널 색을 전 구간에서 고정한다: A0=파랑, A1=주황, A2=청록, Vrefint=보라. (링 버퍼/스택 예제설명과 같은 기본 토큰) */
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --surface2:#E7ECF0; --fg:#14222C; --muted:#52636F; --line:#CBD5DC;
+  --c0:#1D4ED8; --c0-soft:#DCE6FB; --c1:#C2410C; --c1-soft:#FDE6DA; --c2:#0F766E; --c2-soft:#D5F0EC; --c3:#7E22CE; --c3-soft:#EEDFFB;
+  --code-bg:#0F1B24; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#9A3412; --warn-bg:#FFF1E6; --ok:#166534; --ok-bg:#E4F5EA;
+  --font-body:"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.75;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:860px;margin:0 auto}
+header{padding-block:40px 8px}
+.kicker{font-family:var(--font-mono);font-size:13px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.25;margin:8px 0 12px;text-wrap:balance;font-weight:700}
+.lead{color:var(--muted);margin:0;max-width:62ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0;padding:0;list-style:none}
+nav.toc a{display:block;padding:6px 12px;border:1px solid var(--line);border-radius:6px;color:var(--fg);text-decoration:none;font-size:14px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--c0);outline:2px solid var(--c0);outline-offset:1px}
+section{margin-top:56px}
+h2{font-size:24px;line-height:1.35;margin:0 0 12px;text-wrap:balance;font-weight:700}
+h3{font-size:18px;margin:28px 0 8px;font-weight:700}
+p{margin:0 0 14px;max-width:68ch}
+ul,ol{margin:0 0 14px;padding-left:22px;max-width:68ch}
+li{margin-bottom:4px}
+code{font-family:var(--font-mono);font-size:.9em;background:var(--surface2);padding:1px 6px;border-radius:4px}
+.k0{color:var(--c0);font-weight:700} .k1{color:var(--c1);font-weight:700} .k2{color:var(--c2);font-weight:700} .k3{color:var(--c3);font-weight:700}
+.box{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:16px 18px;margin:16px 0}
+.box.warn{background:var(--warn-bg);border-color:var(--warn)} .box.ok{background:var(--ok-bg);border-color:var(--ok)}
+.box > :last-child{margin-bottom:0}
+.label{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.tablewrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:15px;background:var(--surface)}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--surface2);font-weight:700;white-space:nowrap}
+td.m,th.m{font-family:var(--font-mono);font-size:13.5px}
+td.n{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+
+/* block diagram */
+.diag{max-width:720px;margin:18px auto}
+.diag svg{display:block;width:100%;height:auto}
+#blk .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+#blk .bx.hot{stroke:var(--warn);stroke-width:2.5;fill:var(--warn-bg)}
+#blk .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+#blk .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+#blk .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+#blk .w0{stroke:var(--c0)} #blk .w1{stroke:var(--c1)} #blk .w2{stroke:var(--c2)} #blk .w3{stroke:var(--c3)}
+#blk .d0{fill:var(--c0)} #blk .d1{fill:var(--c1)} #blk .d2{fill:var(--c2)} #blk .d3{fill:var(--c3)}
+#blk .ah{fill:var(--muted)}
+
+/* flow */
+.flow{list-style:none;padding:0;margin:16px 0;display:grid;gap:0;max-width:none}
+.flow li{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:0;padding:0 0 14px;position:relative}
+.flow li:not(:last-child)::before{content:"";position:absolute;left:16px;top:34px;bottom:0;width:2px;background:var(--line)}
+.flow .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:14px;font-weight:600;background:var(--surface2);border:2px solid var(--line)}
+.flow li.hw .n{border-color:var(--c3);color:var(--c3)} .flow li.sw .n{border-color:var(--c0);color:var(--c0)}
+.flow .tx{min-width:0} .flow .tx b{display:block}
+.flow .tx span{color:var(--muted);font-size:14.5px}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:11.5px;padding:0 6px;border-radius:4px;margin-left:6px;vertical-align:1px}
+.tag.hw{background:var(--c3-soft);color:var(--c3)} .tag.sw{background:var(--c0-soft);color:var(--c0)}
+
+/* mode cards */
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:16px 0}
+.mode{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:14px 16px;min-width:0}
+.mode.pick{border:2px solid var(--ok)}
+.mode b{display:block;margin-bottom:2px}
+.mode .reg{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);display:block;margin-bottom:8px}
+.trk{display:flex;gap:3px;margin:8px 0 6px;flex-wrap:wrap}
+.trk span{font-family:var(--font-mono);font-size:11.5px;font-weight:600;padding:2px 6px;border-radius:4px;border:1px solid var(--line)}
+.trk .g{color:var(--muted);border-style:dashed;background:none}
+.trk .r0{background:var(--c0-soft);color:var(--c0);border-color:var(--c0)} .trk .r1{background:var(--c1-soft);color:var(--c1);border-color:var(--c1)}
+.trk .r2{background:var(--c2-soft);color:var(--c2);border-color:var(--c2)} .trk .r3{background:var(--c3-soft);color:var(--c3);border-color:var(--c3)}
+.trk .x{text-decoration:line-through;opacity:.55}
+.mode p{font-size:14.5px;margin:0}
+
+/* simulator */
+.sim{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:18px;margin:16px 0}
+.subhead{font-weight:700;margin:18px 0 6px;padding-top:14px;border-top:1px dashed var(--line)}
+.subhead:first-child{margin-top:0;padding-top:0;border-top:0}
+.ranks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+@media (max-width:560px){.ranks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.rk{border:2px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);min-width:0;position:relative}
+.rk .h{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.rk .c{font-weight:700;font-size:15px;line-height:1.35}
+.rk .p{font-family:var(--font-mono);font-size:11.5px;color:var(--muted)}
+.rk .v{font-family:var(--font-mono);font-size:13px;font-variant-numeric:tabular-nums;margin-top:4px}
+.rk.nx{box-shadow:0 0 0 3px var(--fg) inset}
+.rk.nx::after{content:"다음 트리거";position:absolute;top:-11px;right:8px;font-size:11px;font-weight:700;background:var(--fg);color:var(--bg);padding:0 6px;border-radius:4px}
+.rk.r0 .c{color:var(--c0)} .rk.r1 .c{color:var(--c1)} .rk.r2 .c{color:var(--c2)} .rk.r3 .c{color:var(--c3)}
+.rk.on.r0{background:var(--c0-soft);border-color:var(--c0)} .rk.on.r1{background:var(--c1-soft);border-color:var(--c1)}
+.rk.on.r2{background:var(--c2-soft);border-color:var(--c2)} .rk.on.r3{background:var(--c3-soft);border-color:var(--c3)}
+.regs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.stat{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.stat .k{font-size:12px;color:var(--muted);font-family:var(--font-mono)}
+.stat .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3;overflow-wrap:anywhere}
+.lamp{display:inline-block;padding:0 10px;border-radius:999px;font-size:15px;border:1px solid var(--line)}
+.lamp.on{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+.outs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+@media (max-width:560px){.outs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.oc{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.oc .k{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.oc .v{font-family:var(--font-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.oc .f{font-size:12.5px}
+.oc.bad{border:2px solid var(--warn);background:var(--warn-bg)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+button,select,input{font-family:inherit}
+button{font-size:15px;font-weight:700;padding:9px 14px;border-radius:6px;border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;min-height:44px}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+button.hw{border-color:var(--c3);color:var(--c3)} button.hw:hover{background:var(--c3-soft)}
+button.sw{border-color:var(--c0);color:var(--c0)} button.sw:hover{background:var(--c0-soft)}
+button.plain:hover{background:var(--surface2)}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 16px;margin:10px 0}
+.ctl label{display:block;font-size:14px;color:var(--muted)}
+.ctl label b{font-family:var(--font-mono);color:var(--fg);font-weight:600}
+.ctl select{font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl input[type=range]{width:100%;min-height:32px}
+.calc{font-family:var(--font-mono);font-size:13.5px;line-height:1.65;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-height:5.4em;white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0 0}
+.uart{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);color:var(--code-fg);border-radius:6px;padding:10px 12px;white-space:pre;overflow-x:auto;margin:8px 0 0;min-height:2.6em}
+.log{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:8px 0 0;max-height:7.5em;overflow:auto;white-space:pre-wrap}
+
+/* code */
+pre{background:var(--code-bg);color:var(--code-fg);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:0;font-family:var(--font-mono);font-size:13.5px;line-height:1.7;tab-size:2}
+pre code{background:none;padding:0;font-size:inherit;color:inherit}
+.cm{color:var(--code-cmt)} .kw{color:var(--code-kw)} .hl{color:var(--code-hl)}
+.codepair{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;margin:14px 0;align-items:start}
+@media (max-width:760px){.codepair{grid-template-columns:minmax(0,1fr)}}
+.codepair ol{margin:0;padding-left:20px;font-size:15px} .codepair li{margin-bottom:8px}
+.file{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:18px 0 6px}
+
+/* quiz */
+details{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0;padding:0}
+summary{cursor:pointer;padding:12px 16px;font-weight:500;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--c0)} details[open] summary::before{content:"▾ "}
+summary:focus-visible{outline:3px solid var(--fg);outline-offset:-3px;border-radius:8px}
+details .ans{padding:0 16px 14px;color:var(--fg)} details .ans p{margin-bottom:8px}
+footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+
+/* 타이머 예제설명 추가 토큰 */
+.diag .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.diag .bx.hot{stroke:var(--warn);stroke-width:2.5;fill:var(--warn-bg)}
+.diag .bx.hw{stroke:var(--c3);fill:var(--c3-soft)} .diag .bx.sw{stroke:var(--c0);fill:var(--c0-soft)}
+.diag .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.diag .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.diag .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+.diag .ah{fill:var(--muted)}
+.diag .ax{stroke:var(--muted);stroke-width:1.3;fill:none}
+.diag .gd{stroke:var(--line);stroke-width:1.2;stroke-dasharray:5 4;fill:none}
+.diag .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .diag .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.diag .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .diag .s3{stroke:var(--c3);stroke-width:2.2;fill:none}
+.diag .d1{fill:var(--c1)} .diag .d0{fill:var(--c0)} .diag .d3{fill:var(--c3)}
+.diag .blk{fill:var(--c1-soft);stroke:var(--c1)}
+.diag text.m{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.diag text.t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.wave{margin:12px 0}
+.wave svg{display:block;width:100%;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px}
+.wave .ax{stroke:var(--muted);stroke-width:1.2;fill:none}
+.wave .gd{stroke:var(--line);stroke-width:1;stroke-dasharray:4 4;fill:none}
+.wave .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .wave .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.wave .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .wave .s3{stroke:var(--c3);stroke-width:2.2;fill:none}
+.wave .ev{stroke:var(--c3);stroke-width:1.6}
+.wave .bar{fill:var(--c1)} .wave .bar0{fill:var(--c0)}
+.wave text{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.wave text.tt{font-family:var(--font-body);font-size:12.5px;fill:var(--fg)}
+.bits{display:flex;margin:14px 0;font-family:var(--font-mono);font-size:13.5px;text-align:center}
+.bits div{flex:1;border:2px solid var(--c0);padding:10px 6px;background:var(--c0-soft);min-width:0}
+.bits div.lo{border-color:var(--c2);background:var(--c2-soft)}
+.bits small{display:block;color:var(--muted);font-size:12px}
+.eq{font-family:var(--font-mono);font-size:14.5px;background:var(--surface2);border-left:4px solid var(--c0);padding:10px 14px;margin:14px 0;overflow-x:auto;white-space:pre-wrap}
+.nextprev{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+.nextprev a{border:1px solid var(--line);border-radius:8px;padding:8px 14px;text-decoration:none;color:var(--c0);background:var(--surface)}
+td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
+.rowbad td{background:var(--warn-bg)}
+.cards2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:16px 0}
+.cards2 .mode{min-width:0}
+
+.wave .dot{fill:var(--c3)} .wave .blk{fill:var(--c1-soft);stroke:var(--c1)}
+.capt{font-size:14px;color:var(--muted);margin:6px 2px 14px}
+.stat .v.sm{font-size:15px}
+.sim .row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">STM32 Nucleo-F103RB · 타이머 · 예제설명 · <a href="../06_Timers_RTC%20개념설명.html" style="color:inherit">↑ 06_Timers_RTC 개념설명</a></div>
+  <h1>타이머 시간 기준: 1 ms 업데이트 인터럽트와 소프트웨어 분주</h1>
+  <p class="lead">CPU가 반복문으로 시간을 재면 다른 일을 할 수 없고 정확하지도 않다. 타이머는 CPU와 무관하게 세고, 정해진 값에 도달하면 이벤트만 알려 준다. 이 예제설명은 TIM3를 PSC=63, ARR=999로 설정해 1 ms마다 업데이트 인터럽트를 만들고, 소프트웨어 분주로 1초를 얻는 <code>01_TIM_TimeBase</code> 예제를 레지스터 수준까지 해석한다.</p>
+  <nav class="toc" aria-label="목차">
+    <a href="#s1">1. 문제: 정확한 1 ms</a><a href="#s2">2. 타임베이스 3요소</a><a href="#s3">3. 클럭과 주기 계산</a><a href="#s4">4. 직접 만져 보기</a><a href="#s5">5. 레지스터 대응</a><a href="#s6">6. 인터럽트 경로</a><a href="#s7">7. 코드 읽기</a><a href="#s8">8. 실험</a><a href="#s9">9. 트러블슈팅</a><a href="#s10">10. 확인 문제</a>
+  </nav>
+</header>
+
+<section id="s1">
+<h2>1. 문제: 정확한 1 ms를 CPU 없이 만든다</h2>
+<p><code>HAL_Delay()</code>나 빈 반복문은 CPU를 붙잡는다. 타이머는 <b>카운터가 하드웨어로 증가</b>하므로 CPU는 이벤트가 올 때만 일하면 된다. 학습 목표는 다음과 같다.</p><ul><li>주기 공식 <code>f_update = f_TIM / ((PSC+1)(ARR+1))</code>로 PSC·ARR을 계산한다.</li><li>APB1 타이머 클럭이 버스 클럭의 2배가 되는 규칙을 설명한다.</li><li>진짜 ISR(<code>TIM3_IRQHandler</code>)과 HAL 콜백의 차이를 구분한다.</li><li>ISR에서는 플래그만 세우고 출력은 main 루프에서 하는 패턴을 익힌다.</li></ul><div class="box"><div class="label">이 예제의 동작</div><p>1 ms마다 업데이트 인터럽트 → 콜백이 카운트 1000회마다 <code>gSecondFlag</code>를 세운다 → main이 LD2를 토글하고 <code>printf</code>로 초를 출력한다.</p></div>
+</section>
+<section id="s2">
+<h2>2. 타임베이스의 세 요소</h2>
+<div class="tablewrap"><table><tr><th>요소</th><th>레지스터</th><th>역할</th></tr><tr><td>프리스케일러</td><td><code>TIMx_PSC</code></td><td>입력 클럭을 (PSC+1)로 나누어 카운터 클럭을 만든다.</td></tr><tr><td>카운터</td><td><code>TIMx_CNT</code></td><td>카운터 클럭마다 1씩 증가한다 (업카운트 기준).</td></tr><tr><td>자동 재장전값</td><td><code>TIMx_ARR</code></td><td>CNT가 ARR을 넘어 0으로 돌아가는 상한이다. 카운트 수는 ARR+1이다.</td></tr><tr><td>업데이트 이벤트</td><td><code>SR.UIF</code></td><td>오버플로 시 하드웨어가 1로 세운다. <code>DIER.UIE</code> = 1이면 인터럽트로 이어진다.</td></tr></table></div><div class="wave"><svg viewBox="0 0 640 210" role="img" aria-label="TIM3 업카운터 톱니파와 업데이트 이벤트">
+<line class="ax" x1="40" y1="170" x2="625" y2="170"/><line class="ax" x1="40" y1="20" x2="40" y2="170"/>
+<line class="gd" x1="40" y1="45" x2="625" y2="45"/>
+<text x="46" y="39">ARR = 999 (1000 카운트)</text><text x="14" y="174" class="m">0</text><text x="590" y="188" class="m">t</text>
+<polyline class="s0" points="40,170 200,45 200,170 360,45 360,170 520,45 520,170 600,107"/>
+<text x="60" y="120" class="m">CNT</text>
+<line class="gd" x1="200" y1="45" x2="200" y2="195"/><line class="gd" x1="360" y1="45" x2="360" y2="195"/><line class="gd" x1="520" y1="45" x2="520" y2="195"/>
+<text x="204" y="62">UEV</text><text x="364" y="62">UEV</text><text x="524" y="62">UEV</text>
+<line class="ax" x1="200" y1="190" x2="360" y2="190"/><text x="252" y="205">1 ms (= 1000 × 1 µs)</text>
+</svg><p class="capt">그림 1. CNT는 0에서 ARR까지 증가한 뒤 0으로 돌아가며, 이 순간 업데이트 이벤트(UEV)가 발생한다. 1카운트 = (PSC+1)/f_TIM = 64/64 MHz = 1 µs이다.</p></div><div class="eq">f_update = f_TIM / ((PSC + 1) × (ARR + 1)) = 64 MHz / (64 × 1000) = 1 kHz  (주기 1 ms)</div><p>시간 기준으로 쓸 때는 비교 채널이 필요 없다. 짧은 틱을 하나 만들고 소프트웨어 카운터로 긴 주기를 얻는 것이 RTOS 틱·스케줄러·타임아웃 처리의 기본 구조이다.</p>
+</section>
+<section id="s3">
+<h2>3. 타이머 클럭이 64 MHz인 이유</h2>
+<div class="tablewrap"><table><tr><th>단계</th><th>설정</th><th>클럭</th></tr><tr><td>시스템 클럭</td><td>HSI(8 MHz) ÷2 → PLL ×16 → SYSCLK</td><td>64 MHz</td></tr><tr><td>AHB (HCLK)</td><td>÷1</td><td>64 MHz</td></tr><tr><td>APB1</td><td>÷2</td><td>32 MHz (TIM2~4 버스)</td></tr><tr><td>TIM3 입력 클럭</td><td>APB1 분주비 ≠ 1이므로 타이머 클럭은 ×2</td><td><b>64 MHz</b></td></tr><tr><td>APB2</td><td>÷1</td><td>64 MHz → TIM1은 ×1 = 64 MHz</td></tr></table></div><div class="box"><div class="label">규칙</div><p>APB 분주비가 1이 아니면 해당 버스의 타이머 클럭은 버스 클럭의 2배이다. 클럭 트리를 바꾸면 PSC와 ARR도 다시 계산해야 한다.</p></div>
+</section>
+<section id="s4">
+<h2>4. 직접 만져 보기</h2>
+
+  <p>아래 시뮬레이터는 PSC·ARR로 업데이트 주기를 계산하고, 콜백과 main 루프가 플래그를 주고받는 모습을 보여 준다.</p>
+  <ol>
+    <li>PSC=63, ARR=999에서 주파수가 1 kHz인지 확인한다. ARR을 9999로 바꾸면 100 Hz가 된다.</li>
+    <li><b>PSC=6399, ARR=9999</b>로 바꾸면 하드웨어만으로 1 Hz(1초)가 된다. 이때 소프트웨어 분주가 필요한가?</li>
+    <li><b>UEV 1회</b>를 누르며 <code>gTimerCnt</code>가 증가하는 것을 본다. <b>UEV 100회</b>를 눌러 1000에 가까워지면 <code>gSecondFlag</code>가 서는 순간을 관찰한다.</li>
+    <li>플래그가 선 상태에서 <b>main 처리</b>를 누르면 LD2가 토글되고 초가 출력된다.</li>
+  </ol>
+  <div class="sim" id="simbox">
+    <div class="subhead">입력</div>
+    <div class="ctl"><div><label for="psc">PSC = <b id="l_psc"></b></label><input id="psc" type="range" min="0" max="6399" step="1" value="63"></div><div><label for="arr">ARR = <b id="l_arr"></b></label><input id="arr" type="range" min="1" max="65535" step="1" value="999"></div>
+    </div>
+    <div class="subhead">계산</div>
+    <div class="regs"><div class="stat"><div class="k">카운터 클럭</div><div class="v" id="vFc">–</div></div><div class="stat"><div class="k">f_update</div><div class="v" id="vF">–</div></div><div class="stat"><div class="k">주기</div><div class="v" id="vT">–</div></div><div class="stat"><div class="k">1초당 소프트웨어 분주</div><div class="v" id="vSw">–</div></div></div>
+    <div class="subhead">콜백 ↔ main</div>
+    <div class="regs"><div class="stat"><div class="k">gTimerCnt</div><div class="v" id="vCnt">–</div></div><div class="stat"><div class="k">gSeconds</div><div class="v" id="vSec">–</div></div>
+      <div class="stat"><div class="k">gSecondFlag</div><div class="v"><span class="lamp" id="vFlag">0</span></div></div>
+      <div class="stat"><div class="k">LD2</div><div class="v"><span class="lamp" id="vLed">0</span></div></div></div>
+    <div class="btns">
+      <button class="hw" id="b1" type="button">UEV 1회</button>
+      <button class="hw" id="b100" type="button">UEV 100회</button>
+      <button class="sw" id="bMain" type="button">main 처리 (플래그 확인)</button>
+      <button class="plain" id="bReset" type="button">초기화</button>
+    </div>
+    <div class="calc" id="calc" aria-live="polite">버튼을 눌러 계산 과정을 확인한다.</div>
+    <div class="label" style="margin-top:12px">UART 출력 (115200 8N1)</div>
+    <div class="uart" id="uart"></div>
+  </div>
+  <p style="font-size:14.5px;color:var(--muted)">시뮬레이터 모델: 소프트웨어 분주 횟수는 1초를 주기로 나눈 값이며, 이 예제의 콜백은 1000회마다 플래그를 세운다. 주기가 1초 이상이면 분주 없이 매 UEV마다 처리하는 것으로 본다.</p>
+
+</section>
+<section id="s5">
+<h2>5. HAL 필드와 레지스터의 대응</h2>
+<div class="tablewrap"><table><tr><th>HAL 필드</th><th>값</th><th>레지스터/비트</th><th>의미</th></tr><tr><td><code>Instance</code></td><td><code>TIM3</code></td><td>베이스 주소 0x4000 0400</td><td>사용할 타이머 레지스터 블록</td></tr><tr><td><code>Prescaler</code></td><td>63</td><td><code>PSC</code> = 0x003F</td><td>÷64 → 카운터 클럭 1 MHz</td></tr><tr><td><code>CounterMode</code></td><td>UP</td><td><code>CR1.DIR</code> = 0, <code>CMS</code> = 00</td><td>0 → ARR 업카운트</td></tr><tr><td><code>Period</code></td><td>999</td><td><code>ARR</code> = 0x03E7</td><td>1000 카운트 = 1 ms</td></tr><tr><td><code>ClockDivision</code></td><td>DIV1</td><td><code>CR1.CKD</code> = 00</td><td>입력 필터용 분주. 단순 타임베이스에서는 영향 없음</td></tr><tr><td><code>AutoReloadPreload</code></td><td>ENABLE</td><td><code>CR1.ARPE</code> = 1</td><td>ARR 변경을 다음 UEV에서 반영</td></tr><tr><td><code>ClockSource</code></td><td>INTERNAL</td><td><code>SMCR.SMS</code> = 000</td><td>내부 클럭 CK_INT 사용</td></tr><tr><td><code>MasterOutputTrigger</code></td><td>RESET</td><td><code>CR2.MMS</code> = 000</td><td>TRGO 출력 사용 안 함</td></tr></table></div><div class="tablewrap"><table><tr><th>함수</th><th>수행 내용</th></tr><tr><td><code>HAL_TIM_Base_Init()</code></td><td>MSP 콜백에서 TIM3 클럭 허용과 NVIC 설정(<code>TIM3_IRQn</code>, 우선순위 0)을 수행한다. PSC·ARR·CR1을 쓰고 <code>EGR.UG</code>로 갱신하여 즉시 적용한다.</td></tr><tr><td><code>HAL_TIM_Base_Start_IT()</code></td><td><code>DIER.UIE</code> = 1(업데이트 인터럽트 허용), <code>CR1.CEN</code> = 1(카운터 시작).</td></tr></table></div><div class="tablewrap"><table><tr><th>레지스터</th><th>시작 후 값</th><th>해석</th></tr><tr><td class="m"><code>CR1</code></td><td class="m">0x0081</td><td>ARPE=1, CEN=1</td></tr><tr><td class="m"><code>DIER</code></td><td class="m">0x0001</td><td>UIE=1</td></tr><tr><td class="m"><code>PSC</code> / <code>ARR</code></td><td class="m">63 / 999</td><td>1 MHz / 1 kHz</td></tr></table></div>
+</section>
+<section id="s6">
+<h2>6. 인터럽트 경로: 진짜 ISR과 콜백</h2>
+<ol class="flow"><li class="hw"><div class="n">1</div><div class="tx"><b>CNT 오버플로<span class="tag hw">하드웨어</span></b><span>카운터가 ARR을 넘어 0으로 돌아간다.</span></div></li><li class="hw"><div class="n">2</div><div class="tx"><b>SR.UIF = 1<span class="tag hw">하드웨어</span></b><span>DIER.UIE = 1이면 인터럽트 요청이 NVIC로 전달된다.</span></div></li><li class="hw"><div class="n">3</div><div class="tx"><b>NVIC <code>TIM3_IRQn</code><span class="tag hw">하드웨어</span></b><span>우선순위 판정 후 벡터 테이블의 핸들러로 분기한다.</span></div></li><li class="sw"><div class="n">4</div><div class="tx"><b><code>TIM3_IRQHandler</code><span class="tag sw">소프트웨어</span></b><span>stm32f1xx_it.c. 벡터 테이블이 직접 호출하는 진짜 ISR이다.</span></div></li><li class="sw"><div class="n">5</div><div class="tx"><b><code>HAL_TIM_IRQHandler</code><span class="tag sw">소프트웨어</span></b><span>UIF를 확인하고 클리어한 뒤 콜백을 호출한다.</span></div></li><li class="sw"><div class="n">6</div><div class="tx"><b><code>HAL_TIM_PeriodElapsedCallback</code><span class="tag sw">소프트웨어</span></b><span>main.c의 사용자 코드. ISR 문맥에서 실행되므로 짧게 끝내야 한다.</span></div></li></ol><div class="tablewrap"><table><tr><th>구분</th><th>위치</th><th>성격</th></tr><tr><td><code>TIM3_IRQHandler</code></td><td>stm32f1xx_it.c</td><td>벡터 테이블이 직접 호출하는 진짜 ISR</td></tr><tr><td><code>HAL_TIM_IRQHandler</code></td><td>HAL 라이브러리</td><td>플래그 확인·클리어 후 콜백 호출</td></tr><tr><td><code>HAL_TIM_PeriodElapsedCallback</code></td><td>main.c (사용자 코드)</td><td>ISR이 아니라 ISR 문맥에서 호출되는 함수</td></tr></table></div>
+</section>
+<section id="s7">
+<h2>7. 코드 읽기</h2>
+<p>외부 부품은 필요 없다. LD2(PA5)가 1초마다 토글되고, USART2 가상 COM(115200 8N1)으로 출력한다.</p><div class="file">main.c — 타이머 초기화 (CubeMX 생성)</div>
+<div class="codepair">
+<pre><code><span class="kw">static</span> <span class="kw">void</span> MX_TIM3_Init(<span class="kw">void</span>)
+{
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 63;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 999;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  <span class="kw">if</span> (<span class="kw">HAL_TIM_Base_Init</span>(&amp;htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  <span class="kw">if</span> (<span class="kw">HAL_TIM_ConfigClockSource</span>(&amp;htim3, &amp;sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  <span class="kw">if</span> (<span class="kw">HAL_TIMEx_MasterConfigSynchronization</span>(&amp;htim3, &amp;sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+}</code></pre>
+<ol><li><code>Prescaler</code> 63과 <code>Period</code> 999가 1 kHz를 만든다.</li><li><code>AutoReloadPreload</code>가 켜져 있어 ARR 변경이 다음 UEV에서 반영된다.</li><li><code>ClockSource</code>는 내부 클럭이다.</li></ol>
+</div><div class="file">main.c — 시작과 main 루프</div>
+<div class="codepair">
+<pre><code>printf(&quot;TIM3 TimeBase start (1ms update IRQ, print every 1s)\n&quot;);
+
+<span class="cm">/* TIM3_DIER.UIE = 1 (업데이트 인터럽트 허용), TIM3_CR1.CEN = 1 (카운터 시작) */</span>
+<span class="kw">if</span> (<span class="kw">HAL_TIM_Base_Start_IT</span>(&amp;htim3) != HAL_OK) {
+    Error_Handler();
+}
+
+<span class="kw">if</span> (gSecondFlag) {
+    gSecondFlag = 0;
+    printf(&quot;[%lu s] LD2 toggle\n&quot;, (unsigned long) gSeconds);
+}</code></pre>
+<ol><li><code>Start_IT</code>가 UIE와 CEN을 켠다.</li><li>main은 플래그를 확인하면 즉시 지우고 LD2를 토글한 뒤 출력한다.</li><li><code>printf</code>는 main 루프에서만 호출한다.</li></ol>
+</div><div class="file">main.c — 콜백 (ISR 문맥)</div>
+<div class="codepair">
+<pre><code><span class="kw">void</span> <span class="kw">HAL_TIM_PeriodElapsedCallback</span>(TIM_HandleTypeDef *htim) {
+    <span class="kw">if</span> (htim-&gt;Instance != TIM3) {
+        <span class="kw">return</span>;
+    }
+    gTimerCnt++;
+    <span class="kw">if</span> (gTimerCnt == 1000) {
+        gTimerCnt = 0;
+        <span class="kw">HAL_GPIO_TogglePin</span>(LD2_GPIO_Port, LD2_Pin);
+        gSeconds++;
+        gSecondFlag = 1;
+    }
+}</code></pre>
+<ol><li><code>htim->Instance</code>를 검사하여 TIM3만 처리한다.</li><li><code>gSecondFlag</code>는 콜백이 세우고 main이 지우므로 <code>volatile</code>이 필수이다.</li><li>UART 블로킹 송신이 ISR을 점유하지 않도록 콜백은 플래그만 세운다.</li></ol>
+</div><div class="box"><div class="label">기대 출력</div><pre><code>TIM3 TimeBase start (1ms update IRQ, print every 1s)
+[1 s] LD2 toggle
+[2 s] LD2 toggle</code></pre><p>115200 bps에서 1바이트는 약 86.8 µs이다. 한 줄(약 18바이트)은 약 1.6 ms가 걸리지만 ISR이 인터럽트로 동작하므로 이 시간 동안에도 1 ms 틱은 누락되지 않는다. (02 예제와 비교)</p></div>
+</section>
+<section id="s8">
+<h2>8. 실험</h2>
+<h3>실험 A. 1초 주기를 하드웨어만으로</h3><p>PSC=6399, ARR=9999로 바꾸고 콜백에서 분주 없이 바로 플래그를 세운다. 주파수가 1 Hz가 되는지 시뮬레이터와 비교한다.</p><h3>실험 B. 10 ms 주기</h3><p>PSC=63을 유지하고 ARR을 9999로 바꾼다. LD2 토글 주기가 어떻게 달라지는지 예측한 뒤 확인한다.</p><h3>실험 C. 콜백에서 printf</h3><p>콜백 안에서 직접 <code>printf</code>를 호출해 본다. 1 ms 틱 처리가 밀리는 현상을 <code>gTimerCnt</code>와 SysTick(<code>HAL_GetTick()</code>) 차이로 측정한다.</p><h3>실험 D. ARPE 끄기</h3><p><code>AutoReloadPreload</code>를 끄고 동작 중 ARR을 줄여 본다. CNT가 새 ARR보다 클 때 어떤 현상이 생기는지 관찰한다.</p>
+</section>
+<section id="s9">
+<h2>9. 트러블슈팅</h2>
+<div class="tablewrap"><table><tr><th>증상</th><th>원인</th><th>점검/조치</th></tr><tr><td>LD2가 깜빡이지 않는다</td><td><code>Start_IT</code> 누락, NVIC 비활성, <code>TIM3_IRQHandler</code> 미정의</td><td><code>DIER.UIE</code>, NVIC 허용 여부, 핸들러 이름과 <code>HAL_TIM_IRQHandler(&amp;htim3)</code> 호출 확인</td></tr><tr><td>주기가 1초가 아니다</td><td>타이머 클럭 계산 오류(×2 규칙 누락), 클럭 트리 변경</td><td><code>HAL_RCC_GetPCLK1Freq()</code>와 APB1 분주비로 f_TIM 재계산</td></tr><tr><td>첫 주기가 짧거나 즉시 인터럽트가 걸린다</td><td>초기화의 <code>EGR.UG</code>로 UIF가 남은 채 UIE를 켠 경우 (HAL 버전에 따라 다름)</td><td>시작 전 <code>__HAL_TIM_CLEAR_FLAG(&amp;htim3, TIM_FLAG_UPDATE)</code> (02 예제 참조)</td></tr><tr><td>콜백에서 <code>printf</code>를 호출하자 틱이 밀린다</td><td>UART 블로킹 송신(약 1.6 ms)이 1 ms 인터럽트 처리를 가로막는다</td><td>플래그만 세우고 main 루프에서 출력한다</td></tr><tr><td>콜백에서 <code>HAL_Delay()</code>를 호출하면 멈춘다</td><td><code>TICK_INT_PRIORITY</code> = 0이고 TIM3도 (0, 0)이다. 우선순위가 같으면 서로 선점하지 못해 콜백 실행 중 SysTick이 끼어들지 못하고 <code>HAL_GetTick()</code>이 갱신되지 않는다</td><td>ISR/콜백에서 <code>HAL_Delay</code>를 쓰지 않는다</td></tr><tr><td>공유 변수 값이 갱신되지 않는다</td><td><code>volatile</code> 누락으로 컴파일러가 레지스터에 캐싱</td><td>ISR과 main이 공유하는 변수는 <code>volatile</code></td></tr></table></div><div class="box"><div class="label">참고</div><p>CubeMX가 생성한 B1(PC13) EXTI 설정은 이 예제에서 사용하지 않는다.</p></div>
+</section>
+<section id="s10">
+<h2>10. 확인 문제</h2>
+<details><summary><b>문제 1.</b> PSC=6399, ARR=9999로 바꾸면 업데이트 주파수는?</summary>
+<div class="ans"><p>64 MHz / (6400 × 10000) = 1 Hz이다. 하드웨어만으로 1초 주기가 된다.</p></div></details>
+<details><summary><b>문제 2.</b> PSC=63을 유지하고 10 ms 주기를 만들려면 ARR은?</summary>
+<div class="ans"><p>카운터 클럭이 1 MHz이므로 10 ms = 10000 카운트, ARR = 9999이다.</p></div></details>
+<details><summary><b>문제 3.</b> HSI 대신 수정 발진기(HSE)를 쓰면 1초 주기의 무엇이 달라지는가?</summary>
+<div class="ans"><p>주기의 정확도가 좋아진다. 분주비 계산은 같고 입력 클럭의 오차만 줄어든다. 정확도는 데이터시트의 HSI 정확도 표를 참조한다.</p></div></details>
+<details><summary><b>문제 4.</b> ARPE를 끄고 동작 중 ARR을 줄이면 어떤 현상이 생길 수 있는가?</summary>
+<div class="ans"><p>현재 CNT가 새 ARR보다 크면 한 바퀴를 더 돌아야 UEV가 발생한다. ARPE=1이면 변경이 다음 UEV에서 반영되어 이를 피한다.</p></div></details>
+
+</section>
+
+<section>
+  <h2>정리</h2>
+  <div class="tablewrap"><table><tr><th>예제</th><th>타이머</th><th>이벤트 처리</th><th>타이머를 쓰는 방식</th></tr><tr><td class="m"><b>01_TIM_TimeBase (이 예제설명)</b></td><td>TIM3</td><td>인터럽트(UIE)</td><td>주기 신호 (1 ms)</td></tr><tr><td class="m"><a href="../02_TIM_TimeBase_Polling/02_TIM_TimeBase_Polling%20예제설명.html">02_TIM_TimeBase_Polling</a></td><td>TIM3</td><td>폴링(UIF)</td><td>주기 신호 (1 ms)</td></tr><tr><td class="m"><a href="../03_TIM_Overflow_Counter/03_TIM_Overflow_Counter%20예제설명.html">03_TIM_Overflow_Counter</a></td><td>TIM2</td><td>UEV 인터럽트</td><td>CNT 값 자체 (1 µs)</td></tr><tr><td class="m"><a href="../04_TIM_OutputCompare/04_TIM_OutputCompare%20예제설명.html">04_TIM_OutputCompare</a></td><td>TIM2</td><td>CCx 인터럽트</td><td>CNT == CCR 일치</td></tr><tr><td class="m"><a href="../05_TIM_PWM/05_TIM_PWM%20예제설명.html">05_TIM_PWM</a></td><td>TIM1</td><td>없음 (하드웨어)</td><td>CNT &lt; CCR 비교</td></tr></table></div>
+  <div class="nextprev"><a href="../../03_ADC/07_ADC_Potentiometer_PWM_c/07_ADC_Potentiometer_PWM%20%EC%98%88%EC%A0%9C%EC%84%A4%EB%AA%85.html">← 03_ADC / 07_ADC_Potentiometer_PWM_c</a><a href="../02_TIM_TimeBase_Polling/02_TIM_TimeBase_Polling%20예제설명.html">02_TIM_TimeBase_Polling →</a></div>
+  <footer>근거: 01_TIM_TimeBase 소스. 계층: HAL. 레지스터·비트 이름은 RM0008(STM32F101xx~F107xx 레퍼런스 매뉴얼) 기준이다. 타이머 클럭은 SYSCLK 64 MHz(HSI/2 × PLL16), APB1 ÷2, APB2 ÷1 구성을 기준으로 한다. 코드는 해당 폴더의 소스에서 발췌한 것이며 일부 줄이 생략되어 있다.</footer>
+</section>
+</div>
+
+<script>
+
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var FT=64e6, S={cnt:0,sec:0,flag:0,led:0};
+  function fmtHz(f){return f>=1e6?(f/1e6).toFixed(3)+' MHz':f>=1e3?(f/1e3).toFixed(3)+' kHz':f.toFixed(3)+' Hz'}
+  function fmtT(t){return t>=1?t.toFixed(3)+' s':t>=1e-3?(t*1e3).toFixed(3)+' ms':(t*1e6).toFixed(2)+' µs'}
+  function calc(){
+    var psc=+$('psc').value, arr=+$('arr').value;
+    $('l_psc').textContent=psc; $('l_arr').textContent=arr;
+    var fc=FT/(psc+1), f=fc/(arr+1), T=1/f;
+    $('vFc').textContent=fmtHz(fc); $('vF').textContent=fmtHz(f); $('vT').textContent=fmtT(T);
+    var n=Math.round(1/T); $('vSw').textContent=n>=1?n+'회':'불필요 (주기 ≥ 1 s)';
+    $('calc').textContent='f_update = 64 MHz / (('+psc+'+1) × ('+arr+'+1)) = '+fmtHz(f)+'  →  주기 '+fmtT(T);
+    return n;
+  }
+  function uev(){
+    var n=calc();
+    S.cnt++;
+    if(n<1||S.cnt>=n){S.cnt=0;S.flag=1}   // 콜백: 소프트웨어 분주
+  }
+  function render(){
+    $('vCnt').textContent=S.cnt; $('vSec').textContent=S.sec;
+    $('vFlag').textContent=S.flag; $('vFlag').className='lamp'+(S.flag?' on':'');
+    $('vLed').textContent=S.led; $('vLed').className='lamp'+(S.led?' on':'');
+  }
+  function mainStep(){
+    if(S.flag){
+      S.flag=0; S.sec++; S.led^=1;
+      var u=$('uart'); u.textContent=(u.textContent?u.textContent+'\n':'')+'['+S.sec+' s] LD2 toggle';
+      var l=u.textContent.split('\n'); if(l.length>6) u.textContent=l.slice(-6).join('\n');
+      $('calc').textContent='main: gSecondFlag = 1 → 즉시 클리어 → gSeconds++ → LD2 토글 → printf';
+    }else $('calc').textContent='main: gSecondFlag = 0 → 할 일이 없다.';
+    render();
+  }
+  $('psc').oninput=$('arr').oninput=function(){S.cnt=0;S.flag=0;calc();render()};
+  $('b1').onclick=function(){uev();render()};
+  $('b100').onclick=function(){for(var i=0;i<100;i++)uev();render()};
+  $('bMain').onclick=mainStep;
+  $('bReset').onclick=function(){S={cnt:0,sec:0,flag:0,led:0};$('uart').textContent='';calc();render()};
+  calc();render();
+})();
+
+</script>
+</body></html>

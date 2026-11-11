@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>09_BitBandingReg 예제설명</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+
+/* Layout: 한 열 예제설명(최대 860px) — 문제(RMW 경합) → 비트 밴드 대응 → 주소 계산·하드웨어 → 시뮬레이터(별칭 계산기·경합 시연) → 레지스터 대응 → 실행 경로 → 코드 → 실험 → 트러블슈팅 → 문제 순서.
+   색을 전 구간에서 고정한다: 비트 밴드 영역(원래 주소)=파랑, 별칭 주소=주황, main=청록, ISR=보라. (타이머 예제설명과 같은 기본 토큰) */
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --surface2:#E7ECF0; --fg:#14222C; --muted:#52636F; --line:#CBD5DC;
+  --c0:#1D4ED8; --c0-soft:#DCE6FB; --c1:#C2410C; --c1-soft:#FDE6DA; --c2:#0F766E; --c2-soft:#D5F0EC; --c3:#7E22CE; --c3-soft:#EEDFFB;
+  --code-bg:#0F1B24; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#9A3412; --warn-bg:#FFF1E6; --ok:#166534; --ok-bg:#E4F5EA;
+  --font-body:"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.75;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:860px;margin:0 auto}
+header{padding-block:40px 8px}
+.kicker{font-family:var(--font-mono);font-size:13px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.25;margin:8px 0 12px;text-wrap:balance;font-weight:700}
+.lead{color:var(--muted);margin:0;max-width:62ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0;padding:0;list-style:none}
+nav.toc a{display:block;padding:6px 12px;border:1px solid var(--line);border-radius:6px;color:var(--fg);text-decoration:none;font-size:14px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--c0);outline:2px solid var(--c0);outline-offset:1px}
+section{margin-top:56px}
+h2{font-size:24px;line-height:1.35;margin:0 0 12px;text-wrap:balance;font-weight:700}
+h3{font-size:18px;margin:28px 0 8px;font-weight:700}
+p{margin:0 0 14px;max-width:68ch}
+ul,ol{margin:0 0 14px;padding-left:22px;max-width:68ch}
+li{margin-bottom:4px}
+code{font-family:var(--font-mono);font-size:.9em;background:var(--surface2);padding:1px 6px;border-radius:4px}
+.k0{color:var(--c0);font-weight:700} .k1{color:var(--c1);font-weight:700} .k2{color:var(--c2);font-weight:700} .k3{color:var(--c3);font-weight:700}
+.box{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:16px 18px;margin:16px 0}
+.box.warn{background:var(--warn-bg);border-color:var(--warn)} .box.ok{background:var(--ok-bg);border-color:var(--ok)}
+.box > :last-child{margin-bottom:0}
+.label{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.tablewrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:15px;background:var(--surface)}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--surface2);font-weight:700;white-space:nowrap}
+td.m,th.m{font-family:var(--font-mono);font-size:13.5px}
+td.n{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+
+/* block diagram */
+.diag{max-width:720px;margin:18px auto}
+.diag svg{display:block;width:100%;height:auto}
+#blk .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+#blk .bx.hot{stroke:var(--warn);stroke-width:2.5;fill:var(--warn-bg)}
+#blk .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+#blk .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+#blk .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+#blk .w0{stroke:var(--c0)} #blk .w1{stroke:var(--c1)} #blk .w2{stroke:var(--c2)} #blk .w3{stroke:var(--c3)}
+#blk .d0{fill:var(--c0)} #blk .d1{fill:var(--c1)} #blk .d2{fill:var(--c2)} #blk .d3{fill:var(--c3)}
+#blk .ah{fill:var(--muted)}
+
+/* flow */
+.flow{list-style:none;padding:0;margin:16px 0;display:grid;gap:0;max-width:none}
+.flow li{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:0;padding:0 0 14px;position:relative}
+.flow li:not(:last-child)::before{content:"";position:absolute;left:16px;top:34px;bottom:0;width:2px;background:var(--line)}
+.flow .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:14px;font-weight:600;background:var(--surface2);border:2px solid var(--line)}
+.flow li.hw .n{border-color:var(--c3);color:var(--c3)} .flow li.sw .n{border-color:var(--c0);color:var(--c0)}
+.flow .tx{min-width:0} .flow .tx b{display:block}
+.flow .tx span{color:var(--muted);font-size:14.5px}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:11.5px;padding:0 6px;border-radius:4px;margin-left:6px;vertical-align:1px}
+.tag.hw{background:var(--c3-soft);color:var(--c3)} .tag.sw{background:var(--c0-soft);color:var(--c0)}
+
+/* mode cards */
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:16px 0}
+.mode{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:14px 16px;min-width:0}
+.mode.pick{border:2px solid var(--ok)}
+.mode b{display:block;margin-bottom:2px}
+.mode .reg{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);display:block;margin-bottom:8px}
+.trk{display:flex;gap:3px;margin:8px 0 6px;flex-wrap:wrap}
+.trk span{font-family:var(--font-mono);font-size:11.5px;font-weight:600;padding:2px 6px;border-radius:4px;border:1px solid var(--line)}
+.trk .g{color:var(--muted);border-style:dashed;background:none}
+.trk .r0{background:var(--c0-soft);color:var(--c0);border-color:var(--c0)} .trk .r1{background:var(--c1-soft);color:var(--c1);border-color:var(--c1)}
+.trk .r2{background:var(--c2-soft);color:var(--c2);border-color:var(--c2)} .trk .r3{background:var(--c3-soft);color:var(--c3);border-color:var(--c3)}
+.trk .x{text-decoration:line-through;opacity:.55}
+.mode p{font-size:14.5px;margin:0}
+
+/* simulator */
+.sim{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:18px;margin:16px 0}
+.subhead{font-weight:700;margin:18px 0 6px;padding-top:14px;border-top:1px dashed var(--line)}
+.subhead:first-child{margin-top:0;padding-top:0;border-top:0}
+.ranks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+@media (max-width:560px){.ranks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.rk{border:2px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);min-width:0;position:relative}
+.rk .h{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.rk .c{font-weight:700;font-size:15px;line-height:1.35}
+.rk .p{font-family:var(--font-mono);font-size:11.5px;color:var(--muted)}
+.rk .v{font-family:var(--font-mono);font-size:13px;font-variant-numeric:tabular-nums;margin-top:4px}
+.rk.nx{box-shadow:0 0 0 3px var(--fg) inset}
+.rk.nx::after{content:"다음 트리거";position:absolute;top:-11px;right:8px;font-size:11px;font-weight:700;background:var(--fg);color:var(--bg);padding:0 6px;border-radius:4px}
+.rk.r0 .c{color:var(--c0)} .rk.r1 .c{color:var(--c1)} .rk.r2 .c{color:var(--c2)} .rk.r3 .c{color:var(--c3)}
+.rk.on.r0{background:var(--c0-soft);border-color:var(--c0)} .rk.on.r1{background:var(--c1-soft);border-color:var(--c1)}
+.rk.on.r2{background:var(--c2-soft);border-color:var(--c2)} .rk.on.r3{background:var(--c3-soft);border-color:var(--c3)}
+.regs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.stat{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.stat .k{font-size:12px;color:var(--muted);font-family:var(--font-mono)}
+.stat .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3;overflow-wrap:anywhere}
+.lamp{display:inline-block;padding:0 10px;border-radius:999px;font-size:15px;border:1px solid var(--line)}
+.lamp.on{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+.outs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+@media (max-width:560px){.outs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.oc{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.oc .k{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.oc .v{font-family:var(--font-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.oc .f{font-size:12.5px}
+.oc.bad{border:2px solid var(--warn);background:var(--warn-bg)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+button,select,input{font-family:inherit}
+button{font-size:15px;font-weight:700;padding:9px 14px;border-radius:6px;border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;min-height:44px}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+button.hw{border-color:var(--c3);color:var(--c3)} button.hw:hover{background:var(--c3-soft)}
+button.sw{border-color:var(--c0);color:var(--c0)} button.sw:hover{background:var(--c0-soft)}
+button.plain:hover{background:var(--surface2)}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 16px;margin:10px 0}
+.ctl label{display:block;font-size:14px;color:var(--muted)}
+.ctl label b{font-family:var(--font-mono);color:var(--fg);font-weight:600}
+.ctl select{font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl input[type=range]{width:100%;min-height:32px}
+.calc{font-family:var(--font-mono);font-size:13.5px;line-height:1.65;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-height:5.4em;white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0 0}
+.uart{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);color:var(--code-fg);border-radius:6px;padding:10px 12px;white-space:pre;overflow-x:auto;margin:8px 0 0;min-height:2.6em}
+.log{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:8px 0 0;max-height:7.5em;overflow:auto;white-space:pre-wrap}
+
+/* code */
+pre{background:var(--code-bg);color:var(--code-fg);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:0;font-family:var(--font-mono);font-size:13.5px;line-height:1.7;tab-size:2}
+pre code{background:none;padding:0;font-size:inherit;color:inherit}
+.cm{color:var(--code-cmt)} .kw{color:var(--code-kw)} .hl{color:var(--code-hl)}
+.codepair{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;margin:14px 0;align-items:start}
+@media (max-width:760px){.codepair{grid-template-columns:minmax(0,1fr)}}
+.codepair ol{margin:0;padding-left:20px;font-size:15px} .codepair li{margin-bottom:8px}
+.file{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:18px 0 6px}
+
+/* quiz */
+details{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0;padding:0}
+summary{cursor:pointer;padding:12px 16px;font-weight:500;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--c0)} details[open] summary::before{content:"▾ "}
+summary:focus-visible{outline:3px solid var(--fg);outline-offset:-3px;border-radius:8px}
+details .ans{padding:0 16px 14px;color:var(--fg)} details .ans p{margin-bottom:8px}
+footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+
+/* 타이머 예제설명 추가 토큰 */
+.diag .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.diag .bx.hot{stroke:var(--warn);stroke-width:2.5;fill:var(--warn-bg)}
+.diag .bx.hw{stroke:var(--c3);fill:var(--c3-soft)} .diag .bx.sw{stroke:var(--c0);fill:var(--c0-soft)}
+.diag .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.diag .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.diag .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+.diag .ah{fill:var(--muted)}
+.diag .ax{stroke:var(--muted);stroke-width:1.3;fill:none}
+.diag .gd{stroke:var(--line);stroke-width:1.2;stroke-dasharray:5 4;fill:none}
+.diag .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .diag .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.diag .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .diag .s3{stroke:var(--c3);stroke-width:2.2;fill:none}
+.diag .d1{fill:var(--c1)} .diag .d0{fill:var(--c0)} .diag .d3{fill:var(--c3)}
+.diag .blk{fill:var(--c1-soft);stroke:var(--c1)}
+.diag text.m{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.diag text.t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.wave{margin:12px 0}
+.wave svg{display:block;width:100%;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px}
+.wave .ax{stroke:var(--muted);stroke-width:1.2;fill:none}
+.wave .gd{stroke:var(--line);stroke-width:1;stroke-dasharray:4 4;fill:none}
+.wave .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .wave .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.wave .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .wave .s3{stroke:var(--c3);stroke-width:2.2;fill:none}
+.wave .ev{stroke:var(--c3);stroke-width:1.6}
+.wave .bar{fill:var(--c1)} .wave .bar0{fill:var(--c0)}
+.wave text{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.wave text.tt{font-family:var(--font-body);font-size:12.5px;fill:var(--fg)}
+.bits{display:flex;margin:14px 0;font-family:var(--font-mono);font-size:13.5px;text-align:center}
+.bits div{flex:1;border:2px solid var(--c0);padding:10px 6px;background:var(--c0-soft);min-width:0}
+.bits div.lo{border-color:var(--c2);background:var(--c2-soft)}
+.bits small{display:block;color:var(--muted);font-size:12px}
+.eq{font-family:var(--font-mono);font-size:14.5px;background:var(--surface2);border-left:4px solid var(--c0);padding:10px 14px;margin:14px 0;overflow-x:auto;white-space:pre-wrap}
+.nextprev{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+.nextprev a{border:1px solid var(--line);border-radius:8px;padding:8px 14px;text-decoration:none;color:var(--c0);background:var(--surface)}
+td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
+.rowbad td{background:var(--warn-bg)}
+.cards2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:16px 0}
+.cards2 .mode{min-width:0}
+
+.wave .dot{fill:var(--c3)} .wave .blk{fill:var(--c1-soft);stroke:var(--c1)}
+.capt{font-size:14px;color:var(--muted);margin:6px 2px 14px}
+.stat .v.sm{font-size:15px}
+.sim .row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+
+/* 비트 밴드 예제설명 추가 */
+.diag .t.mid,.diag .s.mid{text-anchor:middle}
+.diag .bx.b0{stroke:var(--c0);fill:var(--c0-soft)} .diag .bx.b1{stroke:var(--c1);fill:var(--c1-soft)}
+.diag .ah1{fill:var(--c1)}
+.ctl input[type=text],.ctl input[type=number]{font-family:var(--font-mono);font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.asm{font-family:var(--font-mono);font-size:13px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin:8px 0 0;min-width:0}
+.asm div{padding:1px 6px;border-radius:4px;white-space:pre;overflow-x:auto}
+.asm .pc{background:var(--c2-soft);color:var(--c2);font-weight:600}
+.asm .done{color:var(--muted);text-decoration:line-through}
+.asm .isr{background:var(--c3-soft);color:var(--c3)}
+.stat.bad{border:2px solid var(--warn);background:var(--warn-bg)} .stat.good{border:2px solid var(--ok);background:var(--ok-bg)}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 예제설명 · <a href="../01_GPIO%20개념설명.html" style="color:inherit">↑ 01_GPIO 개념설명</a></div>
+  <h1>비트 밴딩: 비트 하나를 한 번의 쓰기로 바꾼다</h1>
+  <p class="lead"><code>reg |= (1 &lt;&lt; n)</code>은 한 줄이지만 CPU에게는 읽기 → OR → 쓰기의 세 단계이다. 그 사이에 인터럽트가 같은 워드를 바꾸면 그 변경은 사라진다. Cortex-M3는 주변장치와 SRAM의 각 비트를 별칭(alias) 영역의 워드 하나에 대응시켜, 별칭 워드 한 번의 쓰기로 비트 하나만 바꾸게 한다. 이 예제설명은 RCC 클럭 허용, LD2 토글, B1 읽기, SRAM 플래그 공유를 모두 비트 밴드로 처리하는 <code>09_BitBandingReg</code> 예제의 별칭 주소를 직접 계산해 검증한다.</p>
+  <nav class="toc" aria-label="목차">
+    <a href="#s1">1. 문제: RMW 경합</a><a href="#s2">2. 비트 밴드 대응</a><a href="#s3">3. 주소 계산과 설정</a><a href="#s4">4. 직접 만져 보기</a><a href="#s5">5. 레지스터 대응</a><a href="#s6">6. 실행 경로</a><a href="#s7">7. 코드 읽기</a><a href="#s8">8. 실험</a><a href="#s9">9. 트러블슈팅</a><a href="#s10">10. 확인 문제</a>
+  </nav>
+</header>
+
+<section id="s1">
+<h2>1. 문제: 읽기-수정-쓰기 사이에 끼어드는 인터럽트</h2>
+<p>ARM은 load/store 구조이므로 메모리의 비트를 직접 바꾸는 명령이 없다. <code>flags |= 1</code>은 <code>LDR</code>(읽기) → <code>ORR</code>(수정) → <code>STR</code>(쓰기)로 번역된다. <code>LDR</code>과 <code>STR</code> 사이에 ISR이 같은 워드의 다른 비트를 세우면, main은 ISR 이전의 값으로 워드 전체를 덮어써 ISR의 갱신을 지운다. 학습 목표는 다음과 같다.</p>
+<ul>
+<li>비트 밴드 영역과 별칭 영역의 대응, 공식 <code>alias = alias_base + byte_offset × 32 + bit × 4</code>를 설명한다.</li>
+<li>예제가 쓰는 별칭 주소(RCC_APB2ENR, GPIOA_ODR, GPIOC_IDR)를 손으로 계산하고 디버거로 검증한다.</li>
+<li>일반 RMW와 별칭 쓰기의 원자성 차이, 그리고 <code>BSRR</code>과의 차이를 구분한다.</li>
+<li>비트 밴드를 쓰면 안 되는 경우(w1c 플래그 레지스터, M0/M7 코어)를 안다.</li>
+</ul>
+<div class="box"><div class="label">이 예제의 동작</div><p>HAL 없이 HSI 8 MHz로 동작한다. 비트 밴드로 <code>RCC_APB2ENR</code>의 IOPAEN·IOPCEN을 켜고, SysTick을 1 ms로 시작한다. main 루프는 B1(PC13)을 IDR 별칭으로 읽어 눌렸으면 100 ms, 아니면 500 ms마다 LD2(PA5)를 ODR 별칭으로 토글한다. SRAM 워드 <code>flags</code>의 bit0은 main, bit1은 <code>SysTick_Handler</code>가 각자 별칭으로 세우고 지운다.</p></div>
+</section>
+
+<section id="s2">
+<h2>2. 비트 밴드 영역과 별칭 영역</h2>
+<p>Cortex-M3의 메모리 맵에는 비트 밴드 영역 두 곳이 정해져 있다(PM0056 2.2.5). 각 영역의 <b>비트 하나</b>가 별칭 영역의 <b>32비트 워드 하나</b>에 대응하므로 별칭 영역은 원래 영역의 32배 크기이다.</p>
+<div class="tablewrap"><table>
+<tr><th>영역</th><th>비트 밴드 영역 (원래 주소)</th><th>별칭 영역</th><th>대상</th></tr>
+<tr><td>SRAM</td><td class="m"><span class="k0">0x2000 0000 ~ 0x200F FFFF</span> (1 MB)</td><td class="m"><span class="k1">0x2200 0000 ~ 0x23FF FFFF</span> (32 MB)</td><td>전역 변수, 플래그 (F103RB SRAM은 20 KB: 0x2000 0000 ~ 0x2000 4FFF)</td></tr>
+<tr><td>주변장치</td><td class="m"><span class="k0">0x4000 0000 ~ 0x400F FFFF</span> (1 MB)</td><td class="m"><span class="k1">0x4200 0000 ~ 0x43FF FFFF</span> (32 MB)</td><td>APB1·APB2·AHB 주변장치 레지스터 (RCC, GPIO, TIM, USART …)</td></tr>
+</table></div>
+<div class="eq">alias = alias_base + (byte_offset × 32) + (bit × 4)
+byte_offset = 대상 주소 − band_base       (band_base = 0x2000 0000 또는 0x4000 0000)</div>
+<div class="diag"><svg viewBox="0 0 720 270" role="img" aria-label="GPIOA_ODR의 비트 0~7이 별칭 영역의 연속된 워드 8개에 대응하고, 비트 5가 0x42210194에 대응하는 모습">
+<text class="t" x="20" y="28">GPIOA_ODR @ 0x4001 080C (비트 밴드 영역)</text>
+<rect class="bx" x="20" y="48" width="40" height="40"/><text class="t mid" x="40" y="73">0</text>
+<rect class="bx" x="60" y="48" width="40" height="40"/><text class="t mid" x="80" y="73">0</text>
+<rect class="bx b1" x="100" y="48" width="40" height="40"/><text class="t mid" x="120" y="73">1</text>
+<rect class="bx" x="140" y="48" width="40" height="40"/><text class="t mid" x="160" y="73">0</text>
+<rect class="bx" x="180" y="48" width="40" height="40"/><text class="t mid" x="200" y="73">0</text>
+<rect class="bx" x="220" y="48" width="40" height="40"/><text class="t mid" x="240" y="73">0</text>
+<rect class="bx" x="260" y="48" width="40" height="40"/><text class="t mid" x="280" y="73">0</text>
+<rect class="bx" x="300" y="48" width="40" height="40"/><text class="t mid" x="320" y="73">0</text>
+<text class="s mid" x="40" y="104">7</text><text class="s mid" x="80" y="104">6</text><text class="s mid" x="120" y="104">5</text><text class="s mid" x="160" y="104">4</text><text class="s mid" x="200" y="104">3</text><text class="s mid" x="240" y="104">2</text><text class="s mid" x="280" y="104">1</text><text class="s mid" x="320" y="104">0</text>
+<text class="s" x="20" y="142">하위 바이트(비트 7~0)만 표시. 워드 1개 = 별칭 32개 = 128 바이트</text>
+<text class="s" x="20" y="166">byte_offset = 0x4001 080C − 0x4000 0000 = 0x1 080C</text>
+<text class="s" x="20" y="184">0x1 080C × 32 = 0x21 0180</text>
+<text class="s" x="20" y="202">0x4200 0000 + 0x21 0180 + 5 × 4 = 0x4221 0194</text>
+<text class="t" x="450" y="28">별칭 영역 (워드 1개 = 비트 1개)</text>
+<rect class="bx" x="450" y="40" width="250" height="24"/><text class="s" x="460" y="56">bit0 → 0x4221 0180</text>
+<rect class="bx" x="450" y="64" width="250" height="24"/><text class="s" x="460" y="80">bit1 → 0x4221 0184</text>
+<rect class="bx" x="450" y="88" width="250" height="24"/><text class="s" x="460" y="104">bit2 → 0x4221 0188</text>
+<rect class="bx" x="450" y="112" width="250" height="24"/><text class="s" x="460" y="128">bit3 → 0x4221 018C</text>
+<rect class="bx" x="450" y="136" width="250" height="24"/><text class="s" x="460" y="152">bit4 → 0x4221 0190</text>
+<rect class="bx b1" x="450" y="160" width="250" height="24"/><text class="s" x="460" y="176">bit5 → 0x4221 0194  (값 0x0000 0001)</text>
+<rect class="bx" x="450" y="184" width="250" height="24"/><text class="s" x="460" y="200">bit6 → 0x4221 0198</text>
+<rect class="bx" x="450" y="208" width="250" height="24"/><text class="s" x="460" y="224">bit7 → 0x4221 019C</text>
+<path class="w" style="stroke:var(--c1)" d="M134,88 L134,110 Q134,118 142,118 L380,118 Q400,118 400,138 L400,164 Q400,172 410,172 L443,172"/>
+<polygon class="ah1" points="443,168 450,172 443,176"/>
+<text class="s" x="700" y="256" style="text-anchor:end">별칭 읽기 = 0 또는 1, 별칭 쓰기 = 값의 bit0만 사용</text>
+</svg><p class="capt">그림 1. GPIOA_ODR의 비트 5(LD2)는 별칭 워드 0x4221 0194에 대응한다. 인접한 비트는 4바이트 간격의 이웃 워드로 이어진다. 별칭 워드에 1을 쓰면 버스가 ODR 워드를 읽고 비트 5만 바꿔 다시 쓰는 과정을 하나의 잠긴(locked) 전송으로 수행한다.</p></div>
+<div class="tablewrap"><table>
+<tr><th>방식</th><th>명령 순서</th><th>버스 접근</th><th>다른 비트·인터럽트에 안전한가</th></tr>
+<tr><td>일반 RMW <code>reg |= m</code></td><td class="m">LDR → ORR → STR</td><td>읽기 1 + 쓰기 1 (분리)</td><td>아니다. LDR와 STR 사이의 ISR 변경이 사라질 수 있다</td></tr>
+<tr><td>비트 밴드 쓰기 <code>*alias = 1</code></td><td class="m">STR (1개)</td><td>쓰기 1 → 버스 내부에서 잠긴 RMW</td><td>그렇다. CPU 입장에서 끼어들 틈이 없다</td></tr>
+<tr><td><code>GPIOx_BSRR = m</code></td><td class="m">STR (1개)</td><td>쓰기 1 (읽기 없음)</td><td>그렇다. GPIO 출력 전용. 여러 핀을 한 번에 세트/리셋할 수 있다</td></tr>
+</table></div>
+</section>
+
+<section id="s3">
+<h2>3. 예제가 쓰는 별칭 주소와 하드웨어 설정</h2>
+<p>레지스터 주소는 RM0008 메모리 맵의 베이스(RCC 0x4002 1000, GPIOA 0x4001 0800, GPIOC 0x4001 1000)와 오프셋(APB2ENR 0x18, IDR 0x08, ODR 0x0C)으로 구한다. 예제 매크로 <code>BB_PERIPH</code>는 <code>(addr − 0x40000000) &lt;&lt; 5</code>로 ×32를, <code>bit &lt;&lt; 2</code>로 ×4를 계산한다.</p>
+<div class="tablewrap"><table>
+<tr><th>대상 비트</th><th>레지스터 주소</th><th>byte_offset</th><th>×32</th><th>bit×4</th><th>별칭 주소</th></tr>
+<tr><td><code>RCC_APB2ENR.IOPAEN</code></td><td class="m">0x4002 1018</td><td class="m">0x2 1018</td><td class="m">0x42 0300</td><td class="m">2×4 = 0x08</td><td class="m"><span class="k1">0x4242 0308</span></td></tr>
+<tr><td><code>RCC_APB2ENR.IOPCEN</code></td><td class="m">0x4002 1018</td><td class="m">0x2 1018</td><td class="m">0x42 0300</td><td class="m">4×4 = 0x10</td><td class="m"><span class="k1">0x4242 0310</span></td></tr>
+<tr><td><code>GPIOA_ODR.ODR5</code> (LD2)</td><td class="m">0x4001 080C</td><td class="m">0x1 080C</td><td class="m">0x21 0180</td><td class="m">5×4 = 0x14</td><td class="m"><span class="k1">0x4221 0194</span></td></tr>
+<tr><td><code>GPIOC_IDR.IDR13</code> (B1)</td><td class="m">0x4001 1008</td><td class="m">0x1 1008</td><td class="m">0x22 0100</td><td class="m">13×4 = 0x34</td><td class="m"><span class="k1">0x4222 0134</span></td></tr>
+<tr><td><code>flags</code> bit0 / bit1 (SRAM)</td><td class="m">&amp;flags (링커 배치)</td><td class="m">&amp;flags − 0x2000 0000</td><td colspan="2">예: &amp;flags = 0x2000 0020이면 0x400</td><td class="m"><span class="k1">0x2200 0400 / 0x2200 0404</span> (예시)</td></tr>
+</table></div>
+<p><code>flags</code>는 <code>.bss</code>에 놓이는 정적 변수라 실제 주소는 빌드 결과(map 파일 또는 디버거의 <code>&amp;flags</code>)로 확인해야 한다. 위 SRAM 행은 계산 방법을 보이기 위한 예시이다.</p>
+<h3>핀·클럭 설정</h3>
+<div class="tablewrap"><table>
+<tr><th>항목</th><th>코드</th><th>레지스터 값</th><th>의미</th></tr>
+<tr><td>시스템 클럭</td><td><code>SystemClock_Config</code> 없음</td><td>리셋 기본 HSI</td><td>SYSCLK = <code>SystemCoreClock</code> = 8 MHz</td></tr>
+<tr><td>LD2 PA5</td><td><code>GPIOA-&gt;CRL</code> 비트 23:20 ← 0x2</td><td class="m">CNF5 = 00, MODE5 = 10</td><td>범용 푸시풀 출력, 최대 2 MHz</td></tr>
+<tr><td>B1 PC13</td><td><code>GPIOC-&gt;CRH</code> 비트 23:20 ← 0x8</td><td class="m">CNF13 = 10, MODE13 = 00</td><td>풀업/풀다운 입력</td></tr>
+<tr><td>풀업 선택</td><td><code>GPIOC-&gt;BSRR = 1 &lt;&lt; 13</code></td><td class="m">ODR13 = 1</td><td>입력 모드에서 ODR 비트가 1이면 풀업. 보드의 외부 풀업과 같은 방향</td></tr>
+<tr><td>SysTick</td><td><code>LOAD = 8000000/1000 − 1</code></td><td class="m">LOAD = 7999 (0x1F3F)</td><td>8 MHz / 8000 = 1 kHz → 1 ms</td></tr>
+<tr><td>SysTick 시작</td><td><code>CLKSOURCE | TICKINT | ENABLE</code></td><td class="m">STK_CTRL = 0x0000 0007</td><td>코어 클럭(HCLK), 인터럽트 허용, 카운터 시작</td></tr>
+</table></div>
+<div class="box"><div class="label">별칭 영역에 대한 하드웨어 규칙 (PM0056 2.2.5)</div><p>별칭 워드에 쓸 때는 쓴 값의 bit0만 의미가 있다(0x0000 0001과 0xFFFF FFFF는 모두 1을 쓴다). 별칭 워드를 읽으면 대상 비트 값이 0x0000 0000 또는 0x0000 0001로 돌아온다. 원래 주소에 대한 접근은 그대로 가능하며, 두 주소는 같은 물리 비트를 가리킨다.</p></div>
+</section>
+
+<section id="s4">
+<h2>4. 직접 만져 보기</h2>
+<p>위쪽은 별칭 주소 계산기이고, 아래쪽은 main과 SysTick ISR이 같은 워드 <code>flags</code>의 서로 다른 비트를 세울 때 일반 RMW와 비트 밴드의 결과가 어떻게 다른지 보여 준다.</p>
+<ol>
+<li>프리셋에서 <b>GPIOA_ODR.ODR5</b>를 고르고 0x4221 0194가 나오는지 확인한다. IOPAEN, IDR13도 표와 비교한다.</li>
+<li>주소에 비트 밴드 영역 밖의 값(예: <code>08000000</code>)을 넣어 오류 메시지를 본다.</li>
+<li>아래 시연에서 방식을 <b>일반 RMW</b>로 두고 <b>main 1단계</b> → <b>ISR 끼어들기</b> → <b>main 1단계</b> 두 번을 누른다. ISR이 세운 bit1이 사라지는 것을 본다.</li>
+<li>방식을 <b>비트 밴드</b>로 바꾸고 같은 순서로 누른다. main의 쓰기가 명령 1개이므로 ISR이 끼어들 위치가 앞 또는 뒤뿐이고 결과는 항상 0x3이다.</li>
+</ol>
+<div class="sim" id="simbox">
+  <div class="subhead">별칭 주소 계산기</div>
+  <div class="ctl">
+    <div><label for="preset">프리셋</label><select id="preset">
+      <option value="40021018,2">RCC_APB2ENR.IOPAEN</option>
+      <option value="40021018,4">RCC_APB2ENR.IOPCEN</option>
+      <option value="4001080C,5" selected>GPIOA_ODR.ODR5 (LD2)</option>
+      <option value="40011008,13">GPIOC_IDR.IDR13 (B1)</option>
+      <option value="40000000,0">TIM2_CR1.CEN</option>
+      <option value="20000020,1">flags bit1 (예: &amp;flags = 0x20000020)</option>
+    </select></div>
+    <div><label for="addr">대상 주소 (16진수) = <b id="l_addr"></b></label><input id="addr" type="text" value="4001080C" maxlength="10" spellcheck="false" autocomplete="off"></div>
+    <div><label for="bit">비트 번호 = <b id="l_bit"></b></label><input id="bit" type="range" min="0" max="31" step="1" value="5"></div>
+  </div>
+  <div class="regs">
+    <div class="stat"><div class="k">영역</div><div class="v sm" id="vReg">–</div></div>
+    <div class="stat"><div class="k">byte_offset</div><div class="v sm" id="vOff">–</div></div>
+    <div class="stat"><div class="k">별칭 주소</div><div class="v sm" id="vAlias">–</div></div>
+  </div>
+  <div class="calc" id="calc" aria-live="polite">주소와 비트를 입력한다.</div>
+
+  <div class="subhead">경합 시연: main은 bit0, SysTick ISR은 bit1을 세운다</div>
+  <div class="ctl">
+    <div><label for="mode">main의 bit0 세우기 방식</label><select id="mode"><option value="rmw" selected>일반 RMW: flags |= 1</option><option value="bb">비트 밴드: BB_SRAM(&amp;flags, 0) = 1</option></select></div>
+  </div>
+  <div class="row2">
+    <div><div class="label">main 명령 (청록 = 다음 실행)</div><div class="asm" id="asmMain"></div></div>
+    <div><div class="label">SysTick_Handler (ISR)</div><div class="asm" id="asmIsr"></div></div>
+  </div>
+  <div class="regs">
+    <div class="stat"><div class="k">flags (SRAM)</div><div class="v" id="vFlags">–</div></div>
+    <div class="stat"><div class="k">main의 r0</div><div class="v" id="vR0">–</div></div>
+    <div class="stat"><div class="k">ISR 실행 횟수</div><div class="v" id="vIsr">–</div></div>
+    <div class="stat" id="stRes"><div class="k">판정</div><div class="v sm" id="vRes">–</div></div>
+  </div>
+  <div class="btns">
+    <button class="sw" id="bMain" type="button">main 1단계</button>
+    <button class="hw" id="bIsr" type="button">ISR 끼어들기</button>
+    <button class="plain" id="bWorst" type="button">최악 순서 자동</button>
+    <button class="plain" id="bReset" type="button">초기화</button>
+  </div>
+  <div class="log" id="log"></div>
+</div>
+<p style="font-size:14.5px;color:var(--muted)">시뮬레이터 모델: ISR은 main을 선점하지만 main은 ISR을 선점하지 못하므로 ISR 내부의 갱신은 main 입장에서 한 덩어리로 본다. 비트 밴드 쓰기는 버스가 잠긴 RMW로 처리하므로 명령 하나로 표현한다. 컴파일러가 실제로 생성하는 명령(레지스터 번호, 주소 적재 명령 등)은 최적화 수준에 따라 다르며 여기서는 핵심 3명령만 보인다.</p>
+</section>
+
+<section id="s5">
+<h2>5. 코드와 레지스터·비트의 대응</h2>
+<p>이 예제는 CMSIS 구조체(<code>RCC</code>, <code>GPIOA</code>, <code>SysTick</code>)와 직접 만든 비트 밴드 매크로만 사용한다.</p>
+<div class="tablewrap"><table>
+<tr><th>코드</th><th>실제 접근 주소</th><th>레지스터 / 비트</th><th>효과</th></tr>
+<tr><td><code>BB_PERIPH(&amp;RCC-&gt;APB2ENR, 2) = 1</code></td><td class="m">0x4242 0308 ← 1</td><td><code>RCC_APB2ENR.IOPAEN</code></td><td>GPIOA 클럭 허용</td></tr>
+<tr><td><code>BB_PERIPH(&amp;RCC-&gt;APB2ENR, 4) = 1</code></td><td class="m">0x4242 0310 ← 1</td><td><code>RCC_APB2ENR.IOPCEN</code></td><td>GPIOC 클럭 허용</td></tr>
+<tr><td><code>GPIOA-&gt;CRL = (… &amp; ~(0xF&lt;&lt;20)) | (0x2&lt;&lt;20)</code></td><td class="m">0x4001 0800</td><td><code>MODE5</code> = 10, <code>CNF5</code> = 00</td><td>PA5 출력 (일반 RMW, 초기화 단계라 경합 없음)</td></tr>
+<tr><td><code>GPIOC-&gt;CRH = (… &amp; ~(0xF&lt;&lt;20)) | (0x8&lt;&lt;20)</code></td><td class="m">0x4001 1004</td><td><code>MODE13</code> = 00, <code>CNF13</code> = 10</td><td>PC13 풀업/풀다운 입력</td></tr>
+<tr><td><code>GPIOC-&gt;BSRR = (1u &lt;&lt; 13)</code></td><td class="m">0x4001 1010</td><td><code>BS13</code></td><td>ODR13 = 1 → 풀업 선택</td></tr>
+<tr><td><code>SysTick-&gt;LOAD / VAL / CTRL</code></td><td class="m">0xE000 E014 / 018 / 010</td><td><code>STK_LOAD</code>, <code>STK_VAL</code>, <code>STK_CTRL</code></td><td>1 ms 주기 SysTick 예외. 코어 영역(0xE000 0000~)은 비트 밴드 대상이 아니다</td></tr>
+<tr><td><code>BB_PERIPH(&amp;GPIOC-&gt;IDR, 13)</code> 읽기</td><td class="m">0x4222 0134 → 0/1</td><td><code>GPIOC_IDR.IDR13</code></td><td>0 = 눌림 → 100 ms, 1 = 놓음 → 500 ms</td></tr>
+<tr><td><code>BB_PERIPH(&amp;GPIOA-&gt;ODR, 5) ^= 1u</code></td><td class="m">0x4221 0194 읽기 → 쓰기</td><td><code>GPIOA_ODR.ODR5</code></td><td>LD2 반전. ODR의 다른 비트는 건드리지 않는다</td></tr>
+<tr><td><code>BB_SRAM(&amp;flags, 0/1)</code></td><td class="m">0x2200 0000 + (&amp;flags − 0x2000 0000)×32 + 0/4</td><td><code>flags</code> bit0 / bit1</td><td>main과 ISR이 각자 자기 비트만 원자적으로 접근</td></tr>
+</table></div>
+<h3>초기화 후 레지스터 값 (리셋값에서 계산)</h3>
+<div class="tablewrap"><table>
+<tr><th>레지스터</th><th>리셋값</th><th>초기화 후</th><th>해석</th></tr>
+<tr><td><code>RCC_APB2ENR</code></td><td class="m">0x0000 0000</td><td class="m">0x0000 0014</td><td>IOPAEN(비트 2), IOPCEN(비트 4). AFIO 클럭은 켜지 않는다</td></tr>
+<tr><td><code>GPIOA_CRL</code></td><td class="m">0x4444 4444</td><td class="m">0x4424 4444</td><td>PA5 니블만 0x2</td></tr>
+<tr><td><code>GPIOC_CRH</code></td><td class="m">0x4444 4444</td><td class="m">0x4484 4444</td><td>PC13 니블만 0x8</td></tr>
+<tr><td><code>GPIOC_ODR</code></td><td class="m">0x0000 0000</td><td class="m">0x0000 2000</td><td>ODR13 = 1 (풀업)</td></tr>
+<tr><td><code>STK_LOAD</code> / <code>STK_CTRL</code></td><td class="m">– / 0x0000 0000</td><td class="m">0x0000 1F3F / 0x0000 0007</td><td>7999, 시작 (COUNTFLAG 비트 16은 읽는 시점에 따라 1)</td></tr>
+</table></div>
+</section>
+
+<section id="s6">
+<h2>6. 초기화부터 핀 출력까지의 경로</h2>
+<ol class="flow">
+<li class="sw"><div class="n">1</div><div class="tx"><b>별칭 쓰기 <code>*(0x42420308) = 1</code><span class="tag sw">소프트웨어</span></b><span>CPU는 <code>STR</code> 하나를 실행한다.</span></div></li>
+<li class="hw"><div class="n">2</div><div class="tx"><b>코어 버스 인터페이스가 잠긴 RMW로 변환<span class="tag hw">하드웨어</span></b><span>0x4002 1018을 읽어 비트 2만 1로 바꾸고 다시 쓴다. 이 동안 다른 마스터나 예외가 그 워드를 바꿀 수 없다.</span></div></li>
+<li class="sw"><div class="n">3</div><div class="tx"><b>GPIO 모드 설정, SysTick 시작<span class="tag sw">소프트웨어</span></b><span>CRL/CRH는 일반 RMW로 쓴다. 인터럽트가 시작되기 전이므로 경합이 없다.</span></div></li>
+<li class="hw"><div class="n">4</div><div class="tx"><b>1 ms마다 SysTick 예외<span class="tag hw">하드웨어</span></b><span>STK_VAL이 0이 되면 COUNTFLAG가 서고 예외 15번으로 진입한다.</span></div></li>
+<li class="sw"><div class="n">5</div><div class="tx"><b><code>SysTick_Handler</code>: <code>g_ms++</code>, flags bit1 별칭 ← 1<span class="tag sw">소프트웨어</span></b><span>main이 bit0을 만지는 중이어도 bit1만 바뀐다. 콜백 개념은 없다.</span></div></li>
+<li class="sw"><div class="n">6</div><div class="tx"><b>main: IDR13 별칭 읽기 → 간격 결정<span class="tag sw">소프트웨어</span></b><span>0x4222 0134를 읽으면 0 또는 1이 바로 나온다. 마스크·시프트가 필요 없다.</span></div></li>
+<li class="sw"><div class="n">7</div><div class="tx"><b>main: ODR5 별칭 반전<span class="tag sw">소프트웨어</span></b><span><code>g_ms − t_led ≥ interval</code>이면 0x4221 0194를 읽고 반전해 쓴다. PA5 핀 출력이 바뀐다.</span></div></li>
+<li class="sw"><div class="n">8</div><div class="tx"><b>main: flags bit0 ← 1, bit1 확인 후 ← 0<span class="tag sw">소프트웨어</span></b><span>ISR이 세운 1 ms 이벤트를 소비하고 <code>ticks_seen</code>을 센다.</span></div></li>
+</ol>
+</section>
+
+<section id="s7">
+<h2>7. 코드 읽기</h2>
+<p>외부 부품은 필요 없다. 소스는 <code>Core/Src/main.c</code> 하나이며 HAL 함수를 호출하지 않는다.</p>
+<div class="file">main.c — 비트 밴드 매크로와 공유 변수</div>
+<div class="codepair">
+<pre><code><span class="cm">/* 비트 밴딩 별칭 주소 계산 매크로.  addr: 대상 변수/레지스터 주소,  bit: 0~31 */</span>
+<span class="kw">#define</span> BITBAND_ALIAS(base_alias, base_band, addr, bit) \
+    (*(<span class="kw">volatile</span> uint32_t *)((base_alias) + (((uint32_t)(addr) - (base_band)) &lt;&lt; 5) + ((bit) &lt;&lt; 2)))
+<span class="kw">#define</span> BB_PERIPH(addr, bit) BITBAND_ALIAS(0x42000000UL, 0x40000000UL, addr, bit)
+<span class="kw">#define</span> BB_SRAM(addr, bit)   BITBAND_ALIAS(0x22000000UL, 0x20000000UL, addr, bit)
+
+<span class="cm">/* SRAM 공유 워드: bit0 = main 이 세움, bit1 = ISR 이 세움 (각자 자기 비트만 비트 밴딩으로 접근) */</span>
+<span class="kw">static</span> <span class="kw">volatile</span> uint32_t flags;
+<span class="kw">static</span> <span class="kw">volatile</span> uint32_t g_ms;</code></pre>
+<ol><li><code>&lt;&lt; 5</code>는 ×32, <code>&lt;&lt; 2</code>는 ×4이다. 공식과 같다.</li><li>결과를 <code>volatile uint32_t *</code>로 역참조하므로 매크로 자체가 좌변·우변으로 쓰인다.</li><li><code>addr</code>가 상수 주소이면 컴파일러가 별칭 주소를 컴파일 시간에 계산한다.</li><li><code>flags</code>는 ISR과 공유하므로 <code>volatile</code>이다.</li></ol>
+</div>
+<div class="file">main.c — SysTick ISR</div>
+<div class="codepair">
+<pre><code><span class="kw">void</span> <span class="kw">SysTick_Handler</span>(<span class="kw">void</span>)
+{
+    g_ms++;
+    BB_SRAM(&amp;flags, 1) = 1;                   <span class="cm">/* bit1 만 원자적으로 세움 (main 이 bit0 를 만지는 중이어도 안전) */</span>
+}</code></pre>
+<ol><li>벡터 테이블의 약한 심볼 <code>SysTick_Handler</code>를 재정의한 진짜 ISR이다.</li><li><code>g_ms++</code>는 ISR만 쓰고 main은 읽기만 하므로 경합이 없다.</li></ol>
+</div>
+<div class="file">main.c — 초기화</div>
+<div class="codepair">
+<pre><code><span class="cm">/* (1) 클럭 활성화: 일반 방식은 RCC->APB2ENR |= (1<<2)|(1<<4),  비트 밴딩은 비트마다 한 번의 원자적 쓰기 */</span>
+BB_PERIPH(&amp;RCC-&gt;APB2ENR, 2) = 1;          <span class="cm">/* IOPAEN */</span>
+BB_PERIPH(&amp;RCC-&gt;APB2ENR, 4) = 1;          <span class="cm">/* IOPCEN */</span>
+
+GPIOA-&gt;CRL = (GPIOA-&gt;CRL &amp; ~(0xFu &lt;&lt; 20)) | (0x2u &lt;&lt; 20);     <span class="cm">/* PA5 출력 2MHz */</span>
+GPIOC-&gt;CRH = (GPIOC-&gt;CRH &amp; ~(0xFu &lt;&lt; 20)) | (0x8u &lt;&lt; 20);     <span class="cm">/* PC13 입력(풀업 선택) */</span>
+GPIOC-&gt;BSRR = (1u &lt;&lt; 13);
+
+SysTick-&gt;LOAD = SystemCoreClock / 1000u - 1u;
+SysTick-&gt;VAL = 0;
+SysTick-&gt;CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_ENABLE_Msk;</code></pre>
+<ol><li>클럭 허용은 비트마다 쓰기 1회이다. 일반 방식이라면 한 번의 RMW로 두 비트를 함께 켤 수 있다. 비트 밴드는 비트가 많을수록 접근 횟수가 늘어난다.</li><li>CRL·CRH는 4비트 필드이므로 비트 밴드보다 일반 RMW가 자연스럽다.</li><li><code>SystemCoreClock</code>은 클럭 설정이 없으므로 8 MHz(HSI)이고 LOAD = 7999이다.</li></ol>
+</div>
+<div class="file">main.c — main 루프</div>
+<div class="codepair">
+<pre><code><span class="kw">while</span> (1)
+{
+    <span class="cm">/* (2) B1: IDR 비트 13 을 별칭으로 읽는다 (0 = 눌림).  결과는 항상 0 또는 1 */</span>
+    uint32_t interval = (BB_PERIPH(&amp;GPIOC-&gt;IDR, 13) == 0) ? 100u : 500u;
+
+    <span class="kw">if</span> ((uint32_t)(g_ms - t_led) &gt;= interval)
+    {
+        t_led = g_ms;
+        BB_PERIPH(&amp;GPIOA-&gt;ODR, 5) ^= 1u;                       <span class="cm">/* 별칭 워드 읽고 반전해 쓰기: ODR5 하나만 바뀜 */</span>
+    }
+
+    <span class="cm">/* (3) main 이 bit0 를 세우고, ISR 이 세운 bit1 을 확인한 뒤 자기 손으로 비운다 (둘 다 단일 원자 접근) */</span>
+    BB_SRAM(&amp;flags, 0) = 1;
+    <span class="kw">if</span> (BB_SRAM(&amp;flags, 1))
+    {
+        BB_SRAM(&amp;flags, 1) = 0;               <span class="cm">/* ISR 이 세운 1ms 이벤트를 소비 */</span>
+        ticks_seen++;
+    }
+}</code></pre>
+<ol><li><code>(uint32_t)(g_ms - t_led)</code>는 <code>g_ms</code>가 2<sup>32</sup>에서 넘쳐도 올바른 경과 시간을 준다.</li><li><code>^= 1u</code>는 별칭 읽기 + 별칭 쓰기 두 번의 접근이다. ODR의 <b>다른 비트</b>는 안전하지만, 그 사이에 ISR이 <b>같은 비트 5</b>를 바꾸면 그 변경은 덮인다. 이 예제에서는 ISR이 PA5를 건드리지 않으므로 문제가 없다.</li><li>bit1 확인과 클리어도 별개의 두 접근이다. 그 사이에 ISR이 다시 bit1을 세우면 이벤트 두 개가 하나로 합쳐진다(플래그는 "있다/없다"만 전달한다). 워드의 다른 비트가 지워지는 문제와는 다른 성질이다.</li></ol>
+</div>
+<div class="box"><div class="label">관찰 결과</div><p>LD2가 500 ms마다 반전(1 Hz 점멸)한다. B1을 누르고 있으면 100 ms마다 반전(5 Hz 점멸)한다. 디버거 메모리 창에서 0x4221 0194를 보면 LD2가 켜졌을 때 0x0000 0001, 꺼졌을 때 0x0000 0000이다. UART 출력은 없다.</p></div>
+</section>
+
+<section id="s8">
+<h2>8. 실험</h2>
+<h3>실험 A. 디버거로 별칭 주소 검증</h3><p>실행을 멈추고 메모리 창에서 0x4242 0300부터 32워드를 본다. 0x4242 0308과 0x4242 0310만 1이고 나머지는 0이면 <code>RCC_APB2ENR</code> = 0x0000 0014와 일치한다. 이어서 0x4221 0194에 1을 직접 써 넣으면 LD2가 켜진다. <code>&amp;flags</code>를 Watch 창에서 확인하고 별칭 주소를 계산해 같은 방법으로 bit0·bit1을 확인한다.</p>
+<h3>실험 B. 디스어셈블리 비교</h3><p><code>GPIOA-&gt;ODR |= (1u &lt;&lt; 5);</code>와 <code>BB_PERIPH(&amp;GPIOA-&gt;ODR, 5) = 1;</code>을 나란히 넣고 디스어셈블리 창에서 비교한다. 앞의 것은 <code>LDR</code>/<code>ORR</code>/<code>STR</code>, 뒤의 것은 주소 적재 뒤 <code>STR</code> 하나인지 확인한다. 같은 일을 <code>GPIOA-&gt;BSRR = (1u &lt;&lt; 5);</code>로 했을 때와도 비교한다.</p>
+<h3>실험 C. 경합을 실제로 만들기</h3><p>main 루프의 (3)을 <code>flags |= 1u; flags &amp;= ~1u;</code> 반복으로 바꾸고, ISR은 <code>flags |= 2u;</code>, main의 bit1 소비는 그대로 둔다. <code>ticks_seen</code>을 전역 <code>volatile</code>로 옮긴 뒤 수 초 실행하고 <code>g_ms</code>와 비교한다. 일반 RMW에서는 main의 쓰기가 ISR의 bit1을 덮어 이벤트가 사라질 수 있다. 비트 밴드 버전으로 되돌려 차이를 비교한다. (손실은 확률적으로 생기므로 결과가 0일 수도 있다. 그 이유를 시뮬레이터로 설명해 본다.)</p>
+<h3>실험 D. BSRR로 다시 쓰기</h3><p>LD2 토글을 <code>BSRR</code>로 바꾼다(켜기: <code>BSRR = 1u &lt;&lt; 5</code>, 끄기: <code>BSRR = 1u &lt;&lt; 21</code>). 현재 상태를 알아야 하므로 ODR을 한 번 읽어야 한다는 점, 그리고 이 코드가 Cortex-M0 기반 STM32에서도 그대로 동작한다는 점을 정리한다.</p>
+</section>
+
+<section id="s9">
+<h2>9. 트러블슈팅</h2>
+<div class="tablewrap"><table>
+<tr><th>증상</th><th>원인</th><th>점검/조치</th></tr>
+<tr><td>LD2가 켜지지 않는다</td><td>별칭 계산 오류로 다른 비트를 켰다 (×32 대신 ×8, 비트에 ×4 누락 등)</td><td>디버거에서 <code>RCC-&gt;APB2ENR</code> = 0x14, <code>GPIOA-&gt;CRL</code> = 0x4424 4444 확인. 계산기로 주소 재확인</td></tr>
+<tr><td>B1을 누르지 않아도 계속 빠르게 깜빡인다</td><td>IOPCEN 별칭 주소가 틀려 GPIOC 클럭이 꺼져 있다. 클럭이 꺼진 주변장치 레지스터는 대개 0으로 읽혀 "눌림"으로 판정된다</td><td><code>RCC-&gt;APB2ENR</code> 비트 4와 <code>GPIOC-&gt;IDR</code> 확인</td></tr>
+<tr><td>별칭 접근에서 HardFault</td><td>비트 밴드 영역 밖의 주소(플래시 0x0800 xxxx, 코어 0xE000 xxxx 등)로 별칭을 계산해 존재하지 않는 주소에 접근</td><td>대상 주소가 0x2000 0000~0x200F FFFF 또는 0x4000 0000~0x400F FFFF인지 확인</td></tr>
+<tr><td>다른 보드로 옮겼더니 오류 없이 아무것도 안 된다</td><td>Cortex-M0/M0+/M7/M33에는 비트 밴드가 없다 (F0, G0, L0, F7, H7, L5, U5 등)</td><td>GPIO는 <code>BSRR</code>, 변수는 <code>__disable_irq()</code> 임계 구역이나 <code>LDREX</code>/<code>STREX</code>(C11 atomic)로 대체</td></tr>
+<tr><td>비트 밴드로 플래그 하나를 지웠는데 다른 플래그도 사라졌다</td><td><code>EXTI_PR</code>처럼 1을 써서 지우는(rc_w1) 레지스터에 별칭 쓰기를 하면 버스의 RMW가 읽은 1들을 그대로 다시 써서 다른 펜딩 비트까지 지운다</td><td>rc_w1 레지스터는 비트 밴드 대신 해당 비트만 1인 값을 직접 쓴다 (<code>EXTI-&gt;PR = 1u &lt;&lt; n</code>)</td></tr>
+<tr><td>최적화 빌드에서 플래그 변화를 못 본다</td><td>공유 변수에 <code>volatile</code> 누락</td><td><code>flags</code>, <code>g_ms</code>를 <code>volatile</code>로 선언 (이 예제는 선언되어 있음)</td></tr>
+</table></div>
+</section>
+
+<section id="s10">
+<h2>10. 확인 문제</h2>
+<details><summary><b>문제 1.</b> <code>TIM2_CR1.CEN</code>(TIM2 베이스 0x4000 0000, CR1 오프셋 0, 비트 0)의 별칭 주소는?</summary>
+<div class="ans"><p>byte_offset = 0, bit = 0이므로 별칭 = 0x4200 0000이다. 주변장치 별칭 영역의 첫 워드이다.</p></div></details>
+<details><summary><b>문제 2.</b> <code>GPIOB_ODR</code>(0x4001 0C0C)의 비트 12 별칭 주소를 계산하라.</summary>
+<div class="ans"><p>byte_offset = 0x1 0C0C, ×32 = 0x21 8180, 비트 12 × 4 = 0x30. 별칭 = 0x4200 0000 + 0x21 8180 + 0x30 = <b>0x4221 81B0</b>이다.</p></div></details>
+<details><summary><b>문제 3.</b> 별칭 주소 0x2200 0404는 어느 주소의 몇 번 비트인가?</summary>
+<div class="ans"><p>0x404 = 1028. 1028 / 32 = 32 나머지 4이므로 byte_offset = 32 = 0x20, 나머지 4 / 4 = 비트 1이다. 0x2000 0020 워드의 비트 1이다.</p></div></details>
+<details><summary><b>문제 4.</b> LD2 토글에 <code>BB_PERIPH(&amp;GPIOA-&gt;ODR, 5) ^= 1u</code>를 쓴다. 이 문장 전체가 원자적인가? ODR의 다른 비트는 안전한가?</summary>
+<div class="ans"><p>문장 전체는 원자적이지 않다. 별칭 읽기와 별칭 쓰기가 각각 한 번씩 일어나므로 그 사이에 ISR이 비트 5를 바꾸면 그 변경은 덮인다. 그러나 쓰기 단계가 비트 5만 바꾸므로 ODR의 다른 비트(다른 핀)는 항상 안전하다. 일반 <code>GPIOA-&gt;ODR ^= 1u &lt;&lt; 5</code>는 다른 비트까지 위험하다는 점이 다르다.</p></div></details>
+</section>
+
+<section>
+  <h2>정리</h2>
+  <div class="tablewrap"><table><tr><th>예제</th><th>계층</th><th>방식</th><th>핵심</th></tr>
+<tr><td class="m"><a href="../01_BlinkArduino/01_BlinkArduino%20예제설명.html">01_BlinkArduino</a></td><td>Arduino</td><td>출력</td><td>pinMode / digitalWrite / delay</td></tr>
+<tr><td class="m"><a href="../02_BlinkHAL/02_BlinkHAL%20예제설명.html">02_BlinkHAL</a></td><td>HAL</td><td>출력</td><td>HAL_GPIO_TogglePin, CubeMX 구조</td></tr>
+<tr><td class="m"><a href="../03_BlinkLL/03_BlinkLL%20예제설명.html">03_BlinkLL</a></td><td>LL</td><td>출력</td><td>LL_GPIO_TogglePin, JTAG 해제</td></tr>
+<tr><td class="m"><a href="../04_BlinkReg/04_BlinkReg%20예제설명.html">04_BlinkReg</a></td><td>레지스터</td><td>출력</td><td>RCC·CRL·BSRR, SysTick 딜레이</td></tr>
+<tr><td class="m"><a href="../05_ReadPin/05_ReadPin%20예제설명.html">05_ReadPin</a></td><td>HAL</td><td>입력(폴링)</td><td>HAL_GPIO_ReadPin</td></tr>
+<tr><td class="m"><a href="../06_ExtInt/06_ExtInt%20예제설명.html">06_ExtInt</a></td><td>HAL+EXTI</td><td>입력(인터럽트)</td><td>EXTI 콜백</td></tr>
+<tr><td class="m"><a href="../07_ReadPinReg/07_ReadPinReg%20예제설명.html">07_ReadPinReg</a></td><td>레지스터</td><td>입력(폴링)</td><td>GPIOC-&gt;IDR 직접 읽기</td></tr>
+<tr><td class="m"><a href="../08_ExternalInt/08_ExternalInt%20예제설명.html">08_ExternalInt</a></td><td>HAL+EXTI</td><td>입력(인터럽트 2개)</td><td>EXTI9_5·EXTI15_10 공용 콜백</td></tr>
+<tr><td class="m"><b>09_BitBandingReg (이 예제설명)</b></td><td>레지스터</td><td>비트 접근</td><td>Cortex-M3 비트 밴딩</td></tr>
+<tr><td class="m"><a href="../10_AD2Test/10_AD2Test%20예제설명.html">10_AD2Test</a></td><td>HAL</td><td>출력 14핀 + UART</td><td>헤더 핀 순차 점등, AD2 관찰</td></tr>
+</table></div>
+  <div class="nextprev"><a href="../08_ExternalInt/08_ExternalInt%20예제설명.html">← 08_ExternalInt</a><a href="../10_AD2Test/10_AD2Test%20예제설명.html">10_AD2Test →</a></div>
+  <footer>근거: 09_BitBandingReg 소스(Core/Src/main.c, platformio.ini). 계층: 레지스터(CMSIS). 레지스터·비트 이름과 주변장치 주소는 RM0008(STM32F101xx~F107xx 레퍼런스 매뉴얼) 기준이며, 비트 밴드 영역·별칭 규칙과 SysTick은 PM0056(Cortex-M3 프로그래밍 매뉴얼) 2.2.5, 4.5 기준이다. 클럭은 클럭 설정 코드가 없으므로 리셋 기본값 HSI 8 MHz이다. 코드는 해당 폴더의 소스에서 발췌한 것이며 일부 줄이 생략되어 있다.</footer>
+</section>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  function h8(v){var s=('00000000'+(v>>>0).toString(16).toUpperCase()).slice(-8);return '0x'+s.slice(0,4)+' '+s.slice(4)}
+  function hx(v){return '0x'+(v>>>0).toString(16).toUpperCase()}
+  /* ---- 별칭 계산기 ---- */
+  function calc(){
+    var raw=$('addr').value.trim().replace(/^0x/i,'').replace(/[\s_]/g,'');
+    var bit=+$('bit').value; $('l_bit').textContent=bit;
+    if(!/^[0-9a-fA-F]{1,8}$/.test(raw)){$('l_addr').textContent='?';$('vReg').textContent='입력 오류';$('vOff').textContent='–';$('vAlias').textContent='–';$('calc').textContent='16진수 1~8자리로 입력한다 (예: 4001080C).';return}
+    var a=parseInt(raw,16)>>>0; $('l_addr').textContent=h8(a);
+    var band=null,alias=null,name;
+    if(a>=0x20000000&&a<=0x200FFFFF){band=0x20000000;alias=0x22000000;name='SRAM'}
+    else if(a>=0x40000000&&a<=0x400FFFFF){band=0x40000000;alias=0x42000000;name='주변장치'}
+    if(band===null){
+      $('vReg').textContent='영역 밖';$('vOff').textContent='–';$('vAlias').textContent='없음';
+      $('calc').textContent=h8(a)+'는 비트 밴드 영역(0x2000 0000~0x200F FFFF, 0x4000 0000~0x400F FFFF)이 아니다.\n이 주소에는 별칭이 없다. 계산된 주소에 접근하면 다른 영역을 건드리거나 HardFault가 난다.';return}
+    var off=(a-band)>>>0, al=(alias+off*32+bit*4)>>>0;
+    $('vReg').textContent=name; $('vOff').textContent=hx(off); $('vAlias').textContent=h8(al);
+    var back=(al-alias)>>>0;
+    $('calc').textContent='byte_offset = '+h8(a)+' − '+h8(band)+' = '+hx(off)+
+      '\nalias = '+h8(alias)+' + '+hx(off)+' × 32 + '+bit+' × 4'+
+      '\n      = '+h8(alias)+' + '+hx(off*32)+' + '+hx(bit*4)+' = '+h8(al)+
+      '\n역산: '+hx(back)+' ÷ 32 = '+hx(Math.floor(back/32))+' 나머지 '+(back%32)+' → 바이트 '+h8(band+Math.floor(back/32))+'의 비트 '+((back%32)/4)+' (= '+h8(a)+' 기준 비트 '+bit+')'+(a%4?'\n참고: 대상 주소가 4의 배수가 아니다. 이 경우 bit는 그 바이트부터 센 위치이다.':'');
+  }
+  $('preset').onchange=function(){var v=this.value.split(',');$('addr').value=v[0];$('bit').value=v[1];calc()};
+  $('addr').oninput=calc; $('bit').oninput=calc;
+  /* ---- 경합 시연 ---- */
+  var S;
+  var PROG={
+    rmw:['LDR  r0, [flags]      ; 읽기','ORR  r0, r0, #1       ; 수정','STR  r0, [flags]      ; 쓰기'],
+    bb:['STR  r1, [alias_bit0]  ; r1 = 1, 별칭 쓰기 1회']
+  };
+  var ISR={rmw:'flags |= 2  (ISR 안에서는 main이 끼어들 수 없다)',bb:'STR r1, [alias_bit1]  (r1 = 1)'};
+  function reset(){S={flags:0,r0:null,pc:0,isr:0,log:[]};$('log').textContent='';}
+  function log(s){var l=$('log');l.textContent=(l.textContent?l.textContent+'\n':'')+s;var a=l.textContent.split('\n');if(a.length>10)l.textContent=a.slice(-10).join('\n')}
+  function mode(){return $('mode').value}
+  function render(){
+    var p=PROG[mode()], h='';
+    for(var i=0;i<p.length;i++){h+='<div class="'+(i<S.pc?'done':(i===S.pc?'pc':''))+'">'+p[i].replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</div>'}
+    if(S.pc>=p.length)h+='<div class="pc">(main 완료)</div>';
+    $('asmMain').innerHTML=h;
+    $('asmIsr').innerHTML='<div class="'+(S.isr?'isr':'')+'">'+ISR[mode()].replace(/&/g,'&amp;')+'</div><div>g_ms++ 등 나머지는 생략</div>';
+    $('vFlags').textContent='0x'+S.flags.toString(16).toUpperCase()+' ('+('0'+S.flags.toString(2)).slice(-2)+'b)';
+    $('vR0').textContent=S.r0===null?'–':'0x'+S.r0.toString(16).toUpperCase();
+    $('vIsr').textContent=S.isr;
+    var st=$('stRes'), done=S.pc>=p.length;
+    if(!done){st.className='stat';$('vRes').textContent='진행 중'}
+    else if(S.isr>0&&!(S.flags&2)){st.className='stat bad';$('vRes').textContent='bit1 손실: ISR의 갱신이 덮어써졌다'}
+    else if(S.isr>0){st.className='stat good';$('vRes').textContent='정상: bit0, bit1 모두 1'}
+    else {st.className='stat';$('vRes').textContent='ISR 없이 완료 (bit0만 1)'}
+  }
+  function mainStep(){
+    var m=mode(), p=PROG[m];
+    if(S.pc>=p.length){log('main: 이미 완료. 초기화 후 다시 시도한다.');return}
+    if(m==='rmw'){
+      if(S.pc===0){S.r0=S.flags;log('main LDR: r0 ← flags = 0x'+S.r0.toString(16))}
+      else if(S.pc===1){S.r0|=1;log('main ORR: r0 = 0x'+S.r0.toString(16))}
+      else {var lost=(S.flags&2)&&!(S.r0&2);S.flags=S.r0;log('main STR: flags ← r0 = 0x'+S.flags.toString(16)+(lost?'  ← ISR가 세운 bit1이 지워졌다':''))}
+    }else{S.flags|=1;log('main STR alias: 버스가 잠긴 RMW로 bit0만 1 → flags = 0x'+S.flags.toString(16))}
+    S.pc++; render();
+  }
+  function isr(){
+    S.flags|=2; S.isr++;
+    log('SysTick_Handler: bit1 ← 1 → flags = 0x'+S.flags.toString(16)+(mode()==='rmw'&&S.pc===1||mode()==='rmw'&&S.pc===2?'  (main은 LDR 이후 r0에 옛 값을 들고 있다)':''));
+    render();
+  }
+  $('bMain').onclick=mainStep; $('bIsr').onclick=isr;
+  $('bWorst').onclick=function(){reset();
+    if(mode()==='rmw'){mainStep();isr();mainStep();mainStep()}
+    else{isr();mainStep();log('비트 밴드: main 명령이 1개라 ISR은 앞 또는 뒤에만 올 수 있다.')}
+  };
+  $('mode').onchange=function(){reset();render()};
+  $('bReset').onclick=function(){reset();render()};
+  reset(); render(); calc();
+})();
+</script>
+</body></html>

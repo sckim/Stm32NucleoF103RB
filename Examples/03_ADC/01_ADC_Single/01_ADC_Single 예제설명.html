@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>01_ADC_Single 예제설명</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+
+/* Layout: 한 열 예제설명(최대 860px) — 문제 → ADC 블록 구조 → 핀·클럭·레지스터 → 시뮬레이터 → HAL↔레지스터 → 변환 경로 → 코드 → 실험 → 트러블슈팅 → 문제 순서.
+   채널 색을 전 구간에서 고정한다: A0(PA0)=파랑, A1=주황, A2=청록, Vrefint/내부 채널=보라. (ADC 다채널 예제설명과 같은 기본 토큰) */
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --surface2:#E7ECF0; --fg:#14222C; --muted:#52636F; --line:#CBD5DC;
+  --c0:#1D4ED8; --c0-soft:#DCE6FB; --c1:#C2410C; --c1-soft:#FDE6DA; --c2:#0F766E; --c2-soft:#D5F0EC; --c3:#7E22CE; --c3-soft:#EEDFFB;
+  --code-bg:#0F1B24; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#9A3412; --warn-bg:#FFF1E6; --ok:#166534; --ok-bg:#E4F5EA;
+  --font-body:"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.75;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:860px;margin:0 auto}
+header{padding-block:40px 8px}
+.kicker{font-family:var(--font-mono);font-size:13px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.25;margin:8px 0 12px;text-wrap:balance;font-weight:700}
+.lead{color:var(--muted);margin:0;max-width:62ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0;padding:0;list-style:none}
+nav.toc a{display:block;padding:6px 12px;border:1px solid var(--line);border-radius:6px;color:var(--fg);text-decoration:none;font-size:14px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--c0);outline:2px solid var(--c0);outline-offset:1px}
+section{margin-top:56px}
+h2{font-size:24px;line-height:1.35;margin:0 0 12px;text-wrap:balance;font-weight:700}
+h3{font-size:18px;margin:28px 0 8px;font-weight:700}
+p{margin:0 0 14px;max-width:68ch}
+ul,ol{margin:0 0 14px;padding-left:22px;max-width:68ch}
+li{margin-bottom:4px}
+code{font-family:var(--font-mono);font-size:.9em;background:var(--surface2);padding:1px 6px;border-radius:4px}
+.k0{color:var(--c0);font-weight:700} .k1{color:var(--c1);font-weight:700} .k2{color:var(--c2);font-weight:700} .k3{color:var(--c3);font-weight:700}
+.box{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:16px 18px;margin:16px 0}
+.box.warn{background:var(--warn-bg);border-color:var(--warn)} .box.ok{background:var(--ok-bg);border-color:var(--ok)}
+.box > :last-child{margin-bottom:0}
+.label{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.tablewrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:15px;background:var(--surface)}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--surface2);font-weight:700;white-space:nowrap}
+td.m,th.m{font-family:var(--font-mono);font-size:13.5px}
+td.n{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+
+/* block diagram */
+.diag{max-width:720px;margin:18px auto}
+.diag svg{display:block;width:100%;height:auto}
+#blk .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+#blk .bx.hot{stroke:var(--warn);stroke-width:2.5;fill:var(--warn-bg)}
+#blk .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+#blk .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+#blk .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+#blk .w0{stroke:var(--c0)} #blk .w1{stroke:var(--c1)} #blk .w2{stroke:var(--c2)} #blk .w3{stroke:var(--c3)}
+#blk .d0{fill:var(--c0)} #blk .d1{fill:var(--c1)} #blk .d2{fill:var(--c2)} #blk .d3{fill:var(--c3)}
+#blk .ah{fill:var(--muted)}
+
+/* flow */
+.flow{list-style:none;padding:0;margin:16px 0;display:grid;gap:0;max-width:none}
+.flow li{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:0;padding:0 0 14px;position:relative}
+.flow li:not(:last-child)::before{content:"";position:absolute;left:16px;top:34px;bottom:0;width:2px;background:var(--line)}
+.flow .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:14px;font-weight:600;background:var(--surface2);border:2px solid var(--line)}
+.flow li.hw .n{border-color:var(--c3);color:var(--c3)} .flow li.sw .n{border-color:var(--c0);color:var(--c0)}
+.flow .tx{min-width:0} .flow .tx b{display:block}
+.flow .tx span{color:var(--muted);font-size:14.5px}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:11.5px;padding:0 6px;border-radius:4px;margin-left:6px;vertical-align:1px}
+.tag.hw{background:var(--c3-soft);color:var(--c3)} .tag.sw{background:var(--c0-soft);color:var(--c0)}
+
+/* mode cards */
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:16px 0}
+.mode{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:14px 16px;min-width:0}
+.mode.pick{border:2px solid var(--ok)}
+.mode b{display:block;margin-bottom:2px}
+.mode .reg{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);display:block;margin-bottom:8px}
+.trk{display:flex;gap:3px;margin:8px 0 6px;flex-wrap:wrap}
+.trk span{font-family:var(--font-mono);font-size:11.5px;font-weight:600;padding:2px 6px;border-radius:4px;border:1px solid var(--line)}
+.trk .g{color:var(--muted);border-style:dashed;background:none}
+.trk .r0{background:var(--c0-soft);color:var(--c0);border-color:var(--c0)} .trk .r1{background:var(--c1-soft);color:var(--c1);border-color:var(--c1)}
+.trk .r2{background:var(--c2-soft);color:var(--c2);border-color:var(--c2)} .trk .r3{background:var(--c3-soft);color:var(--c3);border-color:var(--c3)}
+.trk .x{text-decoration:line-through;opacity:.55}
+.mode p{font-size:14.5px;margin:0}
+
+/* simulator */
+.sim{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:18px;margin:16px 0}
+.subhead{font-weight:700;margin:18px 0 6px;padding-top:14px;border-top:1px dashed var(--line)}
+.subhead:first-child{margin-top:0;padding-top:0;border-top:0}
+.ranks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+@media (max-width:560px){.ranks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.rk{border:2px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);min-width:0;position:relative}
+.rk .h{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.rk .c{font-weight:700;font-size:15px;line-height:1.35}
+.rk .p{font-family:var(--font-mono);font-size:11.5px;color:var(--muted)}
+.rk .v{font-family:var(--font-mono);font-size:13px;font-variant-numeric:tabular-nums;margin-top:4px}
+.rk.nx{box-shadow:0 0 0 3px var(--fg) inset}
+.rk.nx::after{content:"다음 트리거";position:absolute;top:-11px;right:8px;font-size:11px;font-weight:700;background:var(--fg);color:var(--bg);padding:0 6px;border-radius:4px}
+.rk.r0 .c{color:var(--c0)} .rk.r1 .c{color:var(--c1)} .rk.r2 .c{color:var(--c2)} .rk.r3 .c{color:var(--c3)}
+.rk.on.r0{background:var(--c0-soft);border-color:var(--c0)} .rk.on.r1{background:var(--c1-soft);border-color:var(--c1)}
+.rk.on.r2{background:var(--c2-soft);border-color:var(--c2)} .rk.on.r3{background:var(--c3-soft);border-color:var(--c3)}
+.regs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.stat{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.stat .k{font-size:12px;color:var(--muted);font-family:var(--font-mono)}
+.stat .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3;overflow-wrap:anywhere}
+.lamp{display:inline-block;padding:0 10px;border-radius:999px;font-size:15px;border:1px solid var(--line)}
+.lamp.on{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+.outs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+@media (max-width:560px){.outs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.oc{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.oc .k{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.oc .v{font-family:var(--font-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.oc .f{font-size:12.5px}
+.oc.bad{border:2px solid var(--warn);background:var(--warn-bg)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+button,select,input{font-family:inherit}
+button{font-size:15px;font-weight:700;padding:9px 14px;border-radius:6px;border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;min-height:44px}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+button.hw{border-color:var(--c3);color:var(--c3)} button.hw:hover{background:var(--c3-soft)}
+button.sw{border-color:var(--c0);color:var(--c0)} button.sw:hover{background:var(--c0-soft)}
+button.plain:hover{background:var(--surface2)}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 16px;margin:10px 0}
+.ctl label{display:block;font-size:14px;color:var(--muted)}
+.ctl label b{font-family:var(--font-mono);color:var(--fg);font-weight:600}
+.ctl select{font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl input[type=range]{width:100%;min-height:32px}
+.calc{font-family:var(--font-mono);font-size:13.5px;line-height:1.65;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-height:5.4em;white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0 0}
+.uart{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);color:var(--code-fg);border-radius:6px;padding:10px 12px;white-space:pre;overflow-x:auto;margin:8px 0 0;min-height:2.6em}
+.log{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:8px 0 0;max-height:7.5em;overflow:auto;white-space:pre-wrap}
+
+/* code */
+pre{background:var(--code-bg);color:var(--code-fg);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:0;font-family:var(--font-mono);font-size:13.5px;line-height:1.7;tab-size:2}
+pre code{background:none;padding:0;font-size:inherit;color:inherit}
+.cm{color:var(--code-cmt)} .kw{color:var(--code-kw)} .hl{color:var(--code-hl)}
+.codepair{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;margin:14px 0;align-items:start}
+@media (max-width:760px){.codepair{grid-template-columns:minmax(0,1fr)}}
+.codepair ol{margin:0;padding-left:20px;font-size:15px} .codepair li{margin-bottom:8px}
+.file{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:18px 0 6px}
+
+/* quiz */
+details{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0;padding:0}
+summary{cursor:pointer;padding:12px 16px;font-weight:500;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--c0)} details[open] summary::before{content:"▾ "}
+summary:focus-visible{outline:3px solid var(--fg);outline-offset:-3px;border-radius:8px}
+details .ans{padding:0 16px 14px;color:var(--fg)} details .ans p{margin-bottom:8px}
+footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+
+/* 타이머 예제설명 추가 토큰 */
+.diag .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.diag .bx.hot{stroke:var(--warn);stroke-width:2.5;fill:var(--warn-bg)}
+.diag .bx.hw{stroke:var(--c3);fill:var(--c3-soft)} .diag .bx.sw{stroke:var(--c0);fill:var(--c0-soft)}
+.diag .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.diag .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.diag .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+.diag .ah{fill:var(--muted)}
+.diag .ax{stroke:var(--muted);stroke-width:1.3;fill:none}
+.diag .gd{stroke:var(--line);stroke-width:1.2;stroke-dasharray:5 4;fill:none}
+.diag .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .diag .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.diag .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .diag .s3{stroke:var(--c3);stroke-width:2.2;fill:none}
+.diag .d1{fill:var(--c1)} .diag .d0{fill:var(--c0)} .diag .d3{fill:var(--c3)}
+.diag .blk{fill:var(--c1-soft);stroke:var(--c1)}
+.diag text.m{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.diag text.t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.wave{margin:12px 0}
+.wave svg{display:block;width:100%;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px}
+.wave .ax{stroke:var(--muted);stroke-width:1.2;fill:none}
+.wave .gd{stroke:var(--line);stroke-width:1;stroke-dasharray:4 4;fill:none}
+.wave .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .wave .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.wave .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .wave .s3{stroke:var(--c3);stroke-width:2.2;fill:none}
+.wave .ev{stroke:var(--c3);stroke-width:1.6}
+.wave .bar{fill:var(--c1)} .wave .bar0{fill:var(--c0)}
+.wave text{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.wave text.tt{font-family:var(--font-body);font-size:12.5px;fill:var(--fg)}
+.bits{display:flex;margin:14px 0;font-family:var(--font-mono);font-size:13.5px;text-align:center}
+.bits div{flex:1;border:2px solid var(--c0);padding:10px 6px;background:var(--c0-soft);min-width:0}
+.bits div.lo{border-color:var(--c2);background:var(--c2-soft)}
+.bits small{display:block;color:var(--muted);font-size:12px}
+.eq{font-family:var(--font-mono);font-size:14.5px;background:var(--surface2);border-left:4px solid var(--c0);padding:10px 14px;margin:14px 0;overflow-x:auto;white-space:pre-wrap}
+.nextprev{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+.nextprev a{border:1px solid var(--line);border-radius:8px;padding:8px 14px;text-decoration:none;color:var(--c0);background:var(--surface)}
+td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
+.rowbad td{background:var(--warn-bg)}
+.cards2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:16px 0}
+.cards2 .mode{min-width:0}
+
+.wave .dot{fill:var(--c3)} .wave .blk{fill:var(--c1-soft);stroke:var(--c1)}
+.capt{font-size:14px;color:var(--muted);margin:6px 2px 14px}
+.stat .v.sm{font-size:15px}
+.sim .row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">STM32 Nucleo-F103RB · ADC · 예제설명 · <a href="../03_ADC%20개념설명.html" style="color:inherit">↑ 03_ADC 개념설명</a></div>
+  <h1>ADC 단일 채널: 전압을 12비트 숫자로 바꾸는 과정</h1>
+  <p class="lead">마이크로컨트롤러는 전압을 직접 다룰 수 없고 숫자만 다룬다. ADC는 핀의 전압을 잠깐 붙잡아(샘플&amp;홀드) 12번의 비교로 0~4095 사이의 코드로 바꾼다. 이 예제설명은 ADC1을 교정한 뒤 연속 변환으로 돌려 두고, 200 ms마다 결과를 폴링해 원시 값과 mV를 UART로 출력하는 <code>01_ADC_Single</code> 예제를 블록 구조, 레지스터, 변환 시간, 양자화 오차까지 해석한다.</p>
+  <nav class="toc" aria-label="목차">
+    <a href="#s1">1. 문제와 목표</a><a href="#s2">2. ADC 블록 구조</a><a href="#s3">3. 핀·클럭·레지스터</a><a href="#s4">4. 직접 만져 보기</a><a href="#s5">5. HAL ↔ 레지스터</a><a href="#s6">6. 변환 경로</a><a href="#s7">7. 코드 읽기</a><a href="#s8">8. 실험</a><a href="#s9">9. 트러블슈팅</a><a href="#s10">10. 확인 문제</a>
+  </nav>
+</header>
+
+<section id="s1">
+<h2>1. 문제: 아날로그 전압을 숫자로 읽는다</h2>
+<p>가변저항, 센서, 배터리 전압처럼 연속적인 값을 프로그램에서 쓰려면 먼저 숫자로 바꿔야 한다. ADC의 결과는 전압 그 자체가 아니라 <b>기준 전압(VDDA)에 대한 비율</b>이며, 그 비율을 몇 단계로 나누는지가 분해능이다. 학습 목표는 다음과 같다.</p>
+<ul>
+  <li>샘플&amp;홀드 → 12비트 SAR → <code>ADC_DR</code>로 이어지는 ADC 블록 구조를 설명한다.</li>
+  <li>교정(<code>ADC_CR2.RSTCAL</code>/<code>CAL</code>), 채널 선택(<code>SQR3.SQ1</code>), 샘플 시간(<code>SMPR1/2</code>), 연속 변환(<code>CR2.CONT</code>)을 레지스터로 짚는다.</li>
+  <li>변환 시간 <code>(샘플 시간 + 12.5) / ADCCLK</code>를 계산하고, 샘플 시간이 신호원 임피던스와 어떻게 얽히는지 안다.</li>
+  <li>코드 → mV 환산식과 양자화 오차(1 LSB = 3.3 V / 4096 ≈ 0.806 mV)를 구분한다.</li>
+</ul>
+<div class="box"><div class="label">이 예제의 동작</div>
+<p>시작 시 한 번 <code>HAL_ADCEx_Calibration_Start()</code>로 교정하고 <code>HAL_ADC_Start()</code>로 연속 변환을 켠다. 이후 무한 루프에서 <code>HAL_ADC_PollForConversion()</code> → <code>HAL_ADC_GetValue()</code>로 최신 결과를 읽고 <code>ADC PA0 = &lt;raw&gt; (&lt;mV&gt; mV)</code>를 출력한 뒤 200 ms 쉰다. 인터럽트·DMA는 쓰지 않는다.</p></div>
+<div class="box warn"><div class="label">흔한 실수 — CubeMX에서 채널을 잘못 고른다</div>
+<p>CubeMX의 ADC1 설정 화면에서 Temperature Sensor Channel을 켜면 랭크 1 채널이 <span class="k3"><code>ADC_CHANNEL_TEMPSENSOR</code>(CH16)</span>로 바뀌고, 새로 추가한 채널의 샘플 시간은 기본값 1.5 사이클이 되기 쉽다. 이 경우 핀 설정(PA0 아날로그)과 <code>printf</code> 문구는 그대로여서 겉보기에는 PA0를 읽는 것 같지만, 실제로는 PA0와 무관한 값이 나온다. 다시 생성한 뒤에는 <code>MX_ADC1_Init()</code>의 <code>sConfig.Channel</code>과 <code>SamplingTime</code>을 반드시 확인한다(9절, 실험 A).</p></div>
+</section>
+
+<section id="s2">
+<h2>2. ADC 블록 구조: 샘플&amp;홀드와 축차 비교</h2>
+<p>STM32F103의 ADC는 축차 비교형(SAR, Successive Approximation Register) 변환기이다. 아날로그 멀티플렉서가 18개 입력(외부 CH0~15, 내부 CH16 온도 센서, CH17 Vrefint) 중 하나를 고르고, 샘플&amp;홀드 커패시터가 그 전압을 붙잡은 뒤, SAR 논리가 내부 DAC 전압과 12번 비교해 비트를 위에서부터 하나씩 확정한다.</p>
+<div class="diag">
+<svg viewBox="0 0 720 250" role="img" aria-label="PA0와 내부 채널이 멀티플렉서를 거쳐 샘플앤홀드, SAR 변환기, DR, CPU로 이어지는 ADC 블록도">
+  <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+  <circle class="d0" cx="18" cy="70" r="6"/><text class="t" x="30" y="74">PA0 (A0) · CH0</text>
+  <circle class="d3" cx="18" cy="150" r="6"/><text class="t" x="30" y="154">온도 센서 · CH16</text>
+  <path class="s0" d="M138,70 H170 L196,104"/><path class="s3" d="M138,150 H170 L196,122"/>
+  <path class="bx" d="M196,86 L236,100 L236,128 L196,142 Z"/><text class="t" x="200" y="118">MUX</text>
+  <text class="s" x="178" y="168">SQR3.SQ1</text>
+  <path class="w" d="M236,114 H262" marker-end="url(#ar)"/>
+  <rect class="bx hw" x="264" y="74" width="132" height="80" rx="6"/>
+  <text class="t" x="276" y="96">샘플&amp;홀드</text>
+  <text class="s" x="276" y="114">R_ADC ≤ 1 kΩ</text>
+  <text class="s" x="276" y="130">C_ADC ≤ 8 pF</text>
+  <text class="s" x="276" y="146">t_S = SMPx 사이클</text>
+  <path class="w" d="M396,114 H422" marker-end="url(#ar)"/>
+  <rect class="bx sw" x="424" y="74" width="128" height="80" rx="6"/>
+  <text class="t" x="436" y="96">12비트 SAR</text>
+  <text class="s" x="436" y="114">비교 12회</text>
+  <text class="s" x="436" y="130">12.5 사이클 고정</text>
+  <text class="s" x="436" y="146">ADCCLK 8 MHz</text>
+  <path class="w" d="M552,114 H578" marker-end="url(#ar)"/>
+  <rect class="bx hot" x="580" y="90" width="66" height="48" rx="6"/><text class="t" x="588" y="112">DR</text><text class="s" x="588" y="128">SR.EOC</text>
+  <path class="w" d="M646,114 H668" marker-end="url(#ar)"/>
+  <rect class="bx" x="670" y="90" width="44" height="48" rx="6"/><text class="t" x="676" y="118">CPU</text>
+  <text class="s" x="264" y="62">VREF+ = VDDA (LQFP64 내부 연결)</text>
+  <path class="gd" d="M264,190 H714"/>
+  <text class="s" x="264" y="210">교정: CR2.RSTCAL → CR2.CAL (커패시터 뱅크 오차 보정 코드 계산)</text>
+  <text class="s" x="264" y="228">연속 변환: CR2.CONT = 1 → EOC 후 즉시 다음 변환</text>
+</svg>
+<p class="capt">그림 1. ADC1 단일 채널 경로. 파랑은 이 예제가 읽는 외부 채널(PA0), 보라는 같은 MUX에 연결된 내부 채널(CH16, 02 예제)이다. 결과 레지스터 DR은 하나뿐이며, 연속 변환에서는 새 결과가 이전 값을 덮어쓴다.</p>
+</div>
+<div class="tablewrap"><table>
+  <tr><th>단계</th><th>하드웨어 동작</th><th>걸리는 시간</th><th>관련 레지스터</th></tr>
+  <tr><td>채널 선택</td><td>MUX가 랭크 1 채널을 샘플링 회로에 연결</td><td>—</td><td class="m">SQR3.SQ1[4:0], SQR1.L = 0</td></tr>
+  <tr><td>샘플</td><td>스위치(R_ADC)를 통해 C_ADC가 입력 전압까지 충전</td><td>1.5~239.5 사이클</td><td class="m">SMPR2.SMP0[2:0] / SMPR1.SMP16[2:0]</td></tr>
+  <tr><td>홀드 + 변환</td><td>스위치를 열고 MSB부터 12비트를 비교로 확정</td><td>12.5 사이클 (고정)</td><td>—</td></tr>
+  <tr><td>결과</td><td>DR에 12비트 저장, EOC = 1</td><td>—</td><td class="m">DR[11:0], SR.EOC, CR2.ALIGN = 0 (오른쪽 정렬)</td></tr>
+</table></div>
+<div class="eq">T_conv = (샘플 시간 + 12.5) / ADCCLK
+         = (239.5 + 12.5) / 8 MHz = 252 / 8 MHz = 31.5 µs   (이 예제)
+         = (1.5 + 12.5)  / 8 MHz = 14 / 8 MHz  = 1.75 µs   (1.5 사이클을 고른 경우)</div>
+<h3>샘플 시간과 신호원 임피던스</h3>
+<p>샘플 시간 동안 C_ADC는 신호원 저항 R_AIN과 R_ADC를 거쳐 충전된다. 12비트에서 오차를 ¼ LSB 아래로 두려면 RC 시정수의 ln(2<sup>14</sup>) ≈ 9.7배 이상이 필요하다. 데이터시트 Equation 1은 이를 R_AIN 상한으로 쓴다.</p>
+<div class="eq">R_AIN &lt; t_S / (f_ADC × C_ADC × ln(2^14)) − R_ADC     (C_ADC = 8 pF, R_ADC = 1 kΩ)</div>
+<p>ADCCLK 8 MHz에서 1.5 사이클(0.19 µs)이면 R_AIN이 약 1.4 kΩ 이하여야 하고, 239.5 사이클(29.9 µs)이면 식으로는 수백 kΩ까지 허용된다. 다만 데이터시트 Table 47은 R_AIN 최대 50 kΩ을 따로 규정하므로 그 이상은 쓰지 않는다. 10 kΩ 가변저항의 가운데 단자는 최악일 때 약 2.5 kΩ이므로 239.5 사이클에서 여유가 크다.</p>
+<h3>양자화: 1 LSB의 크기</h3>
+<div class="wave"><svg viewBox="0 0 640 220" role="img" aria-label="입력 전압에 따른 12비트 코드의 계단 모양 전달 특성">
+  <line class="ax" x1="50" y1="180" x2="610" y2="180"/><line class="ax" x1="50" y1="20" x2="50" y2="180"/>
+  <line class="gd" x1="50" y1="180" x2="590" y2="30"/>
+  <polyline class="s0" points="50,180 140,180 140,155 230,155 230,130 320,130 320,105 410,105 410,80 500,80 500,55 590,55"/>
+  <text x="56" y="34">코드</text><text x="560" y="200">V_in</text>
+  <text x="30" y="184">0</text><text x="30" y="159">1</text><text x="30" y="134">2</text><text x="30" y="109">3</text><text x="30" y="84">4</text><text x="30" y="59">5</text>
+  <text x="136" y="196">1</text><text x="226" y="196">2</text><text x="316" y="196">3</text><text x="406" y="196">4</text><text x="496" y="196">5 LSB</text>
+  <line class="ev" x1="230" y1="130" x2="320" y2="130"/>
+  <text class="tt" x="330" y="150">← 코드 2의 폭 = 1 LSB ≈ 0.806 mV</text>
+  <text class="tt" x="380" y="44">점선: 이상적인 연속 직선</text>
+</svg><p class="capt">그림 2. 단순화한 ADC 전달 특성(바닥 함수 모델). 폭 1 LSB 안의 모든 전압이 같은 코드가 되므로 양자화 오차는 피할 수 없다. 실제 칩에는 오프셋·이득·비선형 오차가 더해진다(데이터시트 Table 50, 총 오차 TUE 대표 ±2 LSB, 최대 ±5 LSB).</p></div>
+<div class="eq">1 LSB = VDDA / 4096 = 3300 mV / 4096 ≈ 0.806 mV
+코드의 환산: mV = raw × 3300 / 4095   (정수 나눗셈, 4095 → 3300 mV가 되도록 4095로 나눈다)</div>
+<p>소스는 4095로 나누어 최댓값 코드가 정확히 3300 mV가 되게 했다. 4096으로 나누는 식과의 차이는 최대 약 0.8 mV로 1 LSB보다 작다. 정수 나눗셈은 소수점 아래를 버리므로 출력 mV는 최대 1 mV만큼 더 작게 나온다.</p>
+</section>
+
+<section id="s3">
+<h2>3. 핀·클럭·레지스터</h2>
+<h3>핀</h3>
+<div class="tablewrap"><table>
+  <tr><th>신호</th><th>MCU 핀</th><th>Nucleo 헤더</th><th>설정</th></tr>
+  <tr><td class="k0">ADC1_IN0</td><td class="m">PA0</td><td>Arduino A0 (CN8)</td><td><code>GPIO_MODE_ANALOG</code> → <code>GPIOA_CRL</code>의 <code>MODE0 = 00</code>, <code>CNF0 = 00</code> (아날로그 입력)</td></tr>
+  <tr><td>USART2_TX / RX</td><td class="m">PA2 / PA3</td><td>ST-LINK 가상 COM</td><td>115200 8N1, <code>printf</code> 출력</td></tr>
+  <tr><td class="k3">온도 센서</td><td>핀 없음 (CH16)</td><td>—</td><td>같은 ADC1의 내부 채널. 02 예제에서 다룬다.</td></tr>
+</table></div>
+<p>PA0는 <code>HAL_ADC_MspInit()</code>에서 아날로그 모드로 설정된다. 아날로그 모드에서는 디지털 입력 슈미트 트리거가 끊겨 중간 전압에서도 누설 전류가 늘지 않는다. LQFP64 패키지는 VREF+가 내부에서 VDDA에, VREF−가 VSSA에 연결되어 있어 기준 전압이 곧 VDDA(보드에서 3.3 V)이다.</p>
+<h3>클럭</h3>
+<div class="tablewrap"><table>
+  <tr><th>단계</th><th>설정 (SystemClock_Config)</th><th>클럭</th></tr>
+  <tr><td>SYSCLK</td><td>HSI 8 MHz ÷2 → PLL ×16</td><td class="n">64 MHz</td></tr>
+  <tr><td>APB2 (PCLK2)</td><td><code>RCC_HCLK_DIV1</code></td><td class="n">64 MHz</td></tr>
+  <tr><td>ADCCLK</td><td><code>RCC_ADCPCLK2_DIV8</code> → <code>RCC_CFGR.ADCPRE[15:14] = 11</code></td><td class="n"><b>8 MHz</b></td></tr>
+  <tr><td>ADC 클럭 허용</td><td><code>__HAL_RCC_ADC1_CLK_ENABLE()</code> → <code>RCC_APB2ENR.ADC1EN</code> (비트 9)</td><td>—</td></tr>
+</table></div>
+<div class="box"><div class="label">규칙</div><p>F103의 ADCCLK는 0.6~14 MHz여야 한다(데이터시트 Table 47). PCLK2 64 MHz에서 ÷2(32 MHz), ÷4(16 MHz)는 상한을 넘고, ÷6(10.67 MHz)과 ÷8(8 MHz)만 쓸 수 있다. 이 예제는 ÷8을 쓴다. 같은 그룹의 03·04 예제는 ÷6(10.67 MHz)이므로 변환 시간을 비교할 때 클럭이 다르다는 점에 유의한다.</p></div>
+<h3>ADC1 레지스터 (베이스 0x4001 2400)</h3>
+<div class="tablewrap"><table>
+  <tr><th>레지스터</th><th>오프셋</th><th>이 예제에서 쓰는 비트</th></tr>
+  <tr><td class="m">ADC_SR</td><td class="m">0x00</td><td><code>EOC</code>(비트 1) 변환 완료, <code>STRT</code>(비트 4) 레귤러 변환 시작됨</td></tr>
+  <tr><td class="m">ADC_CR1</td><td class="m">0x04</td><td><code>SCAN</code> = 0 (단일 채널)</td></tr>
+  <tr><td class="m">ADC_CR2</td><td class="m">0x08</td><td><code>ADON</code>(0), <code>CONT</code>(1), <code>CAL</code>(2), <code>RSTCAL</code>(3), <code>ALIGN</code>(11), <code>EXTSEL[19:17]</code>, <code>EXTTRIG</code>(20), <code>SWSTART</code>(22), <code>TSVREFE</code>(23)</td></tr>
+  <tr><td class="m">ADC_SMPR1</td><td class="m">0x0C</td><td><code>SMP16[20:18]</code> (CH10~17의 샘플 시간)</td></tr>
+  <tr><td class="m">ADC_SMPR2</td><td class="m">0x10</td><td><code>SMP0[2:0]</code> (CH0~9의 샘플 시간)</td></tr>
+  <tr><td class="m">ADC_SQR1</td><td class="m">0x2C</td><td><code>L[23:20]</code> = 0 (변환 1개)</td></tr>
+  <tr><td class="m">ADC_SQR3</td><td class="m">0x34</td><td><code>SQ1[4:0]</code> = 랭크 1 채널 번호</td></tr>
+  <tr><td class="m">ADC_DR</td><td class="m">0x4C</td><td><code>DATA[15:0]</code>, 오른쪽 정렬이면 하위 12비트. 읽으면 EOC가 하드웨어로 지워진다.</td></tr>
+</table></div>
+<div class="tablewrap"><table>
+  <tr><th>SMPx 코드</th><th>000</th><th>001</th><th>010</th><th>011</th><th>100</th><th>101</th><th>110</th><th>111</th></tr>
+  <tr><td>샘플 시간 (사이클)</td><td class="n">1.5</td><td class="n">7.5</td><td class="n">13.5</td><td class="n">28.5</td><td class="n">41.5</td><td class="n">55.5</td><td class="n">71.5</td><td class="n">239.5</td></tr>
+  <tr><td>T_conv @ 8 MHz</td><td class="n">1.75 µs</td><td class="n">2.5 µs</td><td class="n">3.25 µs</td><td class="n">5.13 µs</td><td class="n">6.75 µs</td><td class="n">8.5 µs</td><td class="n">10.5 µs</td><td class="n">31.5 µs</td></tr>
+</table></div>
+</section>
+
+<section id="s4">
+<h2>4. 직접 만져 보기</h2>
+<p>아래 시뮬레이터는 PA0 전압을 12비트 코드로 바꾸고, 예제와 같은 정수식으로 mV를 계산한다. 샘플 시간과 ADC 분주비를 바꾸면 변환 시간과 허용 신호원 저항이 함께 바뀐다.</p>
+<ol>
+  <li>입력 전압을 1650 mV에 두고 코드가 2048 근처인지, 출력 mV와 실제 전압의 차이가 1 LSB(0.806 mV) 안팎인지 확인한다.</li>
+  <li>입력을 1 mV씩 움직여 코드가 바뀌지 않는 구간(같은 코드를 내는 입력 범위)을 찾는다.</li>
+  <li>실제 VDDA를 3200 mV로 낮춘다. 입력은 그대로인데 출력 mV가 약 3% 커지는 이유를 생각한다.</li>
+  <li>샘플 시간을 1.5와 239.5로 바꿔 변환 시간과 R_AIN 상한을 비교한다. 분주비를 ÷4로 바꾸면 14 MHz 상한 경고가 뜬다.</li>
+  <li>채널을 <b>CH16</b>으로 바꿔 &lsquo;채널을 잘못 고른&rsquo; 흔한 실수를 재현한다. 입력 슬라이더를 움직여도 출력이 따라오지 않는다.</li>
+</ol>
+<div class="sim" id="simbox">
+  <div class="subhead">입력</div>
+  <div class="ctl">
+    <div><label for="vin"><span class="k0">PA0</span> 입력 전압 = <b id="l_vin"></b></label><input id="vin" type="range" min="0" max="3400" step="1" value="1650"></div>
+    <div><label for="vdda">실제 VDDA = <b id="l_vdda"></b></label><input id="vdda" type="range" min="3000" max="3600" step="10" value="3300"></div>
+    <div><label for="ch">랭크 1 채널 (SQR3.SQ1)</label><select id="ch"><option value="0" selected>CH0 · PA0 (이 예제)</option><option value="16">CH16 · 온도 센서 (실수 재현)</option></select></div>
+    <div><label for="smp">샘플 시간 (SMPx)</label><select id="smp">
+      <option value="1.5">000 · 1.5 사이클</option><option value="7.5">001 · 7.5</option><option value="13.5">010 · 13.5</option><option value="28.5">011 · 28.5</option><option value="41.5">100 · 41.5</option><option value="55.5">101 · 55.5</option><option value="71.5">110 · 71.5</option><option value="239.5" selected>111 · 239.5 사이클 (이 예제)</option></select></div>
+    <div><label for="pre">ADC 분주 (RCC_CFGR.ADCPRE)</label><select id="pre"><option value="2">÷2 → 32 MHz</option><option value="4">÷4 → 16 MHz</option><option value="6">÷6 → 10.67 MHz</option><option value="8" selected>÷8 → 8 MHz (이 예제)</option></select></div>
+  </div>
+  <div class="subhead">변환 결과</div>
+  <div class="regs">
+    <div class="stat"><div class="k">ADC_DR (10진)</div><div class="v" id="vRaw">–</div></div>
+    <div class="stat"><div class="k">ADC_DR (16진 / 2진)</div><div class="v sm" id="vHex">–</div></div>
+    <div class="stat"><div class="k">출력 mV (raw×3300/4095)</div><div class="v" id="vMv">–</div></div>
+    <div class="stat"><div class="k">출력 − 실제 전압</div><div class="v" id="vErr">–</div></div>
+  </div>
+  <div class="subhead">타이밍</div>
+  <div class="regs">
+    <div class="stat"><div class="k">ADCCLK</div><div class="v" id="vClk">–</div></div>
+    <div class="stat"><div class="k">샘플 시간 t_S</div><div class="v" id="vTs">–</div></div>
+    <div class="stat"><div class="k">변환 시간 T_conv</div><div class="v" id="vTc">–</div></div>
+    <div class="stat"><div class="k">R_AIN 상한</div><div class="v" id="vRain">–</div></div>
+    <div class="stat"><div class="k">200 ms 동안 변환 횟수 (CONT=1)</div><div class="v" id="vN">–</div></div>
+    <div class="stat"><div class="k">SR.EOC</div><div class="v"><span class="lamp" id="vEoc">0</span></div></div>
+  </div>
+  <div class="btns">
+    <button class="hw" id="bConv" type="button">변환 1회 완료 (EOC = 1)</button>
+    <button class="sw" id="bRead" type="button">PollForConversion + GetValue + printf</button>
+    <button class="sw" id="bLoop" type="button">while 루프 5회 (200 ms 간격)</button>
+    <button class="plain" id="bReset" type="button">초기화</button>
+  </div>
+  <div class="calc" id="calc" aria-live="polite">버튼을 눌러 계산 과정을 확인한다.</div>
+  <div class="label" style="margin-top:12px">UART 출력 (115200 8N1)</div>
+  <div class="uart" id="uart"></div>
+</div>
+<p style="font-size:14.5px;color:var(--muted)">시뮬레이터 모델: 이상적 변환기로 보고 코드 = floor(V_in / VDDA × 4096)(0~4095로 포화)에 ±1 LSB 잡음을 더한다. 실제 칩의 오프셋·이득·비선형 오차는 넣지 않았다. CH16을 고르면 온도 센서 출력을 약 1.37 V로 두고, 샘플 시간이 17.1 µs보다 짧으면 잡음을 크게 하여 &lsquo;부정확하다&rsquo;는 것만 표현한다(실제 오차 크기는 모델링하지 않는다). R_AIN 상한은 데이터시트 Equation 1로 계산하고 Table 47의 50 kΩ 상한과 비교한다.</p>
+</section>
+
+<section id="s5">
+<h2>5. HAL 함수 ↔ 레지스터·비트</h2>
+<div class="tablewrap"><table>
+  <tr><th>HAL 필드/함수</th><th>값</th><th>레지스터/비트</th><th>의미</th></tr>
+  <tr><td><code>ScanConvMode</code></td><td>DISABLE</td><td class="m">CR1.SCAN = 0</td><td>랭크 1 하나만 변환</td></tr>
+  <tr><td><code>ContinuousConvMode</code></td><td>ENABLE</td><td class="m">CR2.CONT = 1</td><td>EOC 뒤 하드웨어가 곧바로 다음 변환 시작</td></tr>
+  <tr><td><code>DiscontinuousConvMode</code></td><td>DISABLE</td><td class="m">CR1.DISCEN = 0</td><td>—</td></tr>
+  <tr><td><code>ExternalTrigConv</code></td><td>SOFTWARE_START</td><td class="m">CR2.EXTSEL = 111</td><td>SWSTART 비트로 시작</td></tr>
+  <tr><td><code>DataAlign</code></td><td>RIGHT</td><td class="m">CR2.ALIGN = 0</td><td>DR[11:0]에 결과</td></tr>
+  <tr><td><code>NbrOfConversion</code></td><td>1</td><td class="m">SQR1.L = 0000</td><td>변환 1개</td></tr>
+  <tr><td><code>sConfig.Channel</code></td><td><code>ADC_CHANNEL_0</code></td><td class="m">SQR3.SQ1 = 0</td><td>랭크 1 채널 번호</td></tr>
+  <tr><td><code>sConfig.SamplingTime</code></td><td><code>ADC_SAMPLETIME_239CYCLES_5</code></td><td class="m">SMPR2.SMP0 = 111</td><td>29.9 µs 샘플. 샘플 시간은 채널마다 따로 둔다</td></tr>
+  <tr><td><code>HAL_ADCEx_Calibration_Start()</code></td><td>—</td><td class="m">ADON=1 → RSTCAL=1 → CAL=1</td><td>ADON 후 2 ADC 클럭 이상 기다린 뒤 교정 레지스터 초기화, 교정 시작. 각각 하드웨어가 0으로 내릴 때까지 대기</td></tr>
+  <tr><td><code>HAL_ADC_Start()</code></td><td>—</td><td class="m">ADON=1, SR.EOC=0, CR2.SWSTART|EXTTRIG=1</td><td>변환 시작. CONT=1이므로 이후 계속 변환</td></tr>
+  <tr><td><code>HAL_ADC_PollForConversion()</code></td><td>timeout 100 ms</td><td class="m">SR.EOC 대기 → SR.STRT·EOC 클리어</td><td>SCAN=0, L=0이므로 진짜 EOC 폴링을 한다(03 예제와 다름)</td></tr>
+  <tr><td><code>HAL_ADC_GetValue()</code></td><td>—</td><td class="m">DR 읽기</td><td>DR을 읽으면 EOC도 하드웨어로 지워진다</td></tr>
+</table></div>
+<p>아래 표는 RM0008 비트 위치로 계산한 시작 후 값이다. 외부 채널만 쓰므로 <code>CR2.TSVREFE</code>는 0이다(CH16·CH17을 고르면 <code>HAL_ADC_ConfigChannel()</code>이 이 비트를 켠다)(SWSTART는 변환이 시작되면 하드웨어가 지우므로 0으로 둔다).</p>
+<div class="tablewrap"><table>
+  <tr><th>레지스터</th><th>시작 후 값</th><th>해석</th></tr>
+  <tr><td class="m">CR1</td><td class="m">0x0000 0000</td><td>SCAN=0, DISCEN=0</td></tr>
+  <tr><td class="m">CR2</td><td class="m">0x001E 0003</td><td>TSVREFE(23) = 0 · EXTTRIG(20) · EXTSEL=111(19:17) · CONT(1) · ADON(0)</td></tr>
+  <tr><td class="m">SMPR1</td><td class="m">0x0000 0000</td><td>CH10~17 미사용</td></tr>
+  <tr><td class="m">SMPR2</td><td class="m">0x0000 0007</td><td>SMP0 = 111 (239.5 사이클)</td></tr>
+  <tr><td class="m">SQR1</td><td class="m">0x0000 0000</td><td>L = 0 (변환 1개)</td></tr>
+  <tr><td class="m">SQR3</td><td class="m">0x0000 0000</td><td>SQ1 = 0 (CH0)</td></tr>
+</table></div>
+</section>
+
+<section id="s6">
+<h2>6. 초기화부터 결과 출력까지의 경로</h2>
+<p>이 예제에는 ADC 인터럽트가 없다. 동작하는 ISR은 <code>HAL_Delay()</code>용 <code>SysTick_Handler</code>뿐이다(CubeMX가 만든 B1의 <code>EXTI15_10_IRQHandler</code>도 있으나 콜백을 쓰지 않는다).</p>
+<ol class="flow">
+  <li class="sw"><div class="n">1</div><div class="tx"><b><code>MX_ADC1_Init()</code><span class="tag sw">소프트웨어</span></b><span><code>HAL_ADC_Init()</code>이 MSP에서 ADC1 클럭과 PA0 아날로그 모드를 켜고 CR1·CR2·SQR1을 쓴다. <code>HAL_ADC_ConfigChannel()</code>이 SQR3·SMPRx를 쓴다.</span></div></li>
+  <li class="hw"><div class="n">2</div><div class="tx"><b>교정<span class="tag hw">하드웨어</span></b><span>ADON=1로 2 ADC 클럭 이상 켠 뒤 RSTCAL → CAL. 데이터시트 t_CAL은 83 ADC 클럭으로, 8 MHz에서 약 10.4 µs이다. 결과 보정 코드는 이후 모든 변환에 적용된다.</span></div></li>
+  <li class="sw"><div class="n">3</div><div class="tx"><b><code>HAL_ADC_Start()</code><span class="tag sw">소프트웨어</span></b><span>EOC를 지우고 <code>SWSTART | EXTTRIG</code>를 세운다. 한 번만 호출한다.</span></div></li>
+  <li class="hw"><div class="n">4</div><div class="tx"><b>샘플 → SAR → DR, EOC = 1<span class="tag hw">하드웨어</span></b><span>CONT=1이므로 T_conv(31.5 µs)마다 DR이 새 값으로 바뀐다. CPU가 읽지 않아도 계속 덮어쓴다.</span></div></li>
+  <li class="sw"><div class="n">5</div><div class="tx"><b><code>HAL_ADC_PollForConversion(&amp;hadc1, 100)</code><span class="tag sw">소프트웨어</span></b><span>EOC가 1이 될 때까지 기다린 뒤 STRT·EOC를 지운다. 연속 변환 중이므로 대개 다음 변환 한 번(최대 T_conv)만 기다린다.</span></div></li>
+  <li class="sw"><div class="n">6</div><div class="tx"><b><code>HAL_ADC_GetValue()</code> → <code>printf</code><span class="tag sw">소프트웨어</span></b><span>DR의 최신 값을 읽어 mV로 환산하고 USART2로 블로킹 송신한다.</span></div></li>
+  <li class="sw"><div class="n">7</div><div class="tx"><b><code>HAL_Delay(200)</code><span class="tag sw">소프트웨어</span></b><span>그동안 ADC는 약 6,350회(31.5 µs 기준) 변환하지만 마지막 값만 DR에 남는다. 5로 돌아간다.</span></div></li>
+</ol>
+<div class="box"><div class="label">연속 변환을 끄면</div><p><code>ContinuousConvMode = DISABLE</code>로 바꾸고 코드는 그대로 두면, 첫 변환 뒤 ADC가 멈춘다. 두 번째 <code>PollForConversion</code>은 EOC를 100 ms 동안 기다리다 <code>HAL_TIMEOUT</code>을 돌려주고, 예제는 <code>Error_Handler()</code>로 들어가 멈춘다. 단일 변환 모드에서는 루프마다 <code>HAL_ADC_Start()</code>를 다시 불러야 한다.</p></div>
+</section>
+
+<section id="s7">
+<h2>7. 코드 읽기</h2>
+<p>계층은 HAL이다. 사용자 코드는 <code>USER CODE</code> 영역의 교정·시작·루프뿐이고, ADC 설정은 CubeMX가 생성한 <code>MX_ADC1_Init()</code>에 있다.</p>
+<div class="file">Core/Src/main.c — SystemClock_Config() 중 ADC 클럭 (CubeMX 생성)</div>
+<div class="codepair">
+<pre><code>PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
+PeriphClkInit.AdcClockSelection = <span class="hl">RCC_ADCPCLK2_DIV8</span>;
+<span class="kw">if</span> (<span class="kw">HAL_RCCEx_PeriphCLKConfig</span>(&amp;PeriphClkInit) != HAL_OK)
+{
+  Error_Handler();
+}</code></pre>
+<ol><li><code>RCC_CFGR.ADCPRE = 11</code> → PCLK2 64 MHz ÷ 8 = 8 MHz.</li><li>14 MHz 상한 아래이며, 03·04 예제(÷6)보다 느리다.</li></ol>
+</div>
+<div class="file">Core/Src/main.c — MX_ADC1_Init() (CubeMX 생성)</div>
+<div class="codepair">
+<pre><code>hadc1.Instance = ADC1;
+hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
+hadc1.Init.<span class="hl">ContinuousConvMode</span> = ENABLE;
+hadc1.Init.DiscontinuousConvMode = DISABLE;
+hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+hadc1.Init.NbrOfConversion = 1;
+<span class="kw">if</span> (<span class="kw">HAL_ADC_Init</span>(&amp;hadc1) != HAL_OK)
+{
+  Error_Handler();
+}
+
+<span class="cm">/** Configure Regular Channel
+*/</span>
+sConfig.Channel = <span class="hl">ADC_CHANNEL_0</span>;
+sConfig.Rank = ADC_REGULAR_RANK_1;
+sConfig.SamplingTime = <span class="hl">ADC_SAMPLETIME_239CYCLES_5</span>;
+<span class="kw">if</span> (<span class="kw">HAL_ADC_ConfigChannel</span>(&amp;hadc1, &amp;sConfig) != HAL_OK)
+{
+  Error_Handler();
+}</code></pre>
+<ol>
+  <li><code>CR1.SCAN = 0</code>, <code>CR2.CONT = 1</code>, <code>CR2.EXTSEL = 111</code>, <code>CR2.ALIGN = 0</code>, <code>SQR1.L = 0</code>.</li>
+  <li>채널 0(PA0) → <code>SQR3.SQ1 = 0</code>. 외부 채널이므로 <code>CR2.TSVREFE</code>는 건드리지 않는다.</li>
+  <li>샘플 시간 239.5 사이클 → <code>SMPR2.SMP0 = 111</code>. 239.5 / 8 MHz ≈ 29.9 µs, 변환 1회 (239.5 + 12.5) / 8 MHz = 31.5 µs.</li>
+  <li>이 값들은 CubeMX의 <code>ADC_Single.ioc</code>(Rank 1 = Channel 0, 239.5 Cycles)에서 생성된다. 손으로 고치면 다음 생성 때 덮어써지므로 <code>.ioc</code>에서 바꾼다.</li>
+</ol>
+</div>
+<div class="file">Core/Src/stm32f1xx_hal_msp.c — HAL_ADC_MspInit()</div>
+<div class="codepair">
+<pre><code><span class="cm">/* Peripheral clock enable */</span>
+__HAL_RCC_ADC1_CLK_ENABLE();
+
+__HAL_RCC_GPIOA_CLK_ENABLE();
+<span class="cm">/**ADC1 GPIO Configuration
+PA0-WKUP     ------&gt; ADC1_IN0
+*/</span>
+GPIO_InitStruct.Pin = GPIO_PIN_0;
+GPIO_InitStruct.Mode = <span class="hl">GPIO_MODE_ANALOG</span>;
+<span class="kw">HAL_GPIO_Init</span>(GPIOA, &amp;GPIO_InitStruct);</code></pre>
+<ol><li><code>RCC_APB2ENR.ADC1EN = 1</code>.</li><li>PA0를 아날로그 입력(<code>CRL.MODE0 = 00</code>, <code>CNF0 = 00</code>)으로 둔다. <code>.ioc</code>의 PA0 = ADCx_IN0 설정에서 생성된 코드이다.</li></ol>
+</div>
+<div class="file">Core/Src/main.c — USER CODE BEGIN WHILE (교정·시작·루프)</div>
+<div class="codepair">
+<pre><code><span class="cm">// Start ADC Calibration</span>
+<span class="kw">if</span>( <span class="kw">HAL_ADCEx_Calibration_Start</span>(&amp;hadc1) != HAL_OK )
+{
+  Error_Handler();
+}
+<span class="kw">if</span>( <span class="kw">HAL_ADC_Start</span>(&amp;hadc1) != HAL_OK )
+{
+  Error_Handler();
+}
+
+uint16_t adc1;
+
+<span class="kw">while</span> (1)
+{
+  <span class="cm">// ADC1_SR.EOC 플래그 대기 후 ADC1_DR에서 PA0(ADC1_IN0) 변환값(12bit, 0~4095) 읽기</span>
+  <span class="kw">if</span> (<span class="kw">HAL_ADC_PollForConversion</span>(&amp;hadc1, 100) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  adc1 = <span class="kw">HAL_ADC_GetValue</span>(&amp;hadc1);
+  printf(&quot;ADC PA0 = %d (%d mV)\n&quot;, adc1, (<span class="kw">int</span>)(<span class="hl">adc1 * 3300UL / 4095</span>));
+  <span class="cm">/* USER CODE END WHILE */</span>
+
+  <span class="cm">/* USER CODE BEGIN 3 */</span>
+  <span class="kw">HAL_Delay</span>(200);
+}</code></pre>
+<ol>
+  <li>교정은 변환 시작 전에 한 번 한다. RM0008은 전원 투입마다 교정을 권장한다.</li>
+  <li><code>HAL_ADC_Start()</code>는 루프 밖에서 한 번만 부른다. CONT=1이 있어야 이 구조가 성립한다.</li>
+  <li>폴링 반환값을 검사하여 타임아웃이면 <code>Error_Handler()</code>로 멈춘다.</li>
+  <li><code>3300UL</code>로 32비트 부호 없는 곱셈을 먼저 하고 나눈다. 최대 4095 × 3300 = 13,513,500으로 넘침이 없다.</li>
+  <li>문자열은 <code>\n</code> 하나로 끝나고, <code>__io_putchar</code>가 <code>'\n'</code> 앞에 <code>'\r'</code>를 덧붙여 실제 줄 끝은 <code>0D 0A</code>(CR LF)가 된다.</li>
+</ol>
+</div>
+<div class="box"><div class="label">기대 출력</div>
+<pre><code>ADC PA0 = 0 (0 mV)          ← A0를 GND에 연결
+ADC PA0 = 2048 (1650 mV)    ← 가변저항 중간
+ADC PA0 = 4095 (3300 mV)    ← A0를 3V3에 연결</code></pre>
+<p>2048 × 3300 / 4095 = 1650.4 → 1650 mV이다. 실제 값은 잡음과 ADC 오차로 몇 LSB 흔들린다. 각 줄은 <code>0D 0A</code>로 끝난다.</p></div>
+</section>
+
+<section id="s8">
+<h2>8. 실험</h2>
+<p><b>배선</b>: 10 kΩ 가변저항의 양 끝을 3V3과 GND에, 가운데 단자를 A0(PA0)에 연결한다. 터미널은 115200 8N1이다.</p>
+<h3>실험 A. 채널을 잘못 고르면</h3><p>프로젝트를 복사한 뒤 CubeMX에서 Temperature Sensor Channel을 켜고 Rank 1 채널을 이것으로, 샘플 시간을 1.5 Cycles로 바꿔 다시 생성한다. 출력이 가변저항과 무관해지는 것을 확인하고, 디버거로 <code>ADC1-&gt;SQR3</code>(SQ1 = 16)와 <code>CR2.TSVREFE</code>를 읽어 원인을 찾는다. 원래 설정(Channel 0, 239.5 Cycles)으로 되돌려 복구한다.</p>
+<h3>실험 B. 샘플 시간과 신호원 저항</h3><p>A0와 가변저항 사이에 100 kΩ 저항을 직렬로 넣는다. 샘플 시간을 239.5와 1.5 사이클로 바꿔 가며 같은 전압에서 값이 어떻게 달라지는지 본다. 시뮬레이터의 R_AIN 상한과 비교한다. (100 kΩ은 데이터시트의 R_AIN 최대 50 kΩ을 넘으므로 &lsquo;규격 밖&rsquo; 관찰 실험이다.)</p>
+<h3>실험 C. VDDA 가정 확인</h3><p>멀티미터로 보드의 3V3(=VDDA)을 잰다. 3.30 V가 아니라면 같은 입력에서 출력 mV가 얼마나 틀어지는지 계산하고, 3300 대신 실측값을 넣었을 때와 비교한다. VDDA를 칩 내부에서 역산하는 방법은 <code>06_ADC_Vrefint_VDDA_c</code>에서 다룬다.</p>
+<h3>실험 D. 단일 변환 모드로 바꾼다</h3><p><code>ContinuousConvMode</code>를 DISABLE로 바꾸고 실행해 첫 줄만 출력되고 멈추는지(폴링 타임아웃 → <code>Error_Handler</code>) 확인한다. 이어서 루프 안에서 매번 <code>HAL_ADC_Start()</code>를 부르도록 고쳐 정상 동작을 회복시킨다.</p>
+</section>
+
+<section id="s9">
+<h2>9. 트러블슈팅</h2>
+<div class="tablewrap"><table>
+  <tr><th>증상</th><th>원인</th><th>점검/조치</th></tr>
+  <tr><td>가변저항을 돌려도 값이 거의 변하지 않는다</td><td>랭크 1 채널이 CH0가 아니다(예: CubeMX에서 온도 센서 채널을 선택)</td><td><code>sConfig.Channel</code>과 <code>.ioc</code>의 Rank 1 채널을 확인한다. <code>ADC1-&gt;SQR3</code>를 디버거로 읽어 SQ1 = 0인지 본다.</td></tr>
+  <tr><td>아무것도 연결하지 않았는데 값이 마구 흔들린다</td><td>PA0 플로팅</td><td>정상이다. 측정하려면 신호원을 연결하거나 GND에 묶어 0 근처인지 확인한다.</td></tr>
+  <tr><td>첫 줄만 출력되고 멈춘다</td><td>CONT=0인데 Start를 한 번만 불러 폴링이 타임아웃</td><td><code>ContinuousConvMode = ENABLE</code> 또는 루프마다 <code>HAL_ADC_Start()</code></td></tr>
+  <tr><td>값이 일정하게 몇십 LSB 어긋난다</td><td>교정 생략, 또는 VDDA가 3.3 V가 아니다</td><td><code>HAL_ADCEx_Calibration_Start()</code>를 변환 전에 호출하고, VDDA를 실측한다.</td></tr>
+  <tr><td>신호원 저항이 큰 센서에서 값이 실제보다 작거나 채널 간 간섭이 보인다</td><td>샘플 시간 부족으로 C_ADC가 덜 충전된다</td><td>샘플 시간을 늘리거나 버퍼(전압 팔로워)·RC 필터 커패시터를 둔다. R_AIN ≤ 50 kΩ을 지킨다.</td></tr>
+  <tr><td>출력이 4095(3300 mV)에서 더 올라가지 않는다</td><td>입력이 VDDA 이상이다(포화)</td><td>입력은 0~VDDA여야 한다. 5 V 신호는 분압해서 넣는다(PA0는 5 V 허용 핀이 아니다).</td></tr>
+</table></div>
+</section>
+
+<section id="s10">
+<h2>10. 확인 문제</h2>
+<details><summary><b>문제 1.</b> ADCCLK 8 MHz, 샘플 시간 239.5 사이클일 때 변환 1회의 시간과 최대 변환 속도는?</summary>
+<div class="ans"><p>(239.5 + 12.5) / 8 MHz = 252 / 8 MHz = 31.5 µs이다. 연속 변환이면 초당 약 1 / 31.5 µs ≈ 31.7 k회이다.</p></div></details>
+<details><summary><b>문제 2.</b> raw = 1241일 때 예제가 출력하는 mV는? 1 LSB 크기와 함께 답하라.</summary>
+<div class="ans"><p>1241 × 3300 / 4095 = 4,095,300 / 4095 = 1000.07 → 1000 mV이다. 1 LSB = 3300 / 4096 ≈ 0.806 mV이므로 실제 입력은 대략 1000.1 ± 0.8 mV 범위에 있다(ADC 자체 오차 제외).</p></div></details>
+<details><summary><b>문제 3.</b> 이 예제의 <code>SQR3</code>, <code>SMPR2</code> 값은? CubeMX에서 실수로 CH16·1.5 사이클을 고르면?</summary>
+<div class="ans"><p>이 예제: <code>SQR3 = 0x0000 0000</code>(SQ1 = 0), <code>SMPR2 = 0x0000 0007</code>(SMP0 = 111). 실수한 경우: <code>SQR3 = 0x0000 0010</code>(SQ1 = 16), <code>SMPR2 = 0</code>이고 샘플 시간은 <code>SMPR1.SMP16 = 000</code>(1.5 사이클)에 있다.</p></div></details>
+<details><summary><b>문제 4.</b> 이 예제에서 <code>HAL_ADC_PollForConversion()</code>은 EOC를 실제로 폴링하는가? 03_ADC_Multi와 무엇이 다른가?</summary>
+<div class="ans"><p>폴링한다. <code>CR1.SCAN = 0</code>이고 <code>SQR1.L = 0</code>이면 HAL은 <code>SR.EOC</code>를 기다린다. 03_ADC_Multi는 SCAN=1, L=3이라 EOC가 시퀀스 끝에서만 서므로 HAL이 EOC 대신 최대 변환 시간만큼 빈 루프로 기다린다.</p></div></details>
+</section>
+
+<section>
+  <h2>정리</h2>
+  <div class="tablewrap"><table>
+    <tr><th>예제</th><th>계층</th><th>변환 시작·결과 회수</th><th>핵심</th></tr>
+    <tr><td class="m"><b>01_ADC_Single (이 예제설명)</b></td><td>HAL</td><td>연속 변환 + 폴링</td><td>PA0(CH0), 교정, mV 환산</td></tr>
+    <tr><td class="m"><a href="../02_ADC_Temperature/02_ADC_Temperature%20예제설명.html">02_ADC_Temperature</a></td><td>HAL</td><td>연속 변환 + 폴링</td><td>내부 온도 센서(CH16), 긴 샘플링 시간</td></tr>
+    <tr><td class="m"><a href="../03_ADC_Multi/ADC%20다채널%20예제설명.html">03_ADC_Multi</a></td><td>HAL</td><td>스캔 + 불연속, 폴링</td><td>4채널(A0/A1/A2/Vrefint)</td></tr>
+    <tr><td class="m"><a href="../04_ADC_DMA_TimTrigger/ADC%20타이머%20트리거%20DMA%20예제설명.html">04_ADC_DMA_TimTrigger</a></td><td>HAL+TIM+DMA</td><td>TIM3 TRGO 1 kHz + DMA 원형</td><td>반 버퍼 처리</td></tr>
+    <tr><td class="m"><a href="../05_ADC_AnalogWatchdog_c/05_ADC_AnalogWatchdog%20예제설명.html">05_ADC_AnalogWatchdog_c</a></td><td>HAL+DMA</td><td>연속 변환 + DMA 1워드 원형, 하드웨어 창 비교</td><td>전압 창 이탈 감시</td></tr>
+    <tr><td class="m"><a href="../06_ADC_Vrefint_VDDA_c/06_ADC_Vrefint_VDDA%20예제설명.html">06_ADC_Vrefint_VDDA_c</a></td><td>HAL</td><td>연속 변환 + 폴링(16회 합)</td><td>Vrefint로 VDDA 역산·보정</td></tr>
+    <tr><td class="m"><a href="../07_ADC_Potentiometer_PWM_c/07_ADC_Potentiometer_PWM%20예제설명.html">07_ADC_Potentiometer_PWM_c</a></td><td>HAL+DMA+TIM</td><td>DMA + PWM 출력</td><td>이동평균·감마 → LED 밝기</td></tr>
+  </table></div>
+  <div class="nextprev"><a href="../../02_USART/08_USART_printf_Dual/08_USART_printf_Dual%20예제설명.html">← 02_USART / 08_USART_printf_Dual</a><a href="../02_ADC_Temperature/02_ADC_Temperature%20예제설명.html">02_ADC_Temperature →</a></div>
+  <footer>근거: 01_ADC_Single 소스(<code>Core/Src/main.c</code>, <code>stm32f1xx_hal_msp.c</code>, <code>ADC_Single.ioc</code>)와 HAL 드라이버 <code>stm32f1xx_hal_adc.c</code>·<code>stm32f1xx_hal_adc_ex.c</code>. 계층: HAL. 레지스터·비트 이름은 RM0008(STM32F101xx~F107xx 레퍼런스 매뉴얼) 11장 기준이다. ADC 수치(ADCCLK 0.6~14 MHz, R_AIN·C_ADC·R_ADC, t_CAL, 정확도)는 STM32F103xB 데이터시트(DS5319 Rev 19) Table 47~50에서 확인했다. 클럭은 SYSCLK 64 MHz(HSI/2 × PLL16), APB2 ÷1, ADCPRE ÷8 = 8 MHz 구성을 기준으로 한다. 코드는 해당 폴더의 소스에서 발췌한 것이며 일부 줄이 생략되어 있다.</footer>
+</section>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var PCLK2=64e6, CADC=8e-12, RADC=1e3, LN=Math.log(Math.pow(2,14));
+  var S={dr:null,eoc:0,lines:[]};
+  function clkHz(){return PCLK2/(+$('pre').value)}
+  function fmtT(t){return t>=1e-3?(t*1e3).toFixed(2)+' ms':(t*1e6).toFixed(t<1e-5?3:2)+' µs'}
+  function fmtMHz(f){return (f/1e6).toFixed(2)+' MHz'}
+  function sample(){
+    var ch=+$('ch').value, vdda=+$('vdda').value, ts=(+$('smp').value)/clkHz();
+    var v, noise=Math.round(Math.random()*2-1);
+    if(ch===16){ v=1370; if(ts<17.1e-6) noise=Math.round(Math.random()*40-20); }
+    else v=Math.min(+$('vin').value, vdda);
+    var r=Math.floor(v/vdda*4096)+noise;
+    return Math.max(0,Math.min(4095,r));
+  }
+  function mvOf(r){return Math.floor(r*3300/4095)}
+  function hex3(r){var h=r.toString(16).toUpperCase();while(h.length<3)h='0'+h;return '0x'+h}
+  function bin12(r){var b=r.toString(2);while(b.length<12)b='0'+b;return b.replace(/(\d{4})(?=\d)/g,'$1 ')}
+  function timing(){
+    var f=clkHz(), smp=+$('smp').value, ts=smp/f, tc=(smp+12.5)/f;
+    $('vClk').textContent=fmtMHz(f)+(f>14e6?' ✗':'');
+    $('vTs').textContent=fmtT(ts); $('vTc').textContent=fmtT(tc);
+    var rain=ts/(CADC*LN)-RADC;   // 데이터시트 Equation 1 (t_S는 초 단위)
+    $('vRain').textContent=rain<=0?'불가':(rain>50e3?'50 kΩ (Table 47 상한)':(rain/1e3).toFixed(1)+' kΩ');
+    $('vN').textContent=Math.floor(0.2/tc).toLocaleString('ko-KR')+'회';
+    return {f:f,smp:smp,ts:ts,tc:tc,rain:rain};
+  }
+  function render(){
+    $('l_vin').textContent=$('vin').value+' mV'; $('l_vdda').textContent=$('vdda').value+' mV';
+    var t=timing();
+    if(S.dr===null){$('vRaw').textContent='–';$('vHex').textContent='–';$('vMv').textContent='–';$('vErr').textContent='–'}
+    else{
+      var mv=mvOf(S.dr), vin=+$('vin').value, ch=+$('ch').value;
+      $('vRaw').textContent=S.dr; $('vHex').textContent=hex3(S.dr)+' / '+bin12(S.dr); $('vMv').textContent=mv+' mV';
+      $('vErr').textContent=ch===16?'PA0와 무관':((mv-vin>=0?'+':'')+(mv-vin)+' mV');
+    }
+    var e=$('vEoc'); e.textContent=S.eoc; e.className='lamp'+(S.eoc?' on':'');
+  }
+  function explain(){
+    var t=timing(), vdda=+$('vdda').value, vin=Math.min(+$('vin').value,vdda), ch=+$('ch').value, lsb=vdda/4096;
+    var L=[];
+    if(t.f>14e6) L.push('경고: ADCCLK '+fmtMHz(t.f)+' > 14 MHz — 데이터시트 범위 밖이다. ÷6 또는 ÷8을 쓴다.');
+    L.push('T_conv = ('+t.smp+' + 12.5) / '+fmtMHz(t.f)+' = '+fmtT(t.tc)+'   (t_S = '+fmtT(t.ts)+')');
+    if(ch===16){
+      L.push('SQ1 = 16: 온도 센서를 변환한다. PA0 입력 '+$('vin').value+' mV는 결과에 영향을 주지 않는다.');
+      L.push(t.ts<17.1e-6?'t_S '+fmtT(t.ts)+' < 17.1 µs (RM0008 권장) → 센서 출력이 충분히 샘플링되지 않는다.':'t_S ≥ 17.1 µs → 온도 센서 샘플링 조건 충족.');
+    }else{
+      var r=S.dr===null?Math.floor(vin/vdda*4096):S.dr; r=Math.max(0,Math.min(4095,r));
+      L.push('raw ≈ floor('+vin+' / '+vdda+' × 4096) = '+Math.min(4095,Math.floor(vin/vdda*4096))+'   (1 LSB = '+vdda+'/4096 = '+lsb.toFixed(3)+' mV)');
+      L.push('같은 코드를 내는 입력 범위: '+(r*lsb).toFixed(2)+' ~ '+((r+1)*lsb).toFixed(2)+' mV');
+      L.push('mV = '+r+' × 3300 / 4095 = '+(r*3300/4095).toFixed(2)+' → '+mvOf(r)+' mV (정수 나눗셈)'+(vdda!==3300?'   ※ 코드는 VDDA = 3300 mV로 가정한다':''));
+    }
+    $('calc').textContent=L.join('\n');
+  }
+  function convert(){S.dr=sample();S.eoc=1}
+  function uart(line){
+    S.lines.push(line); if(S.lines.length>6)S.lines=S.lines.slice(-6); $('uart').textContent=S.lines.join('\n');
+  }
+  function readOnce(){
+    if(!S.eoc) convert();          // PollForConversion: 연속 변환 중이므로 다음 EOC가 곧 온다
+    S.eoc=0;                       // STRT·EOC 클리어, DR 읽기
+    var r=S.dr; uart('ADC PA0 = '+r+' ('+mvOf(r)+' mV)');
+    convert(); S.eoc=1;            // CONT=1: 하드웨어는 계속 변환한다
+    return r;
+  }
+  $('bConv').onclick=function(){convert();render();explain();
+    $('calc').textContent+='\n하드웨어: 샘플 → SAR 12비트 → DR = '+S.dr+', SR.EOC = 1 (CONT=1이면 곧바로 다음 변환 시작)'};
+  $('bRead').onclick=function(){var r=readOnce();render();explain();
+    $('calc').textContent+='\nPollForConversion: EOC 확인 후 STRT·EOC 클리어 → GetValue: DR = '+r+' → printf'};
+  $('bLoop').onclick=function(){for(var i=0;i<5;i++)readOnce();render();explain();
+    $('calc').textContent+='\n200 ms마다 1회 읽음. 그 사이 하드웨어는 약 '+Math.floor(0.2/timing().tc).toLocaleString('ko-KR')+'회 변환하며 DR에는 마지막 값만 남는다.'};
+  $('bReset').onclick=function(){S={dr:null,eoc:0,lines:[]};$('uart').textContent='';render();$('calc').textContent='버튼을 눌러 계산 과정을 확인한다.'};
+  ['vin','vdda'].forEach(function(id){$(id).oninput=function(){if(S.dr!==null)convert();render();explain()}});
+  ['ch','smp','pre'].forEach(function(id){$(id).onchange=function(){if(S.dr!==null)convert();render();explain()}});
+  render();
+})();
+</script>
+</body></html>

@@ -1,0 +1,931 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>04_I2C 개념설명</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* 개념설명(주변장치 개요). 01_GPIO 개념설명과 같은 토큰·클래스를 쓴다.
+   색 규칙: 신호 경로 = 파랑(--c0), 선택·제어 비트 = 주황(--c1), 플래그·이벤트 = 청록(--c2), 하드웨어 소자 = 보라(--c3). */
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --surface2:#E7ECF0; --fg:#14222C; --muted:#52636F; --line:#CBD5DC;
+  --c0:#1D4ED8; --c0-soft:#DCE6FB; --c1:#C2410C; --c1-soft:#FDE6DA; --c2:#0F766E; --c2-soft:#D5F0EC; --c3:#7E22CE; --c3-soft:#EEDFFB;
+  --warn:#9A3412; --warn-bg:#FFF1E6; --ok:#166534; --ok-bg:#E4F5EA;
+  --font-body:"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.75;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));counter-reset:fig}
+.wrap{max-width:860px;margin:0 auto}
+header{padding-block:40px 8px}
+.kicker{font-family:var(--font-mono);font-size:13px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.kicker a{color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.25;margin:8px 0 12px;text-wrap:balance;font-weight:700}
+.lead{color:var(--muted);margin:0;max-width:66ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0}
+nav.toc a{display:block;padding:6px 12px;border:1px solid var(--line);border-radius:6px;color:var(--fg);text-decoration:none;font-size:14px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--c0);outline:2px solid var(--c0);outline-offset:1px}
+section{margin-top:56px}
+h2{font-size:24px;line-height:1.35;margin:0 0 12px;text-wrap:balance;font-weight:700}
+h3{font-size:18px;margin:28px 0 8px;font-weight:700}
+p{margin:0 0 14px;max-width:68ch}
+ul,ol{margin:0 0 14px;padding-left:22px;max-width:68ch}
+li{margin-bottom:4px}
+a{color:var(--c0)}
+code{font-family:var(--font-mono);font-size:.9em;background:var(--surface2);padding:1px 6px;border-radius:4px;overflow-wrap:anywhere}
+.k0{color:var(--c0);font-weight:700} .k1{color:var(--c1);font-weight:700} .k2{color:var(--c2);font-weight:700} .k3{color:var(--c3);font-weight:700}
+.box{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:16px 18px;margin:16px 0}
+.box.warn{background:var(--warn-bg);border-color:var(--warn)} .box.ok{background:var(--ok-bg);border-color:var(--ok)}
+.box > :last-child{margin-bottom:0}
+.label{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.eqv{display:inline-block;font-family:var(--font-mono);font-size:11.5px;padding:0 6px;border-radius:4px;background:var(--c3-soft);color:var(--c3);vertical-align:1px}
+.tablewrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:15px;background:var(--surface)}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--surface2);font-weight:700;white-space:nowrap}
+td.m,th.m{font-family:var(--font-mono);font-size:13.5px}
+td.on{color:var(--ok);font-weight:700} td.off{color:var(--muted)}
+.eq{font-family:var(--font-mono);font-size:14.5px;background:var(--surface2);border-left:4px solid var(--c0);padding:10px 14px;margin:14px 0;overflow-x:auto;white-space:pre-wrap}
+.flow{list-style:none;padding:0;margin:16px 0;display:grid;max-width:none}
+.flow li{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:0;padding:0 0 14px;position:relative}
+.flow li:not(:last-child)::before{content:"";position:absolute;left:16px;top:34px;bottom:0;width:2px;background:var(--line)}
+.flow .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:14px;font-weight:600;background:var(--surface2);border:2px solid var(--c0);color:var(--c0)}
+.flow .tx{min-width:0} .flow .tx b{display:block} .flow .tx span{color:var(--muted);font-size:14.5px}
+
+/* 원본 그림(PDF에서 잘라 낸 PNG): 다크모드에서도 흰 바탕 카드에 넣는다 */
+figure{margin:18px 0;counter-increment:fig}
+figure.src .img{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px}
+figure.src img{display:block;width:100%;height:auto}
+figure.src.narrow .img{max-width:560px;margin:0 auto}
+figcaption{font-size:14px;color:var(--muted);margin:6px 2px 0}
+figcaption::before{content:"그림 " counter(fig) ". ";font-weight:700;color:var(--fg)}
+.cite{display:block;font-family:var(--font-mono);font-size:12.5px;margin-top:2px}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.figs figure{margin:0}
+
+/* 등가 모델 SVG */
+.diag svg{display:block;width:100%;height:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.diag .bx{fill:var(--surface);stroke:var(--fg);stroke-width:1.4}
+.diag .hw{fill:var(--c3-soft);stroke:var(--c3)} .diag .sel{fill:var(--c1-soft);stroke:var(--c1)} .diag .flg{fill:var(--c2-soft);stroke:var(--c2)}
+.diag .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.diag .tc{font-family:var(--font-body);font-size:13px;fill:var(--fg);text-anchor:middle}
+.diag .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.diag .sc{font-family:var(--font-mono);font-size:11px;fill:var(--muted);text-anchor:middle}
+.diag .o{font-family:var(--font-mono);font-size:11px;fill:var(--c1)}
+.diag .w{stroke:var(--c0);stroke-width:1.8;fill:none}
+.diag .wc{stroke:var(--c1);stroke-width:1.5;fill:none}
+.diag .wm{stroke:var(--muted);stroke-width:1.3;fill:none}
+.diag .dash{stroke:var(--muted);stroke-width:1.2;fill:none;stroke-dasharray:5 4}
+.diag .ah{fill:var(--c0)} .diag .ahc{fill:var(--c1)} .diag .ahm{fill:var(--muted)}
+.diag .sig{stroke:var(--c0);stroke-width:2;fill:none} .diag .sig2{stroke:var(--c2);stroke-width:2;fill:none} .diag .sig3{stroke:var(--c3);stroke-width:2;fill:none}
+.diag .isr{fill:var(--c1-soft);stroke:var(--c1)}
+
+/* 시뮬레이터 */
+.sim{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:18px;margin:16px 0}
+.subhead{font-weight:700;margin:0 0 6px}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px 16px;margin:10px 0}
+.ctl label{display:block;font-size:14px;color:var(--muted)}
+.ctl select,.ctl input{font-family:inherit;font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl select:focus-visible,.ctl input:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+.regs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.stat{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.stat .k{font-size:12px;color:var(--muted);font-family:var(--font-mono)}
+.stat .v{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.35;overflow-wrap:anywhere}
+.note{font-size:14px;color:var(--muted);margin:8px 0 0}
+.verdict{font-weight:700} .verdict.good{color:var(--ok)} .verdict.bad{color:var(--warn)}
+
+details{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0}
+summary{cursor:pointer;padding:12px 16px;font-weight:500;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--c0)} details[open] summary::before{content:"▾ "}
+summary:focus-visible{outline:3px solid var(--fg);outline-offset:-3px;border-radius:8px}
+details .ans{padding:0 16px 14px} details .ans p{margin-bottom:8px}
+.nextprev{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+.nextprev a{border:1px solid var(--line);border-radius:8px;padding:8px 14px;text-decoration:none;color:var(--c0);background:var(--surface)}
+footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+footer ul{max-width:none}
+/* 04_I2C 추가: 시뮬레이터 표 강조, 스트레칭 음영 */
+.diag .shade{fill:var(--c1-soft);stroke:var(--c1);stroke-width:1;stroke-dasharray:3 3}
+.diag .lost{fill:var(--warn-bg);stroke:var(--warn)}
+tr.cur td{background:var(--c0-soft)}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.btnrow button{font-family:inherit;font-size:15px;min-height:40px;padding:6px 14px;border-radius:6px;border:1px solid var(--line);background:var(--surface2);color:var(--fg);cursor:pointer}
+.btnrow button:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+.btnrow button:disabled{opacity:.45;cursor:default}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">STM32F103RB · 04_I2C_Communication · 개념설명</div>
+  <h1>I2C: 선 두 가닥을 여럿이 나눠 쓰는 상태기계</h1>
+  <p class="lead">I2C(Inter-Integrated Circuit, 칩 간 직렬 버스)는 클럭 선 SCL과 데이터 선 SDA 두 가닥에 여러 장치를 매달고, 주소로 상대를 골라 바이트를 주고받는 버스이다. 디지털논리로 보면 오픈드레인 배선 AND, 조건부 엣지 검출기(START/STOP), 시프트 레지스터와 비트 카운터, 주소 비교기, SCL을 만드는 카운터, 그리고 이 모두를 순서대로 움직이는 상태기계의 조합이다. 이 개념설명은 STM32F103RB의 I2C 블록을 RM0008 원본 블록도 위에서 따라가며, 특히 이 칩의 I2C가 소프트웨어에게 요구하는 <b>이벤트(EV5, EV6, EV7, EV8 …)와 플래그를 지우는 읽기 순서</b>를 상태기계로 풀어 본다.</p>
+  <nav class="toc" aria-label="목차">
+    <a href="#s1">1. 문제 정의</a><a href="#s2">2. 일반 개념</a><a href="#s3">3. 블록도</a><a href="#s4">4. 클럭과 시간</a><a href="#s5">5. 제어 요소</a><a href="#s6">6. 이벤트 생성</a><a href="#s7">7. 동작 시나리오</a><a href="#s8">8. 설계상 한계</a><a href="#s9">9. 확인 문제</a><a href="#s10">10. 하부 예제</a>
+  </nav>
+</header>
+
+<div class="box">
+  <div class="label">이 개념설명이 쓰는 근거</div>
+  <p>근거 문서와 인용·표기 규칙, <span class="eqv">등가 모델</span> 표시의 뜻은 <a href="../../교안의_활용법.html">교안의 활용법</a>에 있다. 문서의 숫자로 직접 유도한 계산에도 <span class="eqv">등가 모델</span> 표시를 달았다. 오픈드레인 출력, 풀업, 대체 기능 선택, NVIC 같은 공통 개념은 <a href="../01_GPIO/01_GPIO%20개념설명.html#s2">01_GPIO 개념설명</a>에서 다뤘다. 이 개념설명은 I2C 규격서(NXP UM10204)를 근거로 쓰지 않는다. 그래서 규격서에만 있는 내용(예약 주소 표 전체, 비트 단위 중재의 세부 규칙 등)은 "이 네 문서에는 없다"고 따로 밝혔다.</p>
+  <ul>
+    <li><a href="../../Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a>(참조 매뉴얼): 26장 I2C(p.752~784)</li>
+    <li><a href="../../Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a>(데이터시트): I2C 전기적 특성(Table 41), 핀 정의</li>
+    <li><a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a>(Cortex-M3 프로그래밍 매뉴얼): NVIC(Nested Vectored Interrupt Controller, 중첩 벡터 인터럽트 컨트롤러)</li>
+    <li><a href="../../Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a>(정오표): I2C 항목이 일곱 개(2.8.1~2.8.7) 있다. 이 그룹에서 가장 중요하게 읽어야 할 문서이다</li>
+  </ul>
+</div>
+
+<details class="gloss"><summary>약어 모음</summary><div class="ans"><div class="tablewrap"><table>
+<tr><th>약어</th><th>풀네임</th><th>뜻</th></tr>
+<tr><td class="m">I2C</td><td>Inter-Integrated Circuit</td><td>칩 간 2선 직렬 버스</td></tr>
+<tr><td class="m">SCL / SDA</td><td>Serial Clock / Serial Data</td><td>클럭 선 / 데이터 선</td></tr>
+<tr><td class="m">Sm / Fm</td><td>Standard mode / Fast mode</td><td>표준 모드(최대 100 kHz) / 고속 모드(최대 400 kHz)</td></tr>
+<tr><td class="m">S · Sr · P</td><td>Start · Repeated Start · Stop</td><td>시작 조건 · 반복 시작 조건 · 정지 조건</td></tr>
+<tr><td class="m">A / NA (ACK / NACK)</td><td>Acknowledge / Non-acknowledge</td><td>9번째 클럭의 수신 확인 / 수신 거부</td></tr>
+<tr><td class="m">R/W</td><td>Read / Write</td><td>주소 바이트의 최하위 비트. 1 = 읽기, 0 = 쓰기</td></tr>
+<tr><td class="m">MSB / LSB</td><td>Most / Least Significant Bit</td><td>최상위 / 최하위 비트</td></tr>
+<tr><td class="m">EVx</td><td>Event x</td><td>RM0008 전송 순서도의 사건 번호(EV5, EV6 …). 플래그 하나 또는 소프트웨어 할 일 하나에 대응</td></tr>
+<tr><td class="m">CR1 / CR2</td><td>Control Register 1 / 2</td><td>동작 설정 레지스터</td></tr>
+<tr><td class="m">SR1 / SR2</td><td>Status Register 1 / 2</td><td>사건 플래그 / 버스 상태</td></tr>
+<tr><td class="m">DR</td><td>Data Register</td><td>8비트 데이터 레지스터(송수신 공용 버퍼 1바이트)</td></tr>
+<tr><td class="m">OAR1 / OAR2</td><td>Own Address Register 1 / 2</td><td>슬레이브로서의 내 주소 / 두 번째 주소</td></tr>
+<tr><td class="m">CCR · TRISE</td><td>Clock Control Register · Rise time register</td><td>SCL High/Low 길이 · SCL 상승 시간 상한</td></tr>
+<tr><td class="m">FREQ</td><td>peripheral clock FREQuency</td><td>CR2에 MHz 단위로 적는 APB1 클럭 값</td></tr>
+<tr><td class="m">F/S · DUTY</td><td>Fast/Standard selection · Fm duty cycle</td><td>모드 선택 · 고속 모드 Low:High 비율</td></tr>
+<tr><td class="m">SB · ADDR · ADD10</td><td>Start Bit · ADDRess sent/matched · 10-bit header sent</td><td>START 냄 · 주소 단계 끝 · 10비트 헤더 냄</td></tr>
+<tr><td class="m">TxE · RxNE · BTF</td><td>Transmit data register Empty · Receive data register Not Empty · Byte Transfer Finished</td><td>DR 빔 · DR 참 · DR과 시프트 레지스터가 모두 막혀 SCL을 붙잡음</td></tr>
+<tr><td class="m">STOPF</td><td>STOP detection Flag</td><td>슬레이브가 STOP을 검출함</td></tr>
+<tr><td class="m">BERR · ARLO · AF · OVR</td><td>Bus ERRor · ARbitration LOst · Acknowledge Failure · OVerRun/underrun</td><td>엉뚱한 START/STOP · 중재 패배 · NACK 받음 · 덮어쓰기/모자람. 이 개념설명에서 AF는 늘 이 플래그를 뜻하고, 핀의 대체 기능은 "대체 기능"이라고 풀어 쓴다</td></tr>
+<tr><td class="m">MSL · BUSY · TRA</td><td>Master/SLave · bus BUSY · TRAnsmitter/receiver</td><td>마스터 모드 · 버스 사용 중 · 송신 쪽인가</td></tr>
+<tr><td class="m">PE · SWRST</td><td>Peripheral Enable · SoftWare ReSeT</td><td>블록 허용 · 블록 소프트웨어 리셋</td></tr>
+<tr><td class="m">POS · NOSTRETCH · ENGC</td><td>ACK POSition · clock stretching disable · ENable General Call</td><td>ACK가 어느 바이트에 걸리나 · 슬레이브 스트레칭 끄기 · 주소 00h에 응답</td></tr>
+<tr><td class="m">ITEVTEN · ITBUFEN · ITERREN</td><td>event / buffer / error InTerrupt ENable</td><td>이벤트 / 버퍼(TxE·RxNE) / 오류 인터럽트 허용</td></tr>
+<tr><td class="m">DMAEN · LAST · EOT</td><td>DMA ENable · DMA LAST transfer · End Of Transfer</td><td>DMA 요청 허용 · 다음 EOT가 마지막임 · DMA가 보내는 전송 끝 신호</td></tr>
+<tr><td class="m">PEC · CRC</td><td>Packet Error Checking · Cyclic Redundancy Check</td><td>패킷 오류 검사 바이트 · 순환 중복 검사</td></tr>
+<tr><td class="m">SMBus · PMBus · SMBA</td><td>System / Power Management Bus · SMBus Alert</td><td>I2C에 바탕을 둔 관리용 버스 · 경보 핀</td></tr>
+<tr><td class="m">DMA</td><td>Direct Memory Access</td><td>CPU를 거치지 않는 메모리 전송</td></tr>
+<tr><td class="m">PCLK1 · APB1</td><td>APB1 peripheral clock · Advanced Peripheral Bus 1</td><td>I2C1·I2C2가 붙은 주변장치 버스와 그 클럭(최대 36 MHz)</td></tr>
+<tr><td class="m">ISR · IRQ</td><td>Interrupt Service Routine · Interrupt Request</td><td>인터럽트 처리 루틴 · 인터럽트 요청(번호)</td></tr>
+<tr><td class="m">Rp · Cb · tr</td><td>pull-up Resistor · bus Capacitance · rise time</td><td>풀업 저항 · 선 하나의 부하 용량 · 상승 시간</td></tr>
+<tr><td class="m">rc_w0</td><td>read / clear by writing 0</td><td>읽을 수 있고, 0을 쓰면 지워지는 비트</td></tr>
+</table></div></div></details>
+
+<!-- ============================================================ 1 -->
+<section id="s1">
+<h2>1. 문제 정의: I2C 블록이 없으면 CPU가 무엇을 직접 해야 하는가</h2>
+<p>센서, EEPROM, 표시기 같은 칩 여러 개를 선 두 가닥으로 연결하고 싶다. 선 두 가닥은 모든 장치가 함께 쓰므로 세 가지 문제가 생긴다. 지금 누구에게 말하는지(주소), 상대가 들었는지(확인 응답), 둘이 동시에 말하면 어떻게 하는지(중재)이다. I2C 블록이 없다면 CPU가 GPIO 두 개를 오픈드레인으로 두고 이 모든 것을 직접 처리한다. 이런 방식을 비트뱅잉(bit-banging)이라고 한다.</p>
+<div class="tablewrap"><table>
+<tr><th>풀어야 할 문제</th><th>I2C 블록이 없다면 CPU가 하는 일</th><th>I2C 블록이 대신하는 소자</th></tr>
+<tr><td>SCL 클럭 만들기</td><td>100 kHz이면 5 µs마다 SCL을 놓았다 당기기를 반복한다</td><td>CCR 값까지 세는 카운터(4장)</td></tr>
+<tr><td>바이트를 비트열로</td><td>SCL이 Low일 때 SDA를 바꾸고, MSB부터 8번 반복한다</td><td>8비트 시프트 레지스터 + 비트 카운터</td></tr>
+<tr><td>START·STOP 만들기와 알아보기</td><td>SCL이 High인 동안 SDA를 내리거나(START) 올린다(STOP). 슬레이브라면 이것을 늘 감시한다</td><td>"SCL = 1일 때의 SDA 엣지" 검출기</td></tr>
+<tr><td>확인 응답(ACK)</td><td>9번째 클럭에서 SDA를 놓고 상대가 당기는지 읽는다</td><td>9번째 클럭 샘플러와 AF 플래그</td></tr>
+<tr><td>상대가 SCL을 붙잡을 때(클럭 스트레칭)</td><td>SCL을 놓은 뒤 정말 High가 됐는지 되읽고, Low이면 기다린다</td><td>SCL 되읽기 비교 + 상승 시간 창(TRISE)</td></tr>
+<tr><td>두 마스터가 동시에 말할 때(중재)</td><td>내가 1을 냈는데 선이 0이면 즉시 물러난다</td><td>송신 비트와 선 값의 비교기 → ARLO 플래그</td></tr>
+<tr><td>슬레이브로서 내 주소 알아듣기</td><td>START마다 주소 바이트를 모아 내 주소와 비교한다</td><td>주소 비교기 + OAR1/OAR2</td></tr>
+<tr><td>짧은 잡음 펄스</td><td>소프트웨어로 거르기 어렵다</td><td>입력의 아날로그 필터(50 ns 이하 스파이크 제거, DS5319 Table 41)</td></tr>
+</table></div>
+<p>64 MHz CPU에서 100 kHz SCL의 반 주기는 320 클럭이고, 바이트 하나(8비트 + ACK = 9클럭)는 90 µs = 5 760 클럭이다. 비트뱅잉은 CPU를 이 박자에 묶는다. I2C 블록을 쓰면 비트 단위 일은 하드웨어가 하고 CPU는 <b>바이트나 이벤트 단위</b>로만 개입한다. 다만 F103의 I2C는 USART보다 손이 많이 간다. 주소를 보냈다, 바이트가 끝났다 같은 단계마다 소프트웨어가 정해진 레지스터 읽기·쓰기 순서로 "이벤트를 처리했다"고 알려 줘야 다음 단계로 넘어간다. 이 개념설명의 중심은 그 이벤트 상태기계이다(5~7장).</p>
+</section>
+
+<!-- ============================================================ 2 -->
+<section id="s2">
+<h2>2. 일반 개념</h2>
+<h3>선 두 가닥과 오픈드레인 배선 AND</h3>
+<p>I2C의 두 선에 매달린 장치는 선을 <b>Low로 당기거나, 놓거나</b> 둘 중 하나만 한다. High로 미는 장치는 없다. 선을 High로 올리는 것은 선마다 하나씩 있는 풀업 저항 R<sub>p</sub>이다. 이런 출력을 오픈드레인이라고 한다(<a href="../01_GPIO/01_GPIO%20개념설명.html#s2">01_GPIO 2장</a>). 그러면 선의 값은 "모든 장치가 놓았을 때만 1"이 되므로 모든 장치 출력의 AND이다. RM0008은 SMBus 경보 선을 설명하며 "SMBA is a wired-AND signal just as the SCL and SDA signals are"라고 적는다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=767">p.767</a>).</p>
+<figure class="diag"><svg viewBox="0 0 680 210" role="img" aria-label="오픈드레인 배선 AND 등가 모델">
+<rect class="bx hw" x="10" y="20" width="170" height="46" rx="4"/><text class="tc" x="95" y="40">장치 A (마스터)</text><text class="sc" x="95" y="57">a: 놓음 1 · 당김 0</text>
+<rect class="bx hw" x="10" y="82" width="170" height="46" rx="4"/><text class="tc" x="95" y="102">장치 B (슬레이브)</text><text class="sc" x="95" y="119">b: 놓음 1 · 당김 0</text>
+<rect class="bx hw" x="10" y="144" width="170" height="46" rx="4"/><text class="tc" x="95" y="164">장치 C (슬레이브)</text><text class="sc" x="95" y="181">c: 놓음 1 · 당김 0</text>
+<polyline class="w" points="180,43 220,43 220,90 250,90"/><line class="w" x1="180" y1="105" x2="250" y2="105"/><polyline class="w" points="180,167 220,167 220,120 250,120"/>
+<rect class="bx sel" x="250" y="62" width="130" height="86" rx="4"/><text class="tc" x="315" y="92">배선 AND</text><text class="sc" x="315" y="112">오픈드레인 결선</text><text class="sc" x="315" y="130">0 하나면 선 = 0</text>
+<line class="w" x1="380" y1="105" x2="434" y2="105"/><polygon class="ah" points="440,105 432,100 432,110"/>
+<rect class="bx" x="440" y="82" width="130" height="46" rx="4"/><text class="tc" x="505" y="102">버스 선</text><text class="sc" x="505" y="119">SDA 또는 SCL</text>
+<rect class="bx" x="440" y="14" width="130" height="46" rx="4"/><text class="tc" x="505" y="34">풀업 저항 Rp</text><text class="sc" x="505" y="51">놓으면 VDD로</text>
+<line class="dash" x1="505" y1="60" x2="505" y2="82"/>
+<line class="w" x1="570" y1="105" x2="590" y2="105"/>
+<rect class="bx flg" x="590" y="82" width="82" height="46" rx="4"/><text class="tc" x="631" y="102">선 =</text><text class="sc" x="631" y="119">a · b · c</text>
+<text class="s" x="250" y="186">0이 늘 이긴다 → 중재와 클럭 스트레칭의 바탕</text>
+</svg><figcaption><span class="eqv">등가 모델</span> 오픈드레인 선은 배선 하나가 AND 게이트 역할을 한다. 누구든 0(당김)을 내면 선은 0이고, 모두 1(놓음)일 때만 풀업이 선을 1로 올린다. 그래서 여럿이 동시에 출력해도 단락이 생기지 않는다. 슬레이브가 SCL을 붙잡아 마스터를 기다리게 하는 클럭 스트레칭과, 두 마스터 중 하나를 고르는 중재가 모두 이 성질에서 나온다.</figcaption></figure>
+
+<h3>비트 규칙: SCL이 High인 동안 SDA는 움직이지 않는다</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig269_p754.png"><img src="img/RM0008_Fig269_p754.png" alt="I2C 버스 프로토콜" width="1157" height="471" loading="lazy"></a></div>
+<figcaption>바이트 하나의 모양이다. SCL이 Low인 동안 SDA를 바꾸고, SCL이 High인 동안 SDA를 읽는다. 데이터는 MSB부터 8비트이고, 9번째 클럭에서 받는 쪽이 SDA를 당겨 ACK를 준다. SCL이 High인데 SDA가 내려가면 START, 올라가면 STOP이다. 즉 "SCL High 동안의 SDA 엣지"는 데이터가 아니라 표지이다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=754">RM0008 Rev 21, p.754</a>, Figure 269. I2C bus protocol</span></figcaption></figure>
+<p>이 규칙은 디지털논리의 조건부 엣지 검출기 두 개로 그대로 바뀐다. <code>START = SCL · (SDA 하강 엣지)</code>, <code>STOP = SCL · (SDA 상승 엣지)</code>이다. RM0008은 이 규칙이 깨진 경우를 버스 오류로 정의한다. BERR는 "SCL이 High인 동안 SDA의 상승 또는 하강 엣지가 바이트 전송 중 유효하지 않은 위치에서" 검출될 때 선다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=778">p.778</a>). 바이트는 항상 MSB부터 보낸다(26.3.1, <a href="../../Docs/RM0008_Reference_manual.pdf#page=754">p.754</a>). USART가 LSB부터 보내는 것과 반대이다.</p>
+
+<h3>주소 바이트와 R/W 비트</h3>
+<p>START 다음의 첫 바이트는 주소이다. 7비트 주소 모드에서는 상위 7비트가 슬레이브 주소이고, 최하위 비트가 방향이다. 최하위 비트가 0이면 마스터가 쓰고(마스터 송신), 1이면 마스터가 읽는다(마스터 수신)(26.3.3, <a href="../../Docs/RM0008_Reference_manual.pdf#page=759">p.759</a>). 그래서 선 위의 첫 바이트는 <code>주소 × 2 + R/W</code>이다. 7비트 주소 0x27에 쓰면 선 위에는 0x4E, 읽으면 0x4F가 나간다. 7비트 주소와 선 위의 바이트를 혼동하는 것이 I2C에서 가장 흔한 실수이다.</p>
+<p>10비트 주소 모드에서는 첫 바이트가 헤더 <code>11110xx0</code>(xx = 주소의 상위 2비트)이고 둘째 바이트가 나머지 8비트이다. 읽으려면 반복 START 뒤 헤더 <code>11110xx1</code>을 다시 보낸다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=759">p.759</a>). 주소 00h는 일반 호출(General Call)이며, 슬레이브가 ENGC = 1일 때만 응답한다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=773">p.773</a>). 그 밖의 예약 주소(예: 스캐너가 0x00~0x07, 0x78~0x7F를 건너뛰는 이유)는 I2C 규격서의 내용이며 이 네 문서에는 표로 나오지 않는다.</p>
+
+<div class="sim" id="framesim">
+  <div class="subhead">프레임 그리기: 주소 바이트와 데이터 바이트가 선 위에서 어떤 모양인가</div>
+  <div class="ctl">
+    <div><label for="faddr">7비트 주소 (16진수)</label><input id="faddr" type="text" value="27" maxlength="4"></div>
+    <div><label for="frw">방향 (R/W 비트)</label><select id="frw"><option value="0" selected>0 = 쓰기 (마스터 송신)</option><option value="1">1 = 읽기 (마스터 수신)</option></select></div>
+    <div><label for="fack">주소에 대한 응답</label><select id="fack"><option value="0" selected>ACK (슬레이브 있음)</option><option value="1">NACK (아무도 없음)</option></select></div>
+    <div><label for="fdata">이어지는 데이터 1바이트 (16진수, 비우면 생략)</label><input id="fdata" type="text" value="A5" maxlength="4"></div>
+  </div>
+  <div class="diag"><svg id="fsvg" viewBox="0 0 680 170" role="img" aria-label="I2C 프레임 파형"></svg></div>
+  <div class="regs">
+    <div class="stat"><div class="k">선 위의 주소 바이트</div><div class="v" id="f_ab">-</div></div>
+    <div class="stat"><div class="k">비트 순서 (MSB 먼저)</div><div class="v" id="f_bits" style="font-size:15px">-</div></div>
+    <div class="stat"><div class="k">100 kHz에서 걸리는 시간</div><div class="v" id="f_time">-</div></div>
+  </div>
+  <p class="note" id="f_note"></p>
+</div>
+
+<h3>ACK와 NACK: 9번째 클럭의 의미</h3>
+<p>바이트마다 9번째 클럭에서 보낸 쪽은 SDA를 놓고, 받은 쪽이 SDA를 당기면 ACK, 놓아 두면 NACK이다. 뜻은 상황마다 다르다. 주소 바이트에 대한 NACK는 "그런 주소의 장치가 없다(또는 바쁘다)"이다. 마스터가 쓸 때 데이터 바이트에 대한 NACK는 "더 받을 수 없다"이다. 마스터가 읽을 때는 마스터가 받는 쪽이므로, 마지막 바이트에 일부러 NACK를 줘서 "이제 그만 보내라"를 알린다. RM0008은 마스터 수신에서 "The master sends a NACK for the last received byte from the slave. After receiving this NACK, the slave releases the control of the SCL and SDA lines"라고 적는다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=760">p.760</a>). 이 "마지막 바이트에 NACK"를 제때 거는 일이 F103 I2C에서 가장 까다로운 타이밍이다(5·7장).</p>
+
+<h3>반복 START: 버스를 놓지 않고 방향 바꾸기</h3>
+<p>센서 레지스터를 읽으려면 먼저 "몇 번 레지스터"를 써야 하고(쓰기), 이어서 그 값을 읽어야 한다(읽기). 중간에 STOP을 내면 다른 마스터가 버스를 가로챌 수 있다. 그래서 STOP 없이 START를 한 번 더 낸다. 이것이 반복 START(Sr)이다. F103에서는 마스터 모드 중에 START 비트를 세우면 "현재 바이트 전송이 끝난 뒤 ReStart를 만든다"(<a href="../../Docs/RM0008_Reference_manual.pdf#page=758">p.758</a>).</p>
+
+<h3>클럭 스트레칭: 받는 쪽이 SCL을 붙잡는다</h3>
+<p>SCL은 마스터가 만들지만 배선 AND이므로 슬레이브도 SCL을 Low로 붙잡을 수 있다. 준비가 안 된 쪽은 SCL을 놓지 않음으로써 상대를 기다리게 한다. 이것이 클럭 스트레칭이다. F103 I2C는 이 기능을 양쪽으로 쓴다. 슬레이브일 때는 주소를 받고 소프트웨어가 ADDR을 지울 때까지 SCL을 붙잡는다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=756">p.756</a>). <b>마스터일 때도</b> 여러 이벤트에서 소프트웨어가 처리할 때까지 SCL을 Low로 잡아 둔다(Figure 273 주석, <a href="../../Docs/RM0008_Reference_manual.pdf#page=760">p.760</a>). 반대로 마스터는 SCL을 놓은 뒤 정말 High가 됐는지 되읽고, 슬레이브가 붙잡고 있으면 High 시간을 세지 않고 기다린다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=758">p.758</a>, 4장).</p>
+
+<h3>중재: 두 마스터가 동시에 START를 내면</h3>
+<p>버스가 비어 있을 때 두 마스터가 거의 동시에 START를 내면 둘 다 자기가 주인이라고 생각하고 주소를 보낸다. 배선 AND이므로 같은 비트를 내는 동안에는 아무 일도 없다. 처음으로 한쪽은 1(놓음), 다른 쪽은 0(당김)을 내는 비트에서 선은 0이 된다. 1을 낸 쪽은 "내가 낸 값과 선 값이 다르다"를 보고 물러난다. 이 비교를 하는 쪽만 지고, 이긴 쪽의 메시지는 전혀 깨지지 않는다. 그래서 주소가 작은(0이 앞에 많은) 쪽이 이긴다. RM0008은 SMBus 경보를 설명하며 "the highest priority (lowest address) device will win communication rights via standard arbitration during the slave address transfer"라고 적는다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=767">p.767</a>). 진 쪽 F103은 ARLO 플래그를 세우고 슬레이브 모드로 돌아가며 선을 놓는다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=765">p.765</a>). 비교가 비트 단위로 언제 이루어지는지 같은 세부는 RM0008에 없다. 아래는 배선 AND로부터 유도한 <span class="eqv">등가 모델</span>이다.</p>
+<div class="sim" id="arbsim">
+  <div class="subhead">중재 실험: 두 마스터가 동시에 주소를 보낸다 (둘 다 쓰기)</div>
+  <div class="ctl">
+    <div><label for="arba">마스터 1의 대상 주소 (16진수 7비트)</label><input id="arba" type="text" value="50" maxlength="4"></div>
+    <div><label for="arbb">마스터 2의 대상 주소 (16진수 7비트)</label><input id="arbb" type="text" value="48" maxlength="4"></div>
+  </div>
+  <div class="diag"><svg id="arbsvg" viewBox="0 0 680 140" role="img" aria-label="중재 비트 비교"></svg></div>
+  <p class="note" id="arb_note"></p>
+</div>
+
+<h3>속도: 표준 모드와 고속 모드</h3>
+<p>F103 I2C는 표준 모드(Sm, 최대 100 kHz)와 고속 모드(Fm, 최대 400 kHz)를 지원한다(26.1, <a href="../../Docs/RM0008_Reference_manual.pdf#page=752">p.752</a>). I2C에는 최저 속도가 없지만, I2C를 바탕으로 한 SMBus(System Management Bus)는 최저 10 kHz, 최고 100 kHz이고 SCL이 35 ms 넘게 Low이면 시간 초과로 본다(Table 188, <a href="../../Docs/RM0008_Reference_manual.pdf#page=766">p.766</a>). 이 그룹 예제는 모두 I2C 모드만 쓴다.</p>
+</section>
+
+<!-- ============================================================ 3 -->
+<section id="s3">
+<h2>3. 내부 구현 블록도</h2>
+<figure class="src narrow"><div class="img"><a href="img/RM0008_Fig270_p755.png"><img src="img/RM0008_Fig270_p755.png" alt="I2C 블록도" width="1157" height="1150" loading="lazy"></a></div>
+<figcaption>위쪽이 SDA 데이터 경로이다. SDA 핀 → Noise filter → Data control → Data shift register ↔ Data register로 이어지고, 시프트 레지스터 값은 Comparator(내 주소 비교)와 PEC calculation으로도 간다. 가운데가 SCL 경로이다. SCL 핀 ↔ Noise filter ↔ Clock control이고, Clock control은 CCR 값을 받는다. 아래의 Control logic이 CR1·CR2(스위치)를 읽고 SR1·SR2(플래그)를 세우며 Interrupts와 DMA requests를 내보낸다. SMBA는 SMBus 모드에서만 쓰는 핀이다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=755">RM0008 Rev 21, p.755</a>, Figure 270. I2C block diagram</span></figcaption></figure>
+
+<p>신호를 입력 → 클럭 → 처리 → 플래그/이벤트 → 출력 순서로 따라간다.</p>
+<ol class="flow">
+  <li><span class="n">1</span><div class="tx"><b>입력: SDA·SCL 핀 → 아날로그 잡음 필터 → 제어 블록</b><span>핀은 GPIO에서 대체 기능 오픈드레인으로 둔다(RM0008 Table 27, <a href="../../Docs/RM0008_Reference_manual.pdf#page=168">p.168</a>). 필터는 50 ns 이하의 스파이크를 없앤다(DS5319 Table 41 t<sub>SP</sub>, <a href="../../Docs/Datasheet_stm32f103.pdf#page=68">p.68</a>). 핀이 대체 기능 출력이어도 입력 경로는 늘 살아 있어서, 블록은 자기가 낸 값과 선 값을 비교할 수 있다.</span></div></li>
+  <li><span class="n">2</span><div class="tx"><b>클럭: PCLK1 → FREQ(설정·유지 시간) / CCR(SCL High·Low 길이) / TRISE(되읽기 창)</b><span>I2C1·I2C2는 APB1에 붙어 PCLK1을 쓴다. FREQ는 데이터 설정·유지 시간을 맞추는 기준이고, CCR은 마스터가 만드는 SCL의 High·Low 길이이다(4장). 입력 클럭은 표준 모드에서 최소 2 MHz, 고속 모드에서 최소 4 MHz여야 한다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=755">p.755</a>).</span></div></li>
+  <li><span class="n">3</span><div class="tx"><b>처리: Data shift register ↔ DR, Comparator, PEC calculation</b><span>바이트는 시프트 레지스터에서 MSB부터 나가고 들어온다. DR은 한 바이트짜리 버퍼이다. 슬레이브일 때 START 뒤 받은 주소는 시프트 레지스터에서 OAR1(ENDUAL = 1이면 OAR2, ENGC = 1이면 00h도)과 비교된다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=755">p.755</a>). PEC는 CRC-8(C(x) = x<sup>8</sup> + x<sup>2</sup> + x + 1)을 비트마다 계산한다(26.3.8, <a href="../../Docs/RM0008_Reference_manual.pdf#page=770">p.770</a>).</span></div></li>
+  <li><span class="n">4</span><div class="tx"><b>플래그/이벤트: Control logic → SR1·SR2 → 인터럽트 두 줄과 DMA 요청</b><span>사건 플래그(SB, ADDR, BTF, TxE, RxNE …)는 이벤트 인터럽트로, 오류 플래그(BERR, ARLO, AF, OVR …)는 오류 인터럽트로 따로 모인다(6장). TxE·RxNE는 DMA 요청이 될 수 있다.</span></div></li>
+  <li><span class="n">5</span><div class="tx"><b>출력: 시프트 레지스터 → Data control → SDA, Clock control → SCL</b><span>출력은 "당기거나 놓거나"이다. 바이트 비트, ACK 비트, START·STOP 표지가 모두 이 오픈드레인 출력으로 나간다.</span></div></li>
+</ol>
+
+<figure class="diag"><svg viewBox="0 0 680 320" role="img" aria-label="I2C 블록의 디지털논리 등가">
+<rect class="bx" x="10" y="20" width="70" height="46" rx="4"/><text class="tc" x="45" y="48">SDA 핀</text>
+<line class="w" x1="80" y1="43" x2="96" y2="43"/>
+<rect class="bx hw" x="96" y="20" width="110" height="46" rx="4"/><text class="tc" x="151" y="40">아날로그 필터</text><text class="sc" x="151" y="57">≤ 50 ns 제거</text>
+<line class="w" x1="206" y1="43" x2="222" y2="43"/>
+<rect class="bx hw" x="222" y="20" width="96" height="46" rx="4"/><text class="tc" x="270" y="40">동기화기</text><text class="sc" x="270" y="57">PCLK1 기준</text>
+<line class="w" x1="318" y1="43" x2="334" y2="43"/>
+<rect class="bx sel" x="334" y="20" width="170" height="46" rx="4"/><text class="tc" x="419" y="40">START/STOP 검출</text><text class="sc" x="419" y="57">SCL=1 동안 SDA 엣지</text>
+<line class="w" x1="504" y1="43" x2="520" y2="43"/>
+<rect class="bx flg" x="520" y="20" width="150" height="46" rx="4"/><text class="tc" x="595" y="40">BUSY · STOPF</text><text class="sc" x="595" y="57">BERR (엉뚱한 위치)</text>
+<line class="w" x1="270" y1="66" x2="270" y2="96"/>
+<rect class="bx sel" x="10" y="96" width="196" height="50" rx="4"/><text class="tc" x="108" y="116">ACK 생성기</text><text class="sc" x="108" y="133">9번째 클럭에 SDA 당김</text>
+<line class="wc" x1="40" y1="96" x2="40" y2="66"/>
+<rect class="bx hw" x="222" y="96" width="180" height="50" rx="4"/><text class="tc" x="312" y="116">8비트 시프트 레지스터</text><text class="sc" x="312" y="133">+ 비트 카운터 0~8</text>
+<line class="w" x1="402" y1="121" x2="430" y2="121"/>
+<rect class="bx hw" x="430" y="96" width="76" height="50" rx="4"/><text class="tc" x="468" y="116">DR</text><text class="sc" x="468" y="133">1바이트</text>
+<line class="w" x1="506" y1="121" x2="520" y2="121"/>
+<rect class="bx flg" x="520" y="96" width="150" height="50" rx="4"/><text class="tc" x="595" y="116">TxE · RxNE · BTF</text><text class="sc" x="595" y="133">DR·시프트 상태</text>
+<rect class="bx" x="10" y="176" width="196" height="46" rx="4"/><text class="tc" x="108" y="196">PEC(CRC-8) 계산</text><text class="sc" x="108" y="213">x⁸ + x² + x + 1</text>
+<line class="w" x1="312" y1="146" x2="312" y2="176"/>
+<rect class="bx sel" x="222" y="176" width="180" height="46" rx="4"/><text class="tc" x="312" y="196">주소 비교기</text><text class="sc" x="312" y="213">OAR1 · OAR2 · 00h</text>
+<line class="w" x1="402" y1="199" x2="520" y2="199"/>
+<rect class="bx flg" x="520" y="176" width="150" height="46" rx="4"/><text class="tc" x="595" y="196">ADDR</text><text class="sc" x="595" y="213">DUALF · GENCALL</text>
+<line class="dash" x1="10" y1="238" x2="670" y2="238"/>
+<rect class="bx" x="10" y="258" width="70" height="44" rx="4"/><text class="tc" x="45" y="285">SCL 핀</text>
+<line class="wc" x1="96" y1="280" x2="80" y2="280"/>
+<rect class="bx sel" x="96" y="254" width="170" height="52" rx="4"/><text class="tc" x="181" y="275">SCL 생성 카운터</text><text class="sc" x="181" y="293">CCR · DUTY · F/S</text>
+<line class="dash" x1="266" y1="280" x2="282" y2="280"/>
+<rect class="bx hw" x="282" y="254" width="170" height="52" rx="4"/><text class="tc" x="367" y="275">SCL 되읽기 감시</text><text class="sc" x="367" y="293">TRISE 창 · 스트레칭</text>
+<line class="w" x1="452" y1="280" x2="468" y2="280"/>
+<rect class="bx isr" x="468" y="254" width="202" height="52" rx="4"/><text class="tc" x="569" y="275">제어 상태기계</text><text class="sc" x="569" y="293">it_event · it_error · DMA</text>
+</svg><figcaption><span class="eqv">등가 모델</span> Figure 270을 디지털논리 소자로 다시 그렸다. 위 세 줄이 SDA 쪽, 점선 아래가 SCL 쪽이다. START/STOP 검출기는 "SCL = 1일 때의 SDA 엣지"를 찾는 조건부 엣지 검출기이고, 주소 비교기는 시프트 레지스터 상위 7비트와 OAR 값을 비교하는 동등 비교기이다. 필터·동기화기의 구조와 상태기계의 상태 수는 문서에 없다. 결과(플래그가 서는 시점)만 문서에 있다.</figcaption></figure>
+
+<div class="tablewrap"><table>
+<tr><th>Figure 270의 블록</th><th>디지털논리 등가</th><th>근거</th></tr>
+<tr><td>Noise filter</td><td>짧은 펄스를 없애는 저역 필터(50 ns 이하) + PCLK1 동기화기 <span class="eqv">등가 모델</span></td><td>DS5319 Table 41, RM0008 p.758</td></tr>
+<tr><td>Data control의 START/STOP 판정</td><td>SCL = 1 조건이 붙은 SDA 하강/상승 엣지 검출기</td><td>RM0008 Figure 269, p.778 BERR 정의</td></tr>
+<tr><td>Data shift register</td><td>8비트 양방향 시프트 레지스터, MSB 먼저 + 9진 비트 카운터(8비트 + ACK)</td><td>RM0008 26.3.1</td></tr>
+<tr><td>Data register</td><td>한 칸짜리 버퍼. 송수신이 같은 DR을 쓴다</td><td>RM0008 26.6.5</td></tr>
+<tr><td>Comparator + Own/Dual address register</td><td>7비트(또는 10비트) 동등 비교기 2개 + 00h 비교기, 결과의 OR</td><td>RM0008 26.3.2</td></tr>
+<tr><td>Clock control + CCR</td><td>Low 카운터·High 카운터. High 카운터는 SCL 되읽기 값이 1일 때만 센다</td><td>RM0008 26.3.3, 26.6.8</td></tr>
+<tr><td>PEC calculation</td><td>CRC-8 직렬 LFSR(선형 귀환 시프트 레지스터)</td><td>RM0008 26.3.8</td></tr>
+<tr><td>Control logic</td><td>이벤트 상태기계 + 플래그 플립플롭 + 인터럽트 OR 트리 두 개</td><td>RM0008 26.3, Figure 278</td></tr>
+</table></div>
+
+<h3>칩 안의 두 I2C</h3>
+<div class="tablewrap"><table>
+<tr><th>블록</th><th>버스(클럭)</th><th>베이스 주소</th><th>SCL / SDA</th><th>리맵 시 SCL / SDA</th><th>SMBA</th></tr>
+<tr><td class="m">I2C1</td><td>APB1 (PCLK1, 최대 36 MHz)</td><td class="m">0x4000 5400</td><td class="m">PB6 / PB7</td><td class="m">PB8 / PB9</td><td class="m">PB5</td></tr>
+<tr><td class="m">I2C2</td><td>APB1 (PCLK1, 최대 36 MHz)</td><td class="m">0x4000 5800</td><td class="m">PB10 / PB11</td><td>리맵 없음</td><td class="m">PB12</td></tr>
+</table></div>
+<p>근거: 주소는 RM0008 Table 3(<a href="../../Docs/RM0008_Reference_manual.pdf#page=52">p.52</a>), 핀은 DS5319 Table 5(<a href="../../Docs/Datasheet_stm32f103.pdf#page=30">p.30</a>, <a href="../../Docs/Datasheet_stm32f103.pdf#page=32">p.32~33</a>), 리맵은 RM0008 Table 55(<a href="../../Docs/RM0008_Reference_manual.pdf#page=181">p.181</a>, 36핀 패키지에는 리맵 없음), 클럭 허용 비트는 RCC_APB1ENR의 I2C1EN(비트 21)·I2C2EN(비트 22)(<a href="../../Docs/RM0008_Reference_manual.pdf#page=116">p.116</a>)이다. SCL·SDA 핀(PB6~PB11)은 모두 FT(5 V 허용) 핀이다. DS5319 2.3.16(<a href="../../Docs/Datasheet_stm32f103.pdf#page=19">p.19</a>)은 두 I2C가 멀티마스터·슬레이브, 표준·고속 모드, 슬레이브 이중 주소(7비트만), 마스터에서 7/10비트 주소를 지원하고 DMA를 쓸 수 있다고 정리한다.</p>
+</section>
+
+<!-- ============================================================ 4 -->
+<section id="s4">
+<h2>4. 클럭 경로와 시간 계산</h2>
+<figure class="diag"><svg viewBox="0 0 680 290" role="img" aria-label="SCL 생성 경로와 스트레칭 등가 모델">
+<rect class="bx" x="8" y="20" width="96" height="44" rx="4"/><text class="tc" x="56" y="40">PCLK1</text><text class="sc" x="56" y="56">FREQ = MHz 값</text>
+<line class="w" x1="104" y1="42" x2="122" y2="42"/>
+<rect class="bx sel" x="122" y="20" width="150" height="44" rx="4"/><text class="tc" x="197" y="40">CCR 카운터</text><text class="sc" x="197" y="56">Low / High 길이 셈</text>
+<line class="w" x1="272" y1="42" x2="292" y2="42"/>
+<rect class="bx hw" x="292" y="20" width="146" height="44" rx="4"/><text class="tc" x="365" y="40">SCL 구동</text><text class="sc" x="365" y="56">당김 / 놓음</text>
+<line class="w" x1="438" y1="42" x2="500" y2="42"/><text class="t" x="508" y="46">SCL 선</text>
+<polyline class="wm" points="480,42 480,102 438,102"/>
+<rect class="bx hw" x="292" y="82" width="146" height="40" rx="4"/><text class="tc" x="365" y="107">필터 + 동기화</text>
+<line class="wm" x1="292" y1="102" x2="272" y2="102"/>
+<rect class="bx sel" x="122" y="82" width="150" height="40" rx="4"/><text class="tc" x="197" y="107">TRISE 창 검사</text>
+<line class="wc" x1="197" y1="82" x2="197" y2="64"/><polygon class="ahc" points="197,64 192,72 202,72"/>
+<text class="o" x="10" y="146">TRISE 창 끝에 SCL이 아직 Low면 High 카운터를 멈춘다</text>
+<text class="s" x="8" y="186">정상</text>
+<polyline class="sig" points="60,200 200,200 212,168 340,168 348,200 480,200 492,168 620,168"/>
+<text class="s" x="96" y="216">T_low</text><text class="s" x="250" y="162">T_high (상승 포함)</text>
+<text class="s" x="8" y="256">스트레칭</text>
+<rect class="shade" x="200" y="236" width="90" height="34"/>
+<polyline class="sig3" points="60,270 290,270 302,238 430,238 438,270 570,270 582,238 620,238"/>
+<text class="s" x="96" y="286">T_low</text><text class="o" x="300" y="286">상대가 붙잡은 동안 기다림</text>
+</svg><figcaption><span class="eqv">등가 모델</span> RM0008 26.3.3(<a href="../../Docs/RM0008_Reference_manual.pdf#page=758">p.758</a>)의 설명을 그림으로 옮겼다. 블록은 SCL 상승 엣지를 "만든" 순간부터 High 카운터를 돌리고, TRISE로 정한 시간 뒤에 SCL 입력을 확인한다. SCL이 Low이면 슬레이브가 붙잡은 것으로 보고 High 카운터를 멈춘다. 이 되읽기 경로에는 상승 시간, 필터 지연, PCLK1 동기화 지연이 끼므로, TRISE를 "최대 상승 시간 + 1"로 잡아 두면 상승 시간이 바뀌어도 SCL 주파수가 흔들리지 않는다.</figcaption></figure>
+
+<div class="eq">표준 모드 (F/S = 0):          T_high = T_low = CCR × T_PCLK1                  → f_SCL ≈ 1 / (2 × CCR × T_PCLK1)
+고속 모드 (F/S = 1, DUTY = 0): T_high = CCR × T_PCLK1,  T_low = 2 × CCR × T_PCLK1 → f_SCL ≈ 1 / (3 × CCR × T_PCLK1)
+고속 모드 (F/S = 1, DUTY = 1): T_high = 9 × CCR × T_PCLK1, T_low = 16 × CCR × T_PCLK1 → f_SCL ≈ 1 / (25 × CCR × T_PCLK1)
+CCR 최솟값 = 4 (DUTY = 1이면 1),  FREQ = PCLK1의 MHz 값,  CCR·TRISE는 PE = 0일 때만 설정    (RM0008 26.6.8, p.781~782)
+TRISE = (최대 상승 시간 / T_PCLK1)의 정수부 + 1,  최대 상승 시간: 표준 1000 ns, 고속 300 ns        (RM0008 26.6.9, p.783)</div>
+<p>RM0008은 T<sub>high</sub>가 상승 시간을 포함한다고 적는다. <code>t_high = t_r(SCL) + t_w(SCLH)</code>, <code>t_low = t_f(SCL) + t_w(SCLL)</code>이다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=782">p.782</a>). 그래서 데이터시트가 요구하는 최소 High 폭 t<sub>w(SCLH)</sub>는 CCR이 만든 T<sub>high</sub>에서 실제 상승 시간을 뺀 값으로 확인해야 한다. 또 "실제 주파수는 아날로그 잡음 필터의 입력 지연 때문에 다를 수 있다"고 적혀 있으므로 아래 계산값은 근삿값이다.</p>
+
+<h3>계산 예</h3>
+<div class="tablewrap"><table>
+<tr><th>PCLK1</th><th>모드</th><th>CCR</th><th>T_high / T_low</th><th>f_SCL</th><th>TRISE</th><th>근거</th></tr>
+<tr><td>8 MHz</td><td>표준</td><td class="m">40 (0x28)</td><td class="m">5000 / 5000 ns</td><td class="m">100 kHz</td><td class="m">9</td><td>RM0008 p.782·783의 예</td></tr>
+<tr><td>32 MHz</td><td>표준</td><td class="m">160 (0xA0)</td><td class="m">5000 / 5000 ns</td><td class="m">100 kHz</td><td class="m">33</td><td>같은 식으로 계산</td></tr>
+<tr><td>36 MHz</td><td>표준</td><td class="m">180 (0xB4)</td><td class="m">5000 / 5000 ns</td><td class="m">100 kHz</td><td class="m">37</td><td>DS5319 Table 42 (CCR 레지스터 0x00B4)</td></tr>
+<tr><td>36 MHz</td><td>고속, DUTY 0</td><td class="m">30 (0x1E)</td><td class="m">833 / 1667 ns</td><td class="m">400 kHz</td><td class="m">11</td><td>DS5319 Table 42 (0x801E = F/S 1 + CCR 30)</td></tr>
+<tr><td>32 MHz</td><td>고속, DUTY 0</td><td class="m">27 (0x1B)</td><td class="m">844 / 1688 ns</td><td class="m">395 kHz</td><td class="m">10</td><td>같은 식. 26.67을 올림</td></tr>
+<tr><td>32 MHz</td><td>고속, DUTY 1</td><td class="m">4</td><td class="m">1125 / 2000 ns</td><td class="m">320 kHz</td><td class="m">10</td><td>같은 식. 3.2를 올림</td></tr>
+</table></div>
+<p>RM0008에는 CCR이 정수가 안 될 때의 반올림 규칙이 없다. 이 개념설명은 SCL이 목표를 넘지 않도록 <b>올림</b>을 썼다. 32 MHz(이 그룹 예제의 PCLK1, 시스템 클럭 64 MHz에 APB1 ÷2)에서는 400 kHz가 정확히 나오지 않고 395 kHz가 된다.</p>
+<p>CCR 레지스터 설명 앞의 주석은 "fPCLK1 must be a multiple of 10 MHz to reach the 400 kHz maximum I²C Fm mode clock"이라고 적는다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=781">p.781</a>, DS5319 Table 41 주석 2도 같다). 위 식으로 따져 보면 이 조건은 DUTY = 1에 해당한다. DUTY = 1이면 한 주기가 25 × CCR × T<sub>PCLK1</sub>이므로 2.5 µs가 되려면 CCR × T<sub>PCLK1</sub> = 100 ns, 즉 PCLK1 = CCR × 10 MHz여야 한다. DUTY = 0이면 3 × CCR × T<sub>PCLK1</sub> = 2.5 µs이므로 PCLK1이 1.2 MHz의 배수이기만 하면 된다. 그래서 36 MHz에서 DUTY = 0, CCR = 30으로 정확히 400 kHz가 나오고, DS5319 Table 42도 이 값을 쓴다. <span class="eqv">등가 모델</span>(문서 식에서 유도한 것이다. 문서는 이유를 설명하지 않는다.)</p>
+
+<h3>바이트 하나의 시간 예산</h3>
+<div class="eq">바이트 하나 = 9 클럭 (데이터 8 + ACK 1)
+100 kHz → 90 µs (64 MHz CPU로 5 760 클럭),   400 kHz → 22.5 µs (1 440 클럭)</div>
+<p>이 시간이 5장에서 말할 "현재 바이트가 끝나기 전에 처리해야 하는 이벤트"의 마감이다. 정오표 ES096 2.8.1은 이 마감을 못 지키면 "receiving an extra byte, reading the same data twice or missing data"가 생길 수 있다고 적는다(<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=17">p.17</a>). 속도를 400 kHz로 올리면 마감이 4분의 1로 줄어든다.</p>
+
+<div class="sim" id="ccalc">
+  <div class="subhead">계산기: CCR, TRISE, 실제 SCL 주파수와 데이터시트 최소 폭</div>
+  <div class="ctl">
+    <div><label for="cclk">PCLK1 (MHz, 2~36)</label><input id="cclk" type="number" min="2" max="36" step="1" value="32"></div>
+    <div><label for="cmode">모드</label><select id="cmode"><option value="sm" selected>표준 (F/S = 0)</option><option value="fm0">고속, DUTY = 0 (Low:High = 2)</option><option value="fm1">고속, DUTY = 1 (Low:High = 16:9)</option></select></div>
+    <div><label for="cf">목표 SCL (kHz)</label><input id="cf" type="number" min="1" max="400" value="100"></div>
+    <div><label for="ctr">예상 SCL 상승 시간 t_r (ns)</label><input id="ctr" type="number" min="0" max="2000" value="300"></div>
+  </div>
+  <div class="regs">
+    <div class="stat"><div class="k">CR2.FREQ</div><div class="v" id="c_freq">-</div></div>
+    <div class="stat"><div class="k">CCR (필드 값)</div><div class="v" id="c_ccr">-</div></div>
+    <div class="stat"><div class="k">CCR 레지스터 전체</div><div class="v" id="c_reg">-</div></div>
+    <div class="stat"><div class="k">실제 f_SCL (근삿값)</div><div class="v" id="c_f">-</div></div>
+    <div class="stat"><div class="k">T_high / T_low</div><div class="v" id="c_hl">-</div></div>
+    <div class="stat"><div class="k">t_w(SCLH) ≈ T_high − t_r</div><div class="v" id="c_wh">-</div></div>
+    <div class="stat"><div class="k">TRISE</div><div class="v" id="c_trise">-</div></div>
+    <div class="stat"><div class="k">바이트 시간 (9클럭)</div><div class="v" id="c_byte">-</div></div>
+  </div>
+  <p class="note" id="c_note"></p>
+</div>
+
+<h3>상승 시간: 풀업 저항과 선의 용량</h3>
+<p>오픈드레인 선은 당길 때는 트랜지스터가 빠르게 끌어내리지만, 놓을 때는 풀업 저항 R<sub>p</sub>가 선의 용량 C<sub>b</sub>를 충전하며 천천히 올라간다. DS5319 Table 41(<a href="../../Docs/Datasheet_stm32f103.pdf#page=68">p.68</a>)은 상승 시간 t<sub>r</sub>을 표준 모드 최대 1000 ns, 고속 모드 최대 300 ns로, 선 하나의 부하 용량 C<sub>b</sub>를 최대 400 pF로 정한다. 측정점은 0.3 V<sub>DD</sub>와 0.7 V<sub>DD</sub>이다(Figure 32 주석). RC 충전 식 V(t) = V<sub>DD</sub>(1 − e<sup>−t/RC</sup>)에서 0.3 → 0.7 V<sub>DD</sub>에 걸리는 시간을 구하면 아래 식이 된다. 이 식은 문서의 측정점에 일반 회로 이론을 적용한 <span class="eqv">등가 모델</span>이다.</p>
+<div class="eq">t_r(0.3 → 0.7 VDD) = R_p × C_b × ln(0.7 / 0.3) ≈ 0.847 × R_p × C_b
+R_p 최대 ≈ t_r 최대 / (0.847 × C_b)       표준: 1000 ns,  고속: 300 ns
+R_p 최소 (F103 쪽만) ≈ (VDD − 0.4 V) / 8 mA    (DS5319 Table 37: 8 mA 흡수 시 VOL ≤ 0.4 V)</div>
+<p>R<sub>p</sub>가 크면 상승이 느려 규격을 넘고, 작으면 Low일 때 흐르는 전류가 커져 Low 전압이 올라간다. 하한은 버스의 모든 장치가 그 전류를 흡수할 수 있어야 하는데, 다른 장치의 흡수 능력은 이 네 문서에 없다. 위 하한은 F103 핀만 따진 값이다.</p>
+<figure class="src"><div class="img"><a href="img/DS5319_Fig32_p69.png"><img src="img/DS5319_Fig32_p69.png" alt="I2C 버스 AC 파형과 측정 회로" width="1157" height="699" loading="lazy"></a></div>
+<figcaption>위는 측정 회로이다. 선마다 풀업 R<sub>p</sub>가 V<sub>DD_I2C</sub>로 이어지고, R<sub>s</sub>는 보호용 직렬 저항이다. 아래는 Table 41의 시간 기호가 파형의 어디인지 보여 준다. t<sub>w(SCLH)</sub>·t<sub>w(SCLL)</sub>는 상승·하강 구간을 뺀 폭이고, t<sub>su(STA)</sub>는 반복 START의 설정 시간이다(8장의 정오표 2.8.5가 이 값을 다룬다).
+<span class="cite">출처: <a href="../../Docs/Datasheet_stm32f103.pdf#page=69">DS5319 Rev 19, p.69</a>, Figure 32. I2C bus AC waveforms and measurement circuit</span></figcaption></figure>
+<div class="sim" id="rcalc">
+  <div class="subhead">계산기: 풀업 저항과 버스 용량으로 상승 시간 어림하기 <span class="eqv">등가 모델</span></div>
+  <div class="ctl">
+    <div><label for="rrp">풀업 R_p (kΩ)</label><input id="rrp" type="number" min="0.1" max="100" step="0.1" value="4.7"></div>
+    <div><label for="rcb">선 하나의 용량 C_b (pF)</label><input id="rcb" type="number" min="1" max="1000" value="100"></div>
+    <div><label for="rvdd">VDD (V)</label><input id="rvdd" type="number" min="2" max="3.6" step="0.1" value="3.3"></div>
+  </div>
+  <div class="regs">
+    <div class="stat"><div class="k">t_r (0.3→0.7 VDD)</div><div class="v" id="r_tr">-</div></div>
+    <div class="stat"><div class="k">표준 모드 (≤ 1000 ns)</div><div class="v" id="r_sm">-</div></div>
+    <div class="stat"><div class="k">고속 모드 (≤ 300 ns)</div><div class="v" id="r_fm">-</div></div>
+    <div class="stat"><div class="k">이 C_b에서 R_p 최대 (표준 / 고속)</div><div class="v" id="r_max" style="font-size:15px">-</div></div>
+    <div class="stat"><div class="k">R_p 최소 (F103 핀 기준)</div><div class="v" id="r_min">-</div></div>
+    <div class="stat"><div class="k">Low일 때 전류</div><div class="v" id="r_i">-</div></div>
+  </div>
+  <p class="note" id="r_note"></p>
+</div>
+</section>
+
+<!-- ============================================================ 5 -->
+<section id="s5">
+<h2>5. 제어 요소의 역할: 블록도의 스위치와 레지스터 비트</h2>
+<p>Figure 270의 CR1·CR2·OAR·CCR·TRISE 칸은 경로 위의 스위치와 설정값이다. 블록도 위치와 함께 정리한다(비트 정의는 RM0008 26.6, <a href="../../Docs/RM0008_Reference_manual.pdf#page=772">p.772~783</a>).</p>
+<div class="tablewrap"><table>
+<tr><th>블록도 위의 요소</th><th>고르는 비트</th><th>동작</th></tr>
+<tr><td>블록 전체 스위치</td><td class="m">CR1.PE</td><td>Peripheral Enable. 통신 중에 0으로 하면 통신이 끝난 뒤 꺼진다. 마스터 모드에서는 통신이 끝나기 전에 내리면 안 된다(p.774). PE = 0이면 대부분의 플래그와 ACK·POS·START 등이 지워진다</td></tr>
+<tr><td>블록 리셋</td><td class="m">CR1.SWRST</td><td>1인 동안 블록이 리셋 상태이다. 버스 글리치로 BUSY가 1에 묶였을 때 빠져나오는 수단이다(p.772). 단 정오표 2.8.7의 경우에는 통하지 않는다(8장)</td></tr>
+<tr><td>START / STOP 요청 래치</td><td class="m">CR1.START, STOP</td><td>소프트웨어가 1을 쓰고, 하드웨어가 조건을 낸 뒤 지운다. 마스터에서 START는 "현재 바이트 뒤 반복 START", STOP은 "현재 바이트 뒤 STOP"이다(p.773). 이 비트가 1인 동안 CR1에 다시 쓰면 요청이 두 번 걸릴 수 있다(p.774)</td></tr>
+<tr><td>ACK 생성기 스위치</td><td class="m">CR1.ACK</td><td>1이면 받은 바이트(주소 일치 또는 데이터)에 ACK를 준다. 0이면 NACK이다</td></tr>
+<tr><td>ACK가 걸릴 바이트 선택</td><td class="m">CR1.POS</td><td>0이면 ACK 비트가 지금 시프트 레지스터에서 받는 바이트에, 1이면 그다음 바이트에 적용된다. 2바이트 수신 절차에서만 쓴다(p.773)</td></tr>
+<tr><td>슬레이브 스트레칭 허용</td><td class="m">CR1.NOSTRETCH</td><td>1이면 슬레이브일 때 ADDR·BTF에서 SCL을 붙잡지 않는다. 그 대신 OVR(덮어쓰기·모자람)이 생길 수 있다</td></tr>
+<tr><td>주소 비교기 입력</td><td class="m">OAR1(ADDMODE, ADD) · OAR2(ADD2, ENDUAL) · CR1.ENGC</td><td>내 주소 7/10비트, 두 번째 7비트 주소, 일반 호출 00h 응답 여부. OAR1의 비트 14는 소프트웨어가 늘 1로 둬야 한다고만 적혀 있고 이유는 문서에 없다(p.776)</td></tr>
+<tr><td>타이밍 기준</td><td class="m">CR2.FREQ[5:0]</td><td>PCLK1 값을 MHz로 적는다. 설정·유지 시간 생성에 쓴다. 최소 2 MHz</td></tr>
+<tr><td>SCL 분주기</td><td class="m">CCR.F/S, DUTY, CCR[11:0] · TRISE[5:0]</td><td>4장의 식. PE = 0일 때만 바꾼다</td></tr>
+<tr><td>인터럽트 AND 게이트</td><td class="m">CR2.ITEVTEN, ITBUFEN, ITERREN</td><td>이벤트 / 버퍼(TxE·RxNE) / 오류를 인터럽트로 내보낸다(6장 Figure 278)</td></tr>
+<tr><td>DMA 요청 게이트</td><td class="m">CR2.DMAEN, LAST</td><td>TxE·RxNE를 DMA 요청으로 내보낸다. LAST = 1이면 마지막 DMA 전송 뒤 자동으로 NACK를 낸다(6장)</td></tr>
+<tr><td>PEC · SMBus</td><td class="m">CR1.ENPEC, PEC, SMBUS, SMBTYPE, ENARP, ALERT</td><td>CRC-8 검사 바이트와 SMBus 기능. 이 그룹 예제는 쓰지 않는다</td></tr>
+</table></div>
+
+<h3>플래그는 언제 서고 어떻게 지워지는가</h3>
+<p>I2C 플래그는 지우는 방법이 셋으로 나뉜다. ① <b>읽기 순서</b>로 지워지는 것(SB, ADDR, ADD10, BTF, STOPF), ② <b>DR 접근</b>으로 지워지는 것(TxE, RxNE), ③ <b>0 쓰기</b>로 지워지는 오류 플래그(rc_w0)이다. 표의 "SCL"은 플래그가 선 동안 버스가 어떻게 되는지이다.</p>
+<div class="tablewrap"><table>
+<tr><th>플래그</th><th>세트 조건</th><th>지우는 방법</th><th>그동안 SCL</th></tr>
+<tr><td class="m">SB</td><td>마스터가 START(또는 반복 START)를 냄</td><td>SR1 읽기 → DR 쓰기(주소)</td><td>Low 고정</td></tr>
+<tr><td class="m">ADDR</td><td>마스터: 주소 바이트 끝 + ACK 받음. 슬레이브: 받은 주소가 내 주소와 일치</td><td>SR1 읽기 → SR2 읽기</td><td>Low 고정</td></tr>
+<tr><td class="m">ADD10</td><td>마스터가 10비트 헤더를 냄</td><td>SR1 읽기 → DR 쓰기(둘째 주소 바이트)</td><td>Low 고정</td></tr>
+<tr><td class="m">TxE</td><td>송신 중 DR이 빔(주소 단계에서는 서지 않음, NACK 뒤에도 서지 않음)</td><td>DR 쓰기. START·STOP 때 하드웨어가 지움</td><td>계속 돎</td></tr>
+<tr><td class="m">RxNE</td><td>수신 중 DR에 바이트가 들어옴(주소 단계에서는 서지 않음)</td><td>DR 읽기</td><td>계속 돎</td></tr>
+<tr><td class="m">BTF</td><td>NOSTRETCH = 0이고, DR이 처리되지 않은 채(송신 TxE = 1 / 수신 RxNE = 1) 다음 바이트 경계에 이름</td><td>SR1 읽기 → DR 읽기 또는 쓰기. 송신에서는 START·STOP 때 하드웨어가 지움</td><td>Low 고정</td></tr>
+<tr><td class="m">STOPF</td><td>슬레이브가 ACK 뒤 STOP을 검출함(NACK 뒤에는 서지 않음)</td><td>SR1 읽기 → CR1 쓰기</td><td>(버스 끝)</td></tr>
+<tr><td class="m">BERR · ARLO · AF · OVR · PECERR · TIMEOUT · SMBALERT</td><td>엉뚱한 START/STOP · 중재 패배 · NACK 받음 · 덮어쓰기/모자람 · PEC 불일치 · SMBus 시간 초과 · SMBus 경보</td><td>해당 비트에 0 쓰기</td><td>상황마다 다름(6·7장)</td></tr>
+</table></div>
+<p>근거: SR1·SR2 비트 설명(<a href="../../Docs/RM0008_Reference_manual.pdf#page=777">p.777~781</a>). SR2의 MSL(마스터 모드), BUSY(버스 사용 중), TRA(송신 쪽), DUALF·GENCALL은 하드웨어가 상태에 따라 세우고 내리는 상태 비트이다. BUSY는 PE = 0일 때도 갱신된다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=781">p.781</a>).</p>
+
+<h3>"SR1 읽기 → SR2 읽기"라는 열쇠</h3>
+<p>왜 ADDR 하나를 지우는 데 레지스터 두 개를 읽어야 할까? SB·ADDR·BTF가 선 동안 블록은 SCL을 붙잡고 있다. 붙잡기를 풀어도 된다는 신호가 "소프트웨어가 상태를 확인했다(SR1 읽기)" 다음의 "다음 단계 준비를 마쳤다(SR2 읽기, DR 쓰기 등)"이다. 두 접근이 순서대로 일어나야 상태기계가 다음 상태로 간다. 디지털논리로는 접근 순서를 검출하는 2상태 시퀀스 검출기이다. 01_GPIO의 LCKR 키 순서, 02_USART의 "SR 읽기 → DR 읽기"와 같은 발상이다.</p>
+<figure class="diag"><svg viewBox="0 0 680 170" role="img" aria-label="ADDR 지우기 순서 검출기">
+<rect class="bx flg" x="20" y="44" width="160" height="58" rx="6"/><text class="tc" x="100" y="68">S0: ADDR = 1</text><text class="sc" x="100" y="88">SCL Low 고정</text>
+<line class="w" x1="180" y1="73" x2="254" y2="73"/><polygon class="ah" points="260,73 252,68 252,78"/><text class="s" x="190" y="64">SR1 읽기</text>
+<rect class="bx sel" x="260" y="44" width="160" height="58" rx="6"/><text class="tc" x="340" y="68">S1: SR1 읽힘</text><text class="sc" x="340" y="88">무장 상태</text>
+<line class="w" x1="420" y1="73" x2="494" y2="73"/><polygon class="ah" points="500,73 492,68 492,78"/><text class="s" x="430" y="64">SR2 읽기</text>
+<rect class="bx" x="500" y="44" width="160" height="58" rx="6"/><text class="tc" x="580" y="68">ADDR ← 0</text><text class="sc" x="580" y="88">SCL 놓음, 다음 단계</text>
+<text class="o" x="20" y="134">주의: S1에 있는 동안 ADDR이 새로 서도 SR2 읽기는 그것까지 지운다 (p.780)</text>
+<text class="s" x="20" y="158">SB: SR1 읽기 → DR 쓰기 · BTF: SR1 읽기 → DR 읽기/쓰기 · STOPF: SR1 읽기 → CR1 쓰기</text>
+</svg><figcaption><span class="eqv">등가 모델</span> 실제 상태 수와 구현은 문서에 없다. 문서가 보장하는 것은 순서와 결과뿐이다. RM0008은 "Reading I2C_SR2 after reading I2C_SR1 clears the ADDR flag, even if the ADDR flag was set after reading I2C_SR1"이라고 경고한다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=780">p.780</a>). 즉 무장 조건은 "ADDR = 1인 것을 봤다"가 아니라 "SR1을 읽었다"이다. 그래서 SR2는 SR1에서 ADDR = 1을 확인한 경우(또는 STOPF를 지운 경우)에만 읽어야 한다. 슬레이브 인터럽트 루틴에서 ADDR와 STOPF가 함께 서 있으면 둘의 지우기 순서를 각각 끝까지 해야 한다(Figure 272 주석 3, <a href="../../Docs/RM0008_Reference_manual.pdf#page=757">p.757</a>).</figcaption></figure>
+
+<h3>이벤트 두 부류: 기다려 주는 것과 기다려 주지 않는 것</h3>
+<p>RM0008의 전송 순서도(Figure 271~277)는 사건마다 EV 번호를 붙인다. 이 이벤트들을 <b>버스가 소프트웨어를 기다려 주느냐</b>로 나누면 F103 I2C의 성격이 한눈에 보인다.</p>
+<div class="tablewrap"><table>
+<tr><th>이벤트</th><th>플래그</th><th>소프트웨어 할 일</th><th>버스</th><th>마감</th></tr>
+<tr><td class="m">EV5</td><td class="m">SB</td><td>SR1 읽기 → DR ← 주소 바이트</td><td class="on">SCL Low로 기다림</td><td>없음</td></tr>
+<tr><td class="m">EV6</td><td class="m">ADDR</td><td>SR1 읽기 → SR2 읽기</td><td class="on">기다림</td><td>없음</td></tr>
+<tr><td class="m">EV9</td><td class="m">ADD10</td><td>SR1 읽기 → DR ← 둘째 주소 바이트</td><td class="on">기다림</td><td>없음</td></tr>
+<tr><td class="m">EV8_1</td><td class="m">TxE (시프트도 빔)</td><td>DR ← 첫 데이터</td><td class="on">기다림</td><td>없음</td></tr>
+<tr><td class="m">EV8_2</td><td class="m">TxE + BTF</td><td>STOP 요청 (하드웨어가 TxE·BTF를 지움)</td><td class="on">기다림</td><td>없음</td></tr>
+<tr><td class="m">EV8</td><td class="m">TxE (시프트는 보내는 중)</td><td>DR ← 다음 데이터</td><td class="off">계속 돎</td><td>현재 바이트 끝. 늦으면 BTF로 멈춤(손해는 속도뿐)</td></tr>
+<tr><td class="m">EV7</td><td class="m">RxNE</td><td>DR 읽기</td><td class="off">계속 돎</td><td>현재 바이트 끝. 늦으면 BTF로 멈춤</td></tr>
+<tr><td class="m">EV7_1</td><td class="m">RxNE</td><td>DR 읽기 + ACK = 0 + STOP 요청</td><td class="off">계속 돎</td><td><b>현재 바이트의 ACK 펄스 전</b></td></tr>
+<tr><td class="m">EV6_1</td><td>(플래그 없음)</td><td>ADDR 지운 직후 ACK = 0 (2바이트 수신)</td><td class="off">계속 돎</td><td><b>ACK 펄스 전</b></td></tr>
+<tr><td class="m">EV6_3</td><td class="m">ADDR</td><td>ACK = 0 → ADDR 지움 → 곧바로 STOP 요청 (1바이트 수신)</td><td class="off">ADDR을 지우면 돎</td><td><b>현재 바이트 끝 전</b></td></tr>
+<tr><td class="m">EV7_2 / EV7_3</td><td class="m">BTF</td><td>ACK = 0, DR 읽기, STOP, DR 읽기 (N &gt; 2 / N = 2의 끝맺음)</td><td class="on">BTF 동안 기다림</td><td>읽기 사이에 끊기면 정오표 2.8.2</td></tr>
+<tr><td class="m">EV1 · EV2 · EV3 · EV4</td><td class="m">ADDR · RxNE · TxE · STOPF</td><td>슬레이브 쪽 같은 일(Figure 271·272)</td><td>EV1은 기다림</td><td>EV2·EV3은 현재 바이트 끝</td></tr>
+</table></div>
+<p>근거: Figure 273~277의 범례와 주석(<a href="../../Docs/RM0008_Reference_manual.pdf#page=760">p.760~764</a>). 송신 쪽은 늦어도 BTF로 버스가 멈추므로 느려질 뿐이다. 수신 쪽의 위험은 ACK이다. 수신기는 바이트를 받는 즉시 9번째 클럭에서 ACK 비트 값대로 ACK/NACK를 낸다. 소프트웨어가 "마지막 바이트에는 NACK"를 제때 걸지 못하면 슬레이브는 ACK를 받았으니 한 바이트를 더 보낸다. ES096 2.8.1이 열거한 이벤트(EV7, EV7_1, EV6_1, EV6_3, EV2, EV8, EV3)가 정확히 이 "기다려 주지 않는" 부류이다(<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=17">p.17</a>). 그래서 RM0008은 마스터 수신의 끝맺음을 두 가지로 준다. Method 1은 I2C 인터럽트가 가장 높은 우선순위일 때 쓰고, Method 2는 그렇지 않거나 폴링일 때 BTF로 버스를 일부러 멈춰 세운 상태에서 ACK를 바꾸는 방법이다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=760">p.760~761</a>). 7장에서 Method 2를 단계별로 따라간다.</p>
+</section>
+
+<!-- ============================================================ 6 -->
+<section id="s6">
+<h2>6. 이벤트 생성 기전: 플래그 → 인터럽트 → DMA → 다른 장치</h2>
+<h3>① 사건 줄과 오류 줄: 인터럽트 벡터가 두 개</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig278_p771.png"><img src="img/RM0008_Fig278_p771.png" alt="I2C 인터럽트 매핑" width="1157" height="734" loading="lazy"></a></div>
+<figcaption>위쪽 OR 트리는 정상 사건(SB, ADDR, ADD10, STOPF, BTF, 그리고 ITBUFEN과 AND된 TxE·RxNE)을 모아 ITEVFEN과 AND한 뒤 it_event로 낸다. 아래쪽 OR 트리는 오류(BERR, ARLO, AF, OVR, PECERR, TIMEOUT, SMBALERT)를 모아 ITERREN과 AND한 뒤 it_error로 낸다. 그림의 ITEVFEN은 레지스터 설명에서 ITEVTEN이라는 이름으로 나온다(같은 비트, CR2 비트 9).
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=771">RM0008 Rev 21, p.771</a>, Figure 278. I2C interrupt mapping diagram (사건 목록은 p.770~771 Table 189)</span></figcaption></figure>
+<p>USART가 사건 열 가지를 벡터 하나로 모은 것과 달리, I2C는 블록마다 벡터가 두 개이다. RM0008 26.2는 "2 Interrupt vectors: 1 Interrupt for successful address/data communication, 1 Interrupt for error condition"이라고 적는다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=753">p.753</a>).</p>
+<div class="tablewrap"><table>
+<tr><th>벡터</th><th>설명</th><th>위치(IRQ 번호)</th><th>벡터 주소</th></tr>
+<tr><td class="m">I2C1_EV</td><td>I2C1 event interrupt</td><td class="m">31</td><td class="m">0x0000 00BC</td></tr>
+<tr><td class="m">I2C1_ER</td><td>I2C1 error interrupt</td><td class="m">32</td><td class="m">0x0000 00C0</td></tr>
+<tr><td class="m">I2C2_EV</td><td>I2C2 event interrupt</td><td class="m">33</td><td class="m">0x0000 00C4</td></tr>
+<tr><td class="m">I2C2_ER</td><td>I2C2 error interrupt</td><td class="m">34</td><td class="m">0x0000 00C8</td></tr>
+</table></div>
+<p>근거: RM0008 Table 63(<a href="../../Docs/RM0008_Reference_manual.pdf#page=205">p.205</a>). 벡터 주소 = 0x40 + 4 × 위치이므로 0xBC → 31로 맞는다. 두 줄을 나눈 덕분에 오류(특히 AF, 즉 "상대가 없다·거부했다")를 정상 흐름과 따로, 다른 우선순위로 처리할 수 있다. NVIC에서 인터럽트마다 4비트 우선순위를 줄 수 있다(PM0056 4.3.7, <a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf#page=125">p.125</a>). 정오표 2.8.1의 두 번째 회피책이 "I2C 인터럽트를 가장 높은 우선순위로 올려 끼어들 수 없게 하라"인 이유가 5장의 마감 때문이다.</p>
+<p>그림에서 세 가지를 짚어 둔다.</p>
+<ul>
+  <li><b>TxE·RxNE는 ITBUFEN이 한 번 더 막는다.</b> 바이트마다 울리는 버퍼 사건을 끄고 BTF 같은 굵은 사건만 받을 수 있다. CR2 설명은 BTF 인터럽트를 "BTF = 1 with no TxE or RxNE event"로 적는다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=775">p.775</a>).</li>
+  <li><b>플래그는 수준(level)이다.</b> 이벤트를 지우는 순서를 끝내지 않고 인터럽트 처리 루틴을 빠져나가면 OR 트리 출력이 그대로 1이라 곧바로 다시 들어온다. SB, ADDR, BTF는 지우기 순서를 끝까지 해야 한다(5장).</li>
+  <li><b>마스터 송신의 마지막</b>에서 TxE·BTF는 STOP 조건이 나갈 때 하드웨어가 지운다(EV8_2, <a href="../../Docs/RM0008_Reference_manual.pdf#page=760">p.760</a>). STOP 요청을 넣지 않으면 계속 울린다.</li>
+</ul>
+
+<h3>② DMA 요청: 데이터 바이트만 DMA가 옮긴다</h3>
+<p>CR2.DMAEN = 1이면 송신 중 TxE, 수신 중 RxNE가 DMA 요청이 된다. 그러나 "DMA requests (when enabled) are generated only for data transfer"이다(26.3.7, <a href="../../Docs/RM0008_Reference_manual.pdf#page=768">p.768</a>). 즉 START(EV5)와 주소(EV6)는 여전히 CPU가 이벤트로 처리해야 하고, DMA는 그 뒤의 데이터 바이트들만 맡는다. DMA를 쓸 때는 ITBUFEN을 켜면 안 된다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=769">p.769</a>). 켜면 같은 TxE·RxNE가 인터럽트도 함께 일으킨다.</p>
+<div class="tablewrap"><table>
+<tr><th>요청</th><th>DMA1 채널</th><th>같은 채널의 다른 요청</th></tr>
+<tr><td class="m">I2C1_TX</td><td class="m">6</td><td>USART2_RX, TIM1_CH3, TIM3_CH1/TRIG</td></tr>
+<tr><td class="m">I2C1_RX</td><td class="m">7</td><td>USART2_TX, TIM2_CH2/CH4, TIM4_UP</td></tr>
+<tr><td class="m">I2C2_TX</td><td class="m">4</td><td>SPI2_RX, USART1_TX, TIM1_CH4/TRIG/COM, TIM4_CH2</td></tr>
+<tr><td class="m">I2C2_RX</td><td class="m">5</td><td>SPI2_TX, USART1_RX, TIM1_UP, TIM2_CH1, TIM4_CH3</td></tr>
+</table></div>
+<p>근거는 RM0008 Table 78(<a href="../../Docs/RM0008_Reference_manual.pdf#page=282">p.282</a>)이다. 채널마다 요청들은 "simply logically ORed before entering the DMA1, this means that only one request must be enabled at a time"이다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=281">p.281</a>). 그래서 I2C1을 DMA로 쓰면 같은 채널을 쓰는 USART2의 DMA와 동시에 쓸 수 없다.</p>
+<p>DMA가 정해진 개수를 다 옮기면 I2C 블록에 EOT(End Of Transfer) 신호를 보낸다. 방향마다 끝맺음이 다르다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=768">p.768</a>).</p>
+<ul>
+  <li><b>마스터 송신</b>: EOT 뒤 DMA 요청을 끄고, BTF를 기다린 다음 STOP을 요청한다. EOT는 "마지막 바이트를 DR에 넣었다"일 뿐 선을 다 떠났다는 뜻이 아니기 때문이다(USART의 TXE와 TC 관계와 같다).</li>
+  <li><b>마스터 수신</b>(2바이트 이상): DMA는 끝에서 둘째 바이트에서 EOT_1을 보낸다. CR2.LAST = 1이면 I2C가 그다음 바이트에 <b>자동으로 NACK</b>를 낸다. 5장에서 소프트웨어가 제때 걸기 어려웠던 "마지막 바이트 NACK"를 하드웨어 신호가 대신하는 것이다. STOP은 DMA 전송 완료 인터럽트에서 요청할 수 있다.</li>
+</ul>
+<p>정오표 2.8.1의 첫 번째 회피책도 "Use the I2C with DMA in general, except when the Master is receiving a single byte"이다(<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=17">p.17</a>). 정오표는 이 예외의 이유를 적지 않는다. RM0008이 EOT_1과 자동 NACK를 "2바이트 이상"일 때만 설명하므로, 1바이트 수신에서는 NACK를 하드웨어에 맡길 수 없다고 읽는 것이 자연스럽다(추론). 참고로 RM0008 26.3.7의 DMA 설정 절차는 stream, DMA_SxPAR, DMA_SxMA0R, 이중 버퍼 같은 다른 칩 계열의 용어로 적혀 있다. F103의 DMA1에는 stream이 없고 채널이 있다. 채널 설정은 07_DMA 그룹에서 다룬다.</p>
+
+<h3>③ 다른 블록과 이어지는 곳</h3>
+<div class="tablewrap"><table>
+<tr><th>연결</th><th>무엇을 맞춰야 하나</th><th>근거</th></tr>
+<tr><td>GPIO</td><td>SCL·SDA 모두 대체 기능 오픈드레인. 대체 기능 구성에서도 입력 슈미트 트리거가 켜져 있어 블록이 선 값을 되읽을 수 있다</td><td>RM0008 Table 27(p.168), 9.1.9(<a href="../../Docs/RM0008_Reference_manual.pdf#page=164">p.164</a>)</td></tr>
+<tr><td>AFIO 리맵</td><td>AFIO_MAPR.I2C1_REMAP = 1이면 I2C1이 PB8/PB9로 간다</td><td>RM0008 Table 55(p.181), <a href="../../Docs/RM0008_Reference_manual.pdf#page=186">p.186</a></td></tr>
+<tr><td>RCC</td><td>RCC_APB1ENR.I2C1EN / I2C2EN으로 클럭을 열고, RCC_APB1RSTR.I2C1RST / I2C2RST로 블록 전체를 리셋할 수 있다</td><td>RM0008 p.116, p.109</td></tr>
+<tr><td>디버그</td><td>코어가 디버그로 멈췄을 때 SMBus 시간 초과를 멈출지 DBGMCU_CR의 DBG_I2Cx_SMBUS_TIMEOUT으로 고른다</td><td>RM0008 26.5(<a href="../../Docs/RM0008_Reference_manual.pdf#page=772">p.772</a>)</td></tr>
+<tr><td>SMBA 핀 충돌</td><td>SMBus를 안 써도 I2C 클럭이 켜져 있으면 SMBA 출력이 PB5(I2C1)·PB12(I2C2)를 1로 만든다. 같은 핀의 TIM3_CH2, 리맵한 SPI1_MOSI, SPI2_NSS, USART3_CK 출력과 부딪친다</td><td>ES096 2.3.6~2.3.8(<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=11">p.11~12</a>)</td></tr>
+</table></div>
+</section>
+
+<!-- ============================================================ 7 -->
+<section id="s7">
+<h2>7. 동작 시나리오 추적</h2>
+<h3>시나리오 ① 레지스터 번호를 쓰고, 반복 START로 3바이트 읽기 (Method 2)</h3>
+<p>센서·RTC·EEPROM을 읽는 가장 흔한 모양이다. 앞부분은 마스터 송신(Figure 273), 뒷부분은 마스터 수신 N &gt; 2의 Method 2(Figure 275)이다.</p>
+<div class="figs">
+<figure class="src"><div class="img"><a href="img/RM0008_Fig273_p760.png"><img src="img/RM0008_Fig273_p760.png" alt="마스터 송신 전송 순서" width="1314" height="721" loading="lazy"></a></div>
+<figcaption>마스터 송신. EV5(SB) → 주소 → EV6(ADDR) → EV8_1(첫 데이터) → EV8(다음 데이터) → EV8_2(STOP 요청). 주석 1이 "EV5, EV6, EV9, EV8_1, EV8_2는 SCL을 Low로 늘인다"이고, 주석 2가 "EV8은 현재 바이트가 끝나기 전에 끝내야 한다"이다. <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=760">RM0008 Rev 21, p.760</a>, Figure 273</span></figcaption></figure>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig275_p762.png"><img src="img/RM0008_Fig275_p762.png" alt="마스터 수신 Method 2, N>2" width="1157" height="729" loading="lazy"></a></div>
+<figcaption>마스터 수신 Method 2(N &gt; 2). 끝에서 셋째 바이트(DataN-2)를 일부러 읽지 않아 DataN-1이 시프트 레지스터에 찬 채 BTF로 버스를 세운다(EV7_2). 버스가 멈춘 동안 ACK = 0을 걸고 DataN-2를 읽으면 DataN이 NACK와 함께 들어온다. 범례 EV6의 "writing CR2 with START = 1"은 CR1의 오기이다. <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=762">RM0008 Rev 21, p.762</a>, Figure 275</span></figcaption></figure>
+</div>
+
+<figure class="diag"><svg viewBox="0 0 680 180" role="img" aria-label="레지스터 쓰기 후 반복 START로 3바이트 읽기 타이밍">
+<text class="s" x="30" y="14">버스 (주황 칸 = SCL을 Low로 붙잡고 소프트웨어를 기다리는 구간)</text>
+<rect class="shade" x="56" y="22" width="20" height="74"/><rect class="shade" x="146" y="22" width="20" height="74"/><rect class="shade" x="236" y="22" width="20" height="74"/><rect class="shade" x="282" y="22" width="20" height="74"/><rect class="shade" x="372" y="22" width="20" height="74"/><rect class="shade" x="532" y="22" width="20" height="74"/>
+<rect class="bx" x="30" y="24" width="26" height="28"/><text class="sc" x="43" y="42">S</text>
+<rect class="bx" x="76" y="24" width="70" height="28"/><text class="sc" x="111" y="42">주소+W A</text>
+<rect class="bx" x="166" y="24" width="70" height="28"/><text class="sc" x="201" y="42">레지스터 A</text>
+<rect class="bx" x="256" y="24" width="26" height="28"/><text class="sc" x="269" y="42">Sr</text>
+<rect class="bx" x="302" y="24" width="70" height="28"/><text class="sc" x="337" y="42">주소+R A</text>
+<rect class="bx" x="392" y="24" width="70" height="28"/><text class="sc" x="427" y="42">D1 A</text>
+<rect class="bx" x="462" y="24" width="70" height="28"/><text class="sc" x="497" y="42">D2 A</text>
+<rect class="bx" x="552" y="24" width="70" height="28"/><text class="sc" x="587" y="42">D3 NA</text>
+<rect class="bx" x="622" y="24" width="26" height="28"/><text class="sc" x="635" y="42">P</text>
+<g class="sc"><text x="66" y="80">1</text><text x="156" y="80">2</text><text x="246" y="80">3</text><text x="292" y="80">4</text><text x="382" y="80">5</text><text x="542" y="80">6</text></g>
+<text class="s" x="30" y="118">플래그</text>
+<g class="sc"><text x="66" y="134">SB</text><text x="156" y="134">ADDR</text><text x="246" y="134">BTF</text><text x="292" y="134">SB</text><text x="382" y="134">ADDR</text><text x="427" y="134">RxNE</text><text x="542" y="134">BTF</text><text x="587" y="134">RxNE</text></g>
+<text class="o" x="392" y="160">D1은 읽지 않고 둔다</text><text class="o" x="440" y="174">6에서 ACK = 0, STOP 요청</text>
+</svg><figcaption><span class="eqv">등가 모델</span> 바이트 칸 하나가 9클럭이므로 100 kHz에서 90 µs이다. 주황 칸의 길이는 소프트웨어가 얼마나 빨리 처리하느냐에 따라 늘어난다(그림은 같은 폭으로 그렸다). 번호는 아래 상태기계 단계와 같다. 1 EV5 → 2 EV6과 EV8_1 → 3 BTF(TxE·BTF)에서 반복 START 요청 → 4 EV5 → 5 EV6 → 6 EV7_2. D3 칸만 마스터가 NACK를 준다.</figcaption></figure>
+
+<div class="sim" id="stepsim">
+  <div class="subhead">상태기계 따라가기: 단계마다 플래그, SCL, 소프트웨어 할 일</div>
+  <div class="ctl">
+    <div><label for="ssc">시나리오</label><select id="ssc">
+      <option value="wr" selected>① 레지스터 쓰기 → Sr → 3바이트 읽기 (Method 2)</option>
+      <option value="w2">② 2바이트 쓰기 (Figure 273)</option>
+      <option value="r1">③ 1바이트 읽기 (Figure 277, EV6_3)</option>
+      <option value="nk">④ 주소에 아무도 없음 (AF)</option></select></div>
+  </div>
+  <div class="btnrow"><button type="button" id="sprev">◀ 이전</button><button type="button" id="snext">다음 ▶</button><button type="button" id="sreset">처음으로</button></div>
+  <div class="regs">
+    <div class="stat"><div class="k">단계</div><div class="v" id="s_n">-</div></div>
+    <div class="stat"><div class="k">플래그</div><div class="v" id="s_f" style="font-size:15px">-</div></div>
+    <div class="stat"><div class="k">SCL</div><div class="v" id="s_scl" style="font-size:15px">-</div></div>
+    <div class="stat"><div class="k">마감</div><div class="v" id="s_dl" style="font-size:15px">-</div></div>
+  </div>
+  <div class="tablewrap"><table id="stab"></table></div>
+  <p class="note" id="s_note"></p>
+</div>
+
+<h3>끝맺음 방법 비교: 받을 바이트가 1개, 2개일 때</h3>
+<div class="figs">
+<figure class="src"><div class="img"><a href="img/RM0008_Fig276_p763.png"><img src="img/RM0008_Fig276_p763.png" alt="마스터 수신 Method 2, N=2" width="1157" height="714" loading="lazy"></a></div>
+<figcaption>N = 2. POS = 1과 ACK = 1을 미리 걸고, ADDR을 지운 직후 ACK = 0(EV6_1)으로 하면 POS 덕분에 NACK가 "다음" 바이트, 즉 Data2에 걸린다. BTF(Data1은 DR, Data2는 시프트)에서 STOP을 요청하고 DR을 두 번 읽는다(EV7_3). <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=763">RM0008 Rev 21, p.763</a>, Figure 276</span></figcaption></figure>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig277_p764.png"><img src="img/RM0008_Fig277_p764.png" alt="마스터 수신 Method 2, N=1" width="1157" height="692" loading="lazy"></a></div>
+<figcaption>N = 1. ADDR이 선 상태에서 먼저 ACK = 0을 걸고, ADDR을 지우자마자 STOP을 요청한다(EV6_3). ADDR을 지우는 순간 버스가 다시 돌아 Data1을 받기 시작하므로 이 순서는 현재 바이트가 끝나기 전에 끝나야 한다. <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=764">RM0008 Rev 21, p.764</a>, Figure 277</span></figcaption></figure>
+</div>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig274_p761.png"><img src="img/RM0008_Fig274_p761.png" alt="마스터 수신 Method 1" width="1314" height="684" loading="lazy"></a></div>
+<figcaption>Method 1. 버스를 멈추지 않고, 끝에서 둘째 RxNE(EV7_1)에서 DR을 읽으며 ACK = 0과 STOP을 건다. 인터럽트가 가장 높은 우선순위일 때만 쓰라고 한다. 늦으면 마지막 바이트에도 ACK가 나가 슬레이브가 한 바이트를 더 보낸다(정오표 2.8.1). 이 그림은 1바이트 수신을 EV6_1로 그렸고, Method 2의 Figure 277은 같은 경우를 EV6_3로 그렸다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=761">RM0008 Rev 21, p.761</a>, Figure 274. Method 1: transfer sequence diagram for master receiver</span></figcaption></figure>
+
+<h3>시나리오 ② 주소에 아무도 답하지 않을 때</h3>
+<p>버스 스캐너가 하는 일이다. 주소 바이트의 9번째 클럭에 아무도 SDA를 당기지 않으면 AF가 서고(오류 줄), ADDR은 서지 않는다("ADDR is not set after a NACK reception", <a href="../../Docs/RM0008_Reference_manual.pdf#page=780">p.780</a>). 마스터는 버스를 스스로 놓지 않는다. "If Master: a Stop or repeated Start condition must be generated by software"이다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=764">p.764</a>). 그래서 AF를 본 소프트웨어는 STOP을 요청하고 AF에 0을 써서 지운 뒤 다음 주소로 간다. NACK 뒤 마스터가 SCL을 어떤 상태로 두는지는 문서에 명시되어 있지 않다.</p>
+
+<h3>시나리오 ③ 슬레이브 쪽에서 보면</h3>
+<div class="figs">
+<figure class="src"><div class="img"><a href="img/RM0008_Fig271_p756.png"><img src="img/RM0008_Fig271_p756.png" alt="슬레이브 송신 전송 순서" width="1157" height="651" loading="lazy"></a></div>
+<figcaption>슬레이브 송신. 주소 일치로 EV1(ADDR), 첫 바이트를 넣는 EV3-1, 바이트마다 EV3(TxE). 마스터가 마지막에 NACK를 주면 EV3-2(AF)이다. 슬레이브에게 AF는 오류가 아니라 정상적인 끝 신호이다. <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=756">RM0008 Rev 21, p.756</a>, Figure 271</span></figcaption></figure>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig272_p757.png"><img src="img/RM0008_Fig272_p757.png" alt="슬레이브 수신 전송 순서" width="1157" height="530" loading="lazy"></a></div>
+<figcaption>슬레이브 수신. EV1(ADDR) → 바이트마다 EV2(RxNE) → STOP을 보면 EV4(STOPF, SR1 읽기 → CR1 쓰기로 지움). <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=757">RM0008 Rev 21, p.757</a>, Figure 272</span></figcaption></figure>
+</div>
+
+<h3>시나리오 ④ 중재에 졌을 때</h3>
+<p>멀티마스터 버스에서 다른 마스터와 동시에 시작해 중재에 지면 ARLO가 서고, 블록은 스스로 슬레이브 모드로 돌아가며(MSL = 0) 선을 놓는다. 그 전송에서는 자기 주소에 응답하지 못하지만, 이긴 마스터가 반복 START 뒤 자기 주소를 부르면 응답할 수 있다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=765">p.765</a>). ARLO가 ACK 펄스에서 일어나면 받던 바이트는 DR로 복사되지 않는다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=777">p.777</a>). 이 그룹 예제는 마스터가 하나뿐이라 이 경우가 생기지 않는다.</p>
+</section>
+
+<!-- ============================================================ 8 -->
+<section id="s8">
+<h2>8. 설계상 한계와 이유</h2>
+<div class="tablewrap"><table>
+<tr><th>설계 선택</th><th>얻은 것</th><th>감수한 것</th><th>근거</th></tr>
+<tr><td>프로토콜 단계마다 이벤트를 소프트웨어에 넘김</td><td>하드웨어가 작고, 슬레이브·멀티마스터·10비트·SMBus까지 한 블록으로 처리</td><td>마스터 수신의 끝맺음(ACK = 0, STOP)이 소프트웨어 타이밍에 달렸다. 늦으면 바이트가 하나 더 오거나 같은 값을 두 번 읽는다</td><td>RM0008 26.3.3, ES096 2.8.1(<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=17">p.17</a>)</td></tr>
+<tr><td>데이터 버퍼 1바이트(DR)</td><td>단순하다. 늦으면 BTF로 SCL을 붙잡아 데이터는 잃지 않는다</td><td>스트레칭을 끈 슬레이브(NOSTRETCH = 1)는 OVR로 바이트를 잃거나 같은 바이트를 두 번 보낸다</td><td>RM0008 26.3.4·26.3.5(<a href="../../Docs/RM0008_Reference_manual.pdf#page=765">p.765</a>)</td></tr>
+<tr><td>DMA는 데이터 바이트만</td><td>주소·START는 프로토콜 판단이 필요하므로 CPU에 남김</td><td>DMA를 써도 EV5·EV6은 CPU가 처리한다. 1바이트 수신에는 EOT_1이 없어 DMA 회피책이 통하지 않는다</td><td>RM0008 26.3.7, ES096 2.8.1</td></tr>
+<tr><td>SCL = CCR 정수 분주</td><td>카운터 하나로 Sm·Fm·DUTY를 모두 만든다</td><td>PCLK1에 따라 400 kHz가 정확히 안 나온다(32 MHz → 395 kHz). DUTY = 1에서 400 kHz는 PCLK1이 10 MHz 배수일 때만</td><td>RM0008 26.6.8</td></tr>
+<tr><td>I2C를 APB1에 둠</td><td>저속 주변장치를 느린 버스에 모음</td><td>입력 클럭이 최대 36 MHz. FREQ 필드는 50 MHz까지 적혀 있지만 PCLK1이 그보다 낮다</td><td>RM0008 p.775</td></tr>
+<tr><td>핀이 "진짜" 오픈드레인이 아님</td><td>일반 GPIO 구조를 그대로 씀</td><td>오픈드레인에서도 VDD 쪽 PMOS가 꺼져 있을 뿐 존재한다. 데이터시트가 I2C 규격에 대한 제한으로 명시한다</td><td>DS5319 5.3.16(<a href="../../Docs/Datasheet_stm32f103.pdf#page=68">p.68</a>)</td></tr>
+<tr><td>입력 아날로그 필터</td><td>50 ns 이하 스파이크 제거</td><td>전원 투입·정전기 뒤 필터 출력이 Low에 묶여 BUSY가 1로 잠길 수 있다(정오표 2.8.7)</td><td>ES096 p.20</td></tr>
+<tr><td>DR 쓰기 충돌을 관리하지 않음</td><td>단순한 버퍼</td><td>TxE = 0일 때도 DR에 쓸 수 있다. 쓰기 시점은 소프트웨어 책임이다</td><td>RM0008 26.6.5(<a href="../../Docs/RM0008_Reference_manual.pdf#page=777">p.777</a>)</td></tr>
+<tr><td>이중 주소는 7비트만</td><td>OAR2 하나로 두 번째 주소</td><td>10비트 주소는 하나만 쓸 수 있다</td><td>RM0008 26.6.4, DS5319 2.3.16</td></tr>
+</table></div>
+
+<h3>정오표 ES096의 I2C 항목</h3>
+<div class="tablewrap"><table>
+<tr><th>항목</th><th>무엇이 문제인가</th><th>회피책 (정오표)</th></tr>
+<tr><td>2.8.1 일부 이벤트는 현재 바이트 전송 전에 처리해야 함 (<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=17">p.17</a>)</td><td>EV7, EV7_1, EV6_1, EV6_3, EV2, EV8, EV3을 제때 처리하지 못하면 바이트를 하나 더 받거나, 같은 값을 두 번 읽거나, 데이터를 놓친다</td><td>① DMA 사용(마스터 1바이트 수신 제외) ② I2C 인터럽트를 최고 우선순위로 ③ EV6_1·EV6_3에서 SCL 핀을 잠시 GPIO 오픈드레인 Low로 바꿔 직접 붙잡기</td></tr>
+<tr><td>2.8.2 데이터 레지스터에 잘못된 값 (<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=17">p.17~18</a>)</td><td>Method 2 끝맺음(N = 2의 EV7_3, N &gt; 2의 EV7_2)에서 STOP이 버스에 나가기 전에 DataN-1을 읽지 못하면 시프트 레지스터의 DataN이 1비트 왼쪽으로 밀려 망가진다</td><td>① SCL을 GPIO로 붙잡은 채 읽기 ② 그 구간에 모든 인터럽트 막기 ③ DMA나 최고 우선순위 인터럽트로 BTF = 1이 아예 안 생기게</td></tr>
+<tr><td>2.8.3 SMBus 2.0 완전 지원 아님 (p.18)</td><td>잘못된 바이트·명령에 NACK를 줄 수 없다</td><td>SMBA, ARA, Host notify 같은 상위 수단</td></tr>
+<tr><td>2.8.4 엉뚱한 STOP 뒤 마스터 동작 오류 (<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=19">p.19</a>)</td><td>START 직후 STOP이 오면 BERR도 안 서고 START를 못 낸다. 다른 위치의 STOP은 BERR를 세우지만 걸려 있던 START가 잘못 나간다</td><td>START 요청 후 SB가 서는지 시간 제한을 두고, 넘으면 SWRST로 리셋</td></tr>
+<tr><td>2.8.5 반복 START 설정 시간 어긋남 (p.19)</td><td>표준 모드 88~100 kHz 마스터에서 t<sub>su(STA)</sub>를 조금 어길 수 있다(SCL 상승이 300 ns보다 느리거나 슬레이브가 스트레칭할 때)</td><td>88 kHz 이하로 낮추거나 고속 모드 사용</td></tr>
+<tr><td>2.8.6 데이터 유효 시간 위반을 OVR가 못 잡음 (<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=19">p.19~20</a>)</td><td>NOSTRETCH = 1 슬레이브 송신에서 DR을 늦게(그러나 OVR가 설 만큼은 아니게) 쓰면 SCL High 중 SDA가 바뀌는 오류가 생길 수 있다</td><td>스트레칭 사용, 또는 TxE·ADDR를 최고 우선순위 인터럽트나 DMA로 빨리 처리</td></tr>
+<tr><td>2.8.7 아날로그 필터가 BUSY를 잠금 (<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=20">p.20</a>)</td><td>선은 High인데 필터 출력이 Low에 묶여 BUSY = 1, START를 못 낸다. SWRST, 주변장치 리셋, 시스템 리셋으로도 안 풀린다</td><td>PE = 0 → SCL·SDA를 GPIO 오픈드레인으로 바꿔 High/Low를 차례로 내며 IDR로 확인 → 대체 기능 오픈드레인으로 복귀 → SWRST 1→0 → PE = 1 (15단계)</td></tr>
+<tr><td>2.3.6~2.3.8 SMBA 핀 충돌 (<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=11">p.11~12</a>)</td><td>I2C 클럭이 켜져 있으면 SMBA 출력이 PB5·PB12를 1로 만들어 그 핀의 다른 대체 기능 출력과 부딪친다</td><td>해당 기능을 입력으로만 쓰거나, 함께 쓰지 않는다</td></tr>
+</table></div>
+<p>2.8.1과 2.8.2는 5장의 "기다려 주지 않는 이벤트"가 실제 칩에서 어떤 고장으로 나타나는지를 보여 준다. 2.8.7은 "버스에 아무 장치도 없는데 BUSY"라는 증상의 원인 중 하나이다. 풀업이 없어 선이 Low에 머무는 경우와 구별해야 한다.</p>
+
+<div class="box warn">
+  <div class="label">문서끼리 맞지 않는 곳</div>
+  <ul>
+    <li>RM0008 본문·그림·Table 189는 이벤트 인터럽트 허용 비트를 <code>ITEVFEN</code>이라 부르고, CR2 레지스터 설명(p.775)은 <code>ITEVTEN</code>이라 부른다. 같은 비트(CR2 비트 9)이다.</li>
+    <li>Figure 274~277 범례의 EV6 "this sequence should be followed by writing <b>CR2</b> with START = 1"에서 START는 CR1 비트 8이다(p.773). 같은 범례의 "ADDR1"은 "ADDR = 1"의 오기이다.</li>
+    <li>CR2.FREQ 설명은 "0b110010: 50 MHz"를 적어 놓고 바로 아래에 "Higher than 0b101010(42): Not allowed"라고 적는다(p.775). F103에서는 PCLK1이 최대 36 MHz라 실제로는 문제가 되지 않는다.</li>
+    <li>RM0008 26.3.7의 DMA 설정 절차는 stream, DMA_SxPAR, DMA_SxNDTR 같은 다른 계열 칩의 용어를 쓴다(p.768~769). F103 DMA1은 채널 방식이다.</li>
+    <li>ES096 2.8.1 회피책 3은 "reading SR1 register followed by reading <b>SR3</b>"이라고 적지만 F103 I2C에는 SR3이 없다. RM0008의 ADDR 지우기 순서대로 SR2이다. 2.8.4는 START와 SWRST를 "I2C_CR2"에 있다고 적지만 둘 다 CR1에 있다(RM0008 p.772~773).</li>
+    <li>DS5319 5.3.16(p.68)은 SDA·SCL의 대체 기능 특성을 "Section 5.3.12"에서 보라고 하지만, 이 판의 5.3.12는 I/O 전류 주입 특성이다.</li>
+  </ul>
+</div>
+</section>
+
+<!-- ============================================================ 9 -->
+<section id="s9">
+<h2>9. 이해 확인 문제</h2>
+<details><summary>Q1. PCLK1 = 32 MHz, 표준 모드 100 kHz. FREQ, CCR, TRISE에 각각 무엇을 쓰는가?</summary><div class="ans">
+<p>FREQ = 32(0x20)이다. T<sub>PCLK1</sub> = 31.25 ns이므로 CCR = 5000 / 31.25 = 160(0xA0)이다. TRISE는 1000 ns / 31.25 ns = 32에 1을 더한 33이다(RM0008 p.782·783의 식). 위 계산기로 확인할 수 있다.</p></div></details>
+<details><summary>Q2. 같은 32 MHz에서 고속 모드 400 kHz를 원한다. DUTY = 0과 DUTY = 1 각각 실제 SCL은? 왜 400 kHz가 정확히 안 나오는가?</summary><div class="ans">
+<p>DUTY = 0: 한 주기가 3 × CCR × 31.25 ns이므로 CCR = 26.67 → 27(올림) → 약 395 kHz이다. 26으로 내리면 410 kHz로 상한을 넘는다. DUTY = 1: 25 × CCR × 31.25 ns이므로 CCR = 3.2 → 4 → 320 kHz이다. CCR이 정수라 생기는 양자화 때문이며, DUTY = 1에서 정확히 400 kHz가 되려면 PCLK1이 10 MHz의 배수여야 한다(RM0008 p.781 주석의 조건을 식으로 풀면 이렇다).</p></div></details>
+<details><summary>Q3. 7비트 주소 0x68인 센서의 레지스터를 읽는다. 선 위에 나가는 첫 주소 바이트와, 반복 START 뒤의 주소 바이트는 각각 몇인가?</summary><div class="ans">
+<p>레지스터 번호를 쓰는 단계는 R/W = 0이므로 0x68 × 2 + 0 = 0xD0이다. 반복 START 뒤 읽는 단계는 R/W = 1이므로 0xD1이다. 2장 프레임 그리기에서 주소 68을 넣어 확인할 수 있다.</p></div></details>
+<details><summary>Q4. R<sub>p</sub> = 4.7 kΩ, C<sub>b</sub> = 200 pF인 버스를 400 kHz로 쓸 수 있는가?</summary><div class="ans">
+<p>t<sub>r</sub> ≈ 0.847 × 4.7 kΩ × 200 pF ≈ 796 ns이다. 표준 모드 한계 1000 ns 안이지만 고속 모드 한계 300 ns를 크게 넘는다(DS5319 Table 41). 고속 모드에서 4.7 kΩ이면 C<sub>b</sub>가 약 75 pF 이하여야 하고, 200 pF라면 R<sub>p</sub>를 약 1.77 kΩ 이하로 낮춰야 한다. 이 계산은 RC 충전 식을 쓴 등가 모델이다.</p></div></details>
+<details><summary>Q5. 슬레이브 인터럽트 루틴이 SR1을 읽어 ADDR = 0을 확인했는데, 습관처럼 SR2도 읽었다. 무엇이 잘못될 수 있는가?</summary><div class="ans">
+<p>SR1을 읽은 뒤 SR2를 읽기 전에 ADDR이 새로 섰다면, SR2 읽기가 그 ADDR을 지운다(RM0008 p.780). 소프트웨어는 주소 일치를 한 번도 보지 못한 채 사건을 놓친다. 그래서 SR2는 SR1에서 ADDR = 1을 본 경우에만 읽어야 한다. 5장의 순서 검출기에서 "무장 조건이 SR1 읽기 자체"이기 때문이다.</p></div></details>
+<details><summary>Q6. 1바이트를 읽을 때 왜 ADDR을 지우기 <b>전에</b> ACK = 0을 걸어야 하는가?</summary><div class="ans">
+<p>ADDR을 지우는 순간 SCL 붙잡기가 풀리고 슬레이브가 그 1바이트를 보내기 시작한다. 바이트가 끝나면 마스터는 9번째 클럭에서 ACK 비트 값대로 응답한다. ACK = 0을 나중에 걸면 이미 ACK가 나가 슬레이브가 다음 바이트를 보낼 수 있다. 그래서 EV6_3은 ACK = 0 → ADDR 지우기 → STOP 순서이고, 현재 바이트가 끝나기 전에 끝나야 한다(Figure 277, ES096 2.8.1).</p></div></details>
+<details><summary>Q7. 두 마스터가 동시에 0x50과 0x48에 쓰기를 시작했다. 누가 이기고, 몇 번째 비트에서 승부가 나는가?</summary><div class="ans">
+<p>0x50 = 101 0000, 0x48 = 100 1000이다. MSB부터 1, 0은 같고 셋째 비트에서 0x50 쪽은 1, 0x48 쪽은 0을 낸다. 배선 AND로 선은 0이므로 0x50을 보내던 마스터가 진다. 그 마스터에서 ARLO가 서고 MSL = 0으로 슬레이브가 된다. 이긴 쪽의 주소 바이트는 깨지지 않았으므로 0x48 장치는 정상적으로 ACK한다. 2장 중재 실험에서 확인할 수 있다.</p></div></details>
+<details><summary>Q8. 마스터 수신 N &gt; 2를 Method 1로 짰는데, 다른 인터럽트가 자주 끼면 가끔 바이트가 하나 더 들어온다. 왜이며 어떻게 고치는가?</summary><div class="ans">
+<p>Method 1은 끝에서 둘째 RxNE(EV7_1)에서 마지막 바이트의 ACK 펄스 전에 ACK = 0을 걸어야 한다. 다른 인터럽트가 끼어 늦으면 마지막 바이트에도 ACK가 나가 슬레이브가 한 바이트를 더 보낸다(ES096 2.8.1). Method 2로 바꿔 BTF로 버스를 세운 상태에서 ACK를 바꾸거나, I2C 인터럽트를 최고 우선순위로 올리거나, DMA와 LAST로 NACK를 하드웨어에 맡긴다.</p></div></details>
+<details><summary>Q9. 전원을 켜자마자 BUSY = 1이고 START를 요청해도 SB가 서지 않는다. 의심할 원인 두 가지와 확인 방법은?</summary><div class="ans">
+<p>① 선이 실제로 Low이다. 풀업이 없거나, 이전 전송 중에 리셋되어 슬레이브가 SDA를 붙잡고 있다. 핀을 GPIO 입력으로 읽어 보면 Low이다. ② 선은 High인데 아날로그 필터 출력이 Low에 묶였다(ES096 2.8.7). 이 경우 SWRST나 시스템 리셋으로도 안 풀리고, 핀을 GPIO 오픈드레인으로 바꿔 SDA·SCL에 엣지를 만들어 준 뒤 SWRST를 해야 한다.</p></div></details>
+<details><summary>Q10. DMA로 14바이트를 받는다. 마지막 바이트의 NACK는 누가 만드는가? 이때 ITBUFEN은 왜 0이어야 하는가?</summary><div class="ans">
+<p>DMA가 13번째 바이트에서 EOT_1을 보내고, CR2.LAST = 1이면 I2C가 그다음(14번째) 바이트에 자동으로 NACK를 낸다(RM0008 26.3.7). ITBUFEN = 1이면 RxNE가 DMA 요청과 함께 이벤트 인터럽트도 일으켜 CPU가 바이트마다 불려 나오고, DMA를 쓰는 의미가 없어진다(p.769 "Do not enable the ITBUFEN bit … if DMA is used").</p></div></details>
+<details><summary>Q11. 100 kHz에서 레지스터 쓰기 + 반복 START + 14바이트 읽기는 최소 얼마나 걸리는가? 400 kHz면?</summary><div class="ans">
+<p>바이트는 주소·W, 레지스터, 주소·R, 데이터 14개로 17개이다. 17 × 9 = 153클럭이므로 100 kHz에서 1.53 ms, 400 kHz에서 약 0.38 ms이다. START·Sr·STOP과 소프트웨어가 SCL을 붙잡는 시간은 빠졌으므로 실제로는 더 길다.</p></div></details>
+</section>
+
+<!-- ============================================================ 10 -->
+<section id="s10">
+<h2>10. 하부 예제 연결</h2>
+<p>각 예제가 이 개념설명의 어느 경로를 쓰는지 정리했다.</p>
+<div class="tablewrap"><table>
+<tr><th>예제</th><th>지나가는 경로</th><th>이 개념설명의 장</th></tr>
+<tr><td><a href="01_I2C_Scan/01_I2C_Scan%20예제설명.html">01_I2C_Scan</a></td><td>주소마다 START → 주소 바이트 → ACK면 EV6, NACK면 AF → STOP. 버스가 Low에 묶이면 BUSY</td><td><a href="#s2">2</a>, <a href="#s7">7②</a>, <a href="#s8">8</a></td></tr>
+<tr><td><a href="02_PCF8574_Output/02_PCF8574_Output%20예제설명.html">02_PCF8574_Output</a></td><td>1바이트 마스터 송신(EV5 → EV6 → EV8_1 → EV8_2)과 1바이트 마스터 수신(EV6_3). I2C1 리맵(PB8/PB9)</td><td><a href="#s5">5</a>, <a href="#s6">6③</a>, <a href="#s7">7①</a></td></tr>
+<tr><td><a href="03_PCF8574_LCD/03_PCF8574_LCD%20예제설명.html">03_PCF8574_LCD</a></td><td>짧은 마스터 송신을 아주 많이 반복. 글자 하나에 여러 바이트가 들므로 바이트 시간 예산이 화면 갱신 속도를 정한다</td><td><a href="#s4">4</a>, <a href="#s7">7①</a></td></tr>
+<tr><td><a href="04_I2C_MPU6050_c/04_I2C_MPU6050%20예제설명.html">04_I2C_MPU6050_c</a></td><td>레지스터 번호 쓰기 → 반복 START → 14바이트 읽기(N &gt; 2 끝맺음). 100 kHz에서 약 1.5 ms</td><td><a href="#s5">5</a>, <a href="#s7">7①</a>, Q11</td></tr>
+<tr><td><a href="05_I2C_MPU6050_DMA_c/05_I2C_MPU6050_DMA%20예제설명.html">05_I2C_MPU6050_DMA_c</a></td><td>주소 단계는 CPU가 이벤트로, 데이터는 RxNE → DMA1 채널 7. LAST/EOT_1로 마지막 NACK, 오류 벡터로 AF 처리</td><td><a href="#s6">6①②</a>, Q10</td></tr>
+<tr><td><a href="06_I2C_OLED_SSD1306_c/06_I2C_OLED_SSD1306%20예제설명.html">06_I2C_OLED_SSD1306_c</a></td><td>고속 모드 마스터 송신으로 1 KB 남짓을 한 번에. PCLK1 32 MHz에서 400 kHz 설정은 실제 약 395 kHz</td><td><a href="#s4">4</a>, Q2</td></tr>
+<tr><td><a href="07_I2C_EEPROM_AT24C_c/07_I2C_EEPROM_AT24C%20예제설명.html">07_I2C_EEPROM_AT24C_c</a></td><td>주소 2바이트 쓰기 → 반복 START → 읽기. 내부 쓰기 동안 장치가 주소에 NACK하는 것을 AF로 보고 다시 묻는다(ACK 폴링)</td><td><a href="#s2">2</a>, <a href="#s7">7①②</a></td></tr>
+<tr><td><a href="08_I2C_DS3231_RTC_c/08_I2C_DS3231_RTC%20예제설명.html">08_I2C_DS3231_RTC_c</a></td><td>레지스터 0x00 쓰기 → 반복 START → 7바이트 읽기(N &gt; 2). 표준 모드 100 kHz와 정오표 2.8.5의 관계</td><td><a href="#s7">7①</a>, <a href="#s8">8</a></td></tr>
+</table></div>
+
+<div class="box ok">
+  <div class="label">정리</div>
+  <ul>
+    <li>I2C는 오픈드레인 배선 AND 위의 2선 버스이다. SCL High 동안의 SDA 엣지가 START/STOP이고, 바이트는 MSB부터 8비트 + ACK 1비트이다. 첫 바이트는 주소 × 2 + R/W이다.</li>
+    <li>F103 I2C는 필터 + 엣지 검출기 + 시프트 레지스터 + DR 1바이트 + 주소 비교기 + SCL 카운터 + 이벤트 상태기계이다. 입력 클럭은 PCLK1(최대 36 MHz)이다.</li>
+    <li>SCL = PCLK1을 CCR로 나눈 것(표준 2CCR, 고속 3CCR 또는 25CCR 주기)이고, TRISE는 상승 시간 상한 + 1이다. 실제 상승 시간은 R<sub>p</sub> × C<sub>b</sub>가 정한다.</li>
+    <li>SB·ADDR·BTF는 SCL을 붙잡고 소프트웨어를 기다리며, 정해진 읽기 순서(SR1 → DR 쓰기 / SR1 → SR2 / SR1 → DR)로 지워진다. RxNE·TxE와 ACK 변경은 기다려 주지 않으므로 마감이 있다. 이것이 정오표 2.8.1·2.8.2의 뿌리이다.</li>
+    <li>인터럽트는 사건 줄과 오류 줄 두 개이고, DMA는 데이터 바이트만 옮기며 LAST로 마지막 NACK를 하드웨어에 맡길 수 있다.</li>
+  </ul>
+</div>
+<div class="nextprev"><a href="../03_ADC/03_ADC%20개념설명.html">← 03_ADC 개념설명</a><a href="01_I2C_Scan/01_I2C_Scan%20예제설명.html">첫 예제: 01_I2C_Scan →</a><a href="../05_SPI_Communication/05_SPI_Communication%20개념설명.html">05_SPI 개념설명 →</a></div>
+</section>
+
+<footer>
+  <p>그림 출처와 표기 규칙은 <a href="../../교안의_활용법.html">교안의 활용법</a>을 따른다.</p>
+</footer>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  function fmt(x,d){return (Math.round(x*Math.pow(10,d))/Math.pow(10,d)).toLocaleString('ko-KR')}
+  function ftime(ns){return ns>=1e6?fmt(ns/1e6,3)+" ms":(ns>=1e3?fmt(ns/1e3,2)+" µs":fmt(ns,1)+" ns")}
+  function hex(v,n){return "0x"+v.toString(16).toUpperCase().padStart(n||2,"0")}
+  function phex(t,max){t=(t||"").trim().replace(/^0x/i,""); if(!/^[0-9a-f]+$/i.test(t)) return null; var v=parseInt(t,16); return v>max?null:v;}
+  function on(ids,fn){ids.forEach(function(id){$(id).addEventListener("input",fn);$(id).addEventListener("change",fn)}); fn();}
+
+  /* ---------- 2장 프레임 그리기 ---------- */
+  function drawFrame(){
+    var a=phex($("faddr").value,0x7F), rw=+$("frw").value, nack=+$("fack").value, dt=$("fdata").value.trim();
+    var d=dt.length?phex(dt,0xFF):null;
+    if(a===null){$("f_note").textContent="7비트 주소는 00~7F 사이의 16진수로 넣는다."; return;}
+    if(dt.length&&d===null){$("f_note").textContent="데이터는 00~FF 사이의 16진수로 넣는다."; return;}
+    var ab=(a<<1)|rw, slots=[];
+    for(var i=7;i>=0;i--) slots.push({b:(ab>>i)&1, l:i?("A"+(i-1)):(rw?"R":"W"), who:"m"});
+    slots.push({b:nack,l:nack?"NA":"A",who:"s",ack:1});
+    var withData=(d!==null&&!nack);
+    if(withData){
+      for(i=7;i>=0;i--) slots.push({b:(d>>i)&1,l:"D"+i,who:rw?"s":"m"});
+      slots.push({b:rw?1:0,l:rw?"NA":"A",who:rw?"m":"s",ack:1});
+    }
+    var n=slots.length+3, x0=34, w=(672-x0)/n, sh=24, sl=52, dh=84, dl=112, s="";
+    s+='<text class="s" x="2" y="'+(sh+16)+'">SCL</text><text class="s" x="2" y="'+(dh+16)+'">SDA</text>';
+    /* SCL */
+    var scl=[x0+","+sh], x=x0+w; scl.push(x+","+sh); /* 유휴 */
+    x+=w; scl.push(x+","+sh); /* START 칸: SCL High 유지 */
+    scl.push(x+","+sl);
+    slots.forEach(function(){var m=x+w/2; scl.push(m+","+sl,m+","+sh,(x+w)+","+sh,(x+w)+","+sl); x+=w;});
+    var px=x; scl.push((px+w/2)+","+sl,(px+w/2)+","+sh,(px+2*w)+","+sh);
+    /* SDA */
+    var sda=[x0+","+dh], xs=x0+w; sda.push((xs+w/2)+","+dh,(xs+w/2)+","+dl,(xs+w)+","+dl); /* START: SCL High 동안 하강 */
+    var prev=0; xs+=w;
+    slots.forEach(function(o){var y=o.b?dh:dl; if(o.b!==prev) sda.push(xs+","+(prev?dh:dl)); sda.push(xs+","+y,(xs+w)+","+y); prev=o.b; xs+=w;});
+    if(prev) sda.push(xs+","+dl); else sda.push(xs+","+dl);
+    sda.push((xs+w*0.75)+","+dl,(xs+w*0.75)+","+dh,(xs+2*w)+","+dh); /* STOP: SCL High 뒤 상승 */
+    x=x0+2*w;
+    slots.forEach(function(o){
+      if(o.ack) s+='<rect class="bx flg" x="'+x+'" y="'+(dh-6)+'" width="'+w+'" height="'+(dl-dh+12)+'" rx="2"/>';
+      s+='<line class="dash" x1="'+x+'" y1="'+(sh-6)+'" x2="'+x+'" y2="'+(dl+6)+'"/>';
+      s+='<text class="sc" x="'+(x+w/2)+'" y="140">'+o.l+'</text><text class="sc" x="'+(x+w/2)+'" y="158">'+o.b+'</text>';
+      x+=w;});
+    s+='<text class="sc" x="'+(x0+1.5*w)+'" y="140">S</text><text class="sc" x="'+(x+0.5*w)+'" y="140">P</text>';
+    s+='<polyline class="sig" points="'+scl.join(" ")+'"/><polyline class="sig2" points="'+sda.join(" ")+'"/>';
+    $("fsvg").innerHTML=s;
+    $("f_ab").textContent=hex(ab)+" = "+hex(a)+" × 2 + "+rw;
+    $("f_bits").textContent=slots.map(function(o){return o.b}).join(" ");
+    var clk=slots.length; $("f_time").textContent=fmt(clk*10,0)+" µs ("+clk+"클럭, S·P 제외)";
+    var note="청록 칸은 9번째 클럭(ACK 자리)이다. "+(rw?"읽기이므로 데이터 바이트는 슬레이브가 내고, 마지막 바이트에는 마스터가 NACK를 준다. ":"쓰기이므로 데이터 바이트에 대한 ACK는 슬레이브가 준다. ");
+    if(nack) note+="주소에 NACK가 오면 AF가 서고 ADDR은 서지 않는다. 마스터는 데이터를 보내지 않고 STOP을 요청해야 한다(RM0008 p.764).";
+    if(a===0) note+=" 주소 00h는 일반 호출이다(슬레이브의 ENGC = 1일 때만 ACK).";
+    if((a&0x7C)===0x78) note+=" 11110xx는 10비트 주소의 헤더 자리이다(RM0008 p.759).";
+    $("f_note").textContent=note;
+  }
+  on(["faddr","frw","fack","fdata"],drawFrame);
+
+  /* ---------- 2장 중재 ---------- */
+  function drawArb(){
+    var a=phex($("arba").value,0x7F), b=phex($("arbb").value,0x7F);
+    if(a===null||b===null){$("arb_note").textContent="두 주소 모두 00~7F 사이의 16진수로 넣는다."; return;}
+    var A=a<<1, B=b<<1, lost=-1, loser=0, s="", x0=120, w=66;
+    for(var i=7;i>=0;i--){var ba=(A>>i)&1, bb=(B>>i)&1; if(ba!==bb){lost=7-i; loser=ba?1:2; break;}}
+    var rows=[["마스터 1",A],["마스터 2",B]], labels=["A6","A5","A4","A3","A2","A1","A0","W"];
+    labels.forEach(function(l,k){s+='<text class="sc" x="'+(x0+k*w+w/2)+'" y="14">'+l+'</text>';});
+    rows.forEach(function(r,ri){
+      var y=22+ri*36; s+='<text class="t" x="8" y="'+(y+19)+'">'+r[0]+'</text>';
+      for(var k=0;k<8;k++){var bit=(r[1]>>(7-k))&1, out=(lost>=0&&k>lost&&loser===ri+1);
+        s+='<rect class="bx '+(out?"lost":(lost===k&&loser===ri+1?"lost":""))+'" x="'+(x0+k*w+2)+'" y="'+y+'" width="'+(w-4)+'" height="28" rx="3"/>';
+        s+='<text class="tc" x="'+(x0+k*w+w/2)+'" y="'+(y+19)+'">'+(out?"놓음":bit)+'</text>';}
+    });
+    var y=94; s+='<text class="t" x="8" y="'+(y+19)+'">선 (AND)</text>';
+    for(var k=0;k<8;k++){var la=(A>>(7-k))&1, lb=(B>>(7-k))&1, line=(lost>=0&&k>lost)?((loser===1?lb:la)):(la&lb);
+      s+='<rect class="bx flg" x="'+(x0+k*w+2)+'" y="'+y+'" width="'+(w-4)+'" height="28" rx="3"/><text class="tc" x="'+(x0+k*w+w/2)+'" y="'+(y+19)+'">'+line+'</text>';}
+    $("arbsvg").innerHTML=s;
+    if(lost<0) $("arb_note").textContent="두 주소가 같아 주소 단계에서는 승부가 나지 않는다. 배선 AND로 따지면 이후 데이터 바이트에서 처음 다른 비트가 승부를 가른다(등가 모델).";
+    else $("arb_note").textContent="MSB부터 "+(lost+1)+"번째 비트("+labels[lost]+")에서 마스터 "+loser+(loser===1?"은":"는")+" 1(놓음)을 냈는데 선은 0이다. 마스터 "+loser+(loser===1?"이":"가")+" 지고 ARLO = 1, MSL = 0이 되어 선을 놓는다. 이긴 마스터 "+(3-loser)+"의 주소 "+hex(loser===1?b:a)+"는 한 비트도 깨지지 않았다. 주소가 작은 쪽이 이긴다(RM0008 p.767).";
+  }
+  on(["arba","arbb"],drawArb);
+
+  /* ---------- 4장 CCR·TRISE 계산기 ---------- */
+  function calcC(){
+    var f=+$("cclk").value, mode=$("cmode").value, ft=+$("cf").value, tr=Math.max(0,+$("ctr").value||0), note=[];
+    var ids=["c_freq","c_ccr","c_reg","c_f","c_hl","c_wh","c_trise","c_byte"];
+    function blank(msg){ids.forEach(function(id){$(id).textContent="-";$(id).className="v"}); $("c_note").textContent=msg;}
+    if(!(f>=2&&f<=36)) return blank("PCLK1은 2~36 MHz여야 한다(최소 2 MHz, RM0008 p.755 / APB1 최대 36 MHz).");
+    if(mode!=="sm"&&f<4) return blank("고속 모드는 PCLK1이 최소 4 MHz여야 한다(RM0008 p.758).");
+    if(!(ft>0)) return blank("목표 SCL을 넣는다.");
+    var T=1000/f, k=mode==="sm"?2:(mode==="fm0"?3:25), hi=mode==="fm1"?9:1, lo=mode==="sm"?1:(mode==="fm0"?2:16);
+    var ccr=Math.ceil(1e6/ft/(k*T)-1e-9), cmin=mode==="fm1"?1:4;
+    if(ccr<cmin){ccr=cmin; note.push("CCR 최솟값 "+cmin+"로 막혀 목표보다 느리다.");}
+    if(ccr>4095) return blank("CCR이 12비트(4095)를 넘는다. 이 클럭에서 낼 수 있는 가장 느린 SCL은 약 "+fmt(1e6/(k*4095*T),2)+" kHz이다.");
+    var fs=mode==="sm"?0:1, duty=mode==="fm1"?1:0, reg=(fs<<15)|(duty<<14)|ccr;
+    var th=hi*ccr*T, tl=lo*ccr*T, fa=1e6/(th+tl), trmax=mode==="sm"?1000:300, wmin=mode==="sm"?4000:600, lmin=mode==="sm"?4700:1300;
+    var fi=Math.round(f), trise=Math.floor(trmax/T+1e-9)+1;
+    $("c_freq").textContent=hex(fi)+" ("+fi+")";
+    $("c_ccr").textContent=ccr+" ("+hex(ccr,3)+")";
+    $("c_reg").textContent=hex(reg,4);
+    var ef=$("c_f"); ef.textContent=fmt(fa,2)+" kHz"; ef.className="v verdict "+((fa<=(mode==="sm"?100:400)+1e-6)?"good":"bad");
+    $("c_hl").textContent=fmt(th,1)+" / "+fmt(tl,1)+" ns";
+    var ew=$("c_wh"), wh=th-tr; ew.textContent=fmt(wh,1)+" ns"; ew.className="v verdict "+(wh>=wmin?"good":"bad");
+    $("c_trise").textContent=trise+" ("+hex(trise)+")";
+    $("c_byte").textContent=ftime(9*1e6/fa);
+    if(Math.round(f)!==f) note.push("FREQ는 정수 MHz만 적을 수 있다.");
+    if(fa>(mode==="sm"?100:400)+1e-6) note.push((mode==="sm"?"표준 모드 상한 100 kHz":"고속 모드 상한 400 kHz")+"를 넘는다.");
+    note.push("데이터시트 최소 폭(DS5319 Table 41): t_w(SCLH) ≥ "+(wmin/1000)+" µs, t_w(SCLL) ≥ "+(lmin/1000)+" µs. t_w(SCLL) ≈ T_low − t_f(최대 300 ns)이므로 T_low "+fmt(tl,1)+" ns에서 하강 시간을 빼서 확인한다.");
+    if(tl-300<lmin) note.push("하강 시간이 300 ns에 가까우면 t_w(SCLL)이 최소값보다 짧아질 수 있다.");
+    if(tr>trmax) note.push("입력한 상승 시간이 이 모드의 최대 "+trmax+" ns를 넘는다. 풀업을 줄이거나 버스 용량을 줄여야 한다.");
+    if(mode==="sm"&&fa>=88&&fa<=100) note.push("88~100 kHz 표준 모드 마스터는 SCL 상승이 300 ns보다 느리거나 슬레이브가 스트레칭하면 반복 START 설정 시간을 조금 어길 수 있다(ES096 2.8.5).");
+    if(mode==="fm1"&&f%10!==0&&ft>=400) note.push("DUTY = 1에서 400 kHz는 PCLK1이 10 MHz 배수일 때만 정확하다(RM0008 p.781 주석).");
+    note.push("TRISE = "+trmax+" ns / "+fmt(T,3)+" ns의 정수부 + 1. 실제 주파수는 필터 지연 때문에 조금 다를 수 있다(RM0008 p.782).");
+    $("c_note").textContent=note.join(" ");
+  }
+  on(["cclk","cmode","cf","ctr"],calcC);
+
+  /* ---------- 4장 상승 시간 계산기 ---------- */
+  function calcR(){
+    var r=+$("rrp").value, c=+$("rcb").value, v=+$("rvdd").value;
+    if(!(r>0&&c>0&&v>0.4)){$("r_note").textContent="양수를 넣는다."; return;}
+    var tr=0.8473*r*c; /* kΩ × pF = ns */
+    $("r_tr").textContent=fmt(tr,0)+" ns";
+    var es=$("r_sm"), ef=$("r_fm");
+    es.textContent=tr<=1000?"만족":"초과"; es.className="v verdict "+(tr<=1000?"good":"bad");
+    ef.textContent=tr<=300?"만족":"초과"; ef.className="v verdict "+(tr<=300?"good":"bad");
+    $("r_max").textContent=fmt(1000/(0.8473*c),2)+" / "+fmt(300/(0.8473*c),2)+" kΩ";
+    var rmin=(v-0.4)/8; $("r_min").textContent="≈ "+fmt(rmin,2)+" kΩ";
+    var ei=$("r_i"), i=v/r; ei.textContent="≈ "+fmt(i,2)+" mA"; ei.className="v verdict "+(r>=rmin?"good":"bad");
+    var n="t_r = 0.847 × R_p × C_b (0.3→0.7 VDD, DS5319 Figure 32 측정점). ";
+    if(c>400) n+="C_b가 데이터시트 최대 400 pF(Table 41)를 넘는다. ";
+    if(r<rmin) n+="R_p가 너무 작아 Low일 때 F103 핀이 8 mA보다 많이 흡수해야 한다(VOL 0.4 V 보장 조건 밖, DS5319 Table 37). ";
+    n+="다른 장치의 흡수 전류 한계는 이 네 문서에 없으므로 R_p 최소는 F103 핀 기준이다.";
+    $("r_note").textContent=n;
+  }
+  on(["rrp","rcb","rvdd"],calcR);
+
+  /* ---------- 7장 상태기계 따라가기 ---------- */
+  var SC={
+    wr:[
+      ["소프트웨어가 START = 1. 버스가 비어 있으면 START 조건을 낸다","SB, MSL, BUSY","Low 고정 (EV5)","SR1 읽기 → DR ← 주소×2+0","없음"],
+      ["주소 바이트 8비트 + 슬레이브 ACK","ADDR, TRA","Low 고정 (EV6)","SR1 읽기 → SR2 읽기","없음"],
+      ["ADDR가 지워짐. DR·시프트 레지스터 모두 빔","TxE","Low 고정 (EV8_1)","DR ← 레지스터 번호","없음"],
+      ["레지스터 번호가 시프트로 넘어가 나가는 중","TxE","돎 (EV8)","더 보낼 바이트 없음 → 쓰지 않는다","쓸 바이트가 있었다면 이 바이트 끝 전"],
+      ["레지스터 바이트 끝 + ACK. DR은 빔","TxE, BTF","Low 고정","START = 1 (반복 START 요청)","없음"],
+      ["반복 START를 낸다. TxE·BTF는 하드웨어가 지움","SB","Low 고정 (EV5)","SR1 읽기 → DR ← 주소×2+1","없음"],
+      ["주소 바이트 + 슬레이브 ACK","ADDR (TRA = 0)","Low 고정 (EV6)","SR1 읽기 → SR2 읽기. ACK = 1 유지","없음"],
+      ["D1 수신 + 마스터 ACK","RxNE","돎","Method 2: 3바이트 남았으므로 읽지 않는다","-"],
+      ["D2 수신 + 마스터 ACK. DR = D1, 시프트 = D2","RxNE, BTF","Low 고정 (EV7_2)","ACK = 0 → DR 읽기(D1). 이 읽기로 D3 수신이 시작된다","없음(버스가 기다림)"],
+      ["D3 수신 중","-","돎","곧바로 STOP = 1 → DR 읽기(D2)","D3 끝 전. 놓치면 D3가 1비트 밀려 망가짐(ES096 2.8.2)"],
+      ["D3 수신 + 마스터 NACK, 이어서 STOP","RxNE (MSL = 0, BUSY = 0)","놓음 (버스 끝)","DR 읽기(D3)","-"]],
+    w2:[
+      ["START = 1 → START 조건","SB, MSL, BUSY","Low 고정 (EV5)","SR1 읽기 → DR ← 주소×2+0","없음"],
+      ["주소 바이트 + ACK","ADDR, TRA","Low 고정 (EV6)","SR1 읽기 → SR2 읽기","없음"],
+      ["DR·시프트 모두 빔","TxE","Low 고정 (EV8_1)","DR ← D1","없음"],
+      ["D1이 시프트로 넘어가 나가는 중","TxE","돎 (EV8)","DR ← D2","D1 끝 전. 늦으면 BTF로 멈춤(속도 손해)"],
+      ["D1 끝 + ACK, D2가 시프트로 넘어가 나가는 중","TxE","돎","더 보낼 바이트 없음 → BTF를 기다린다","-"],
+      ["D2 끝 + ACK. DR·시프트 모두 빔","TxE, BTF","Low 고정 (EV8_2)","STOP = 1","없음"],
+      ["STOP 조건. TxE·BTF는 하드웨어가 지움","(MSL = 0, BUSY = 0)","놓음","끝","-"]],
+    r1:[
+      ["START = 1 → START 조건","SB, MSL, BUSY","Low 고정 (EV5)","SR1 읽기 → DR ← 주소×2+1","없음"],
+      ["주소 바이트 + 슬레이브 ACK","ADDR (TRA = 0)","Low 고정 (EV6_3 시작)","먼저 ACK = 0","없음"],
+      ["(같은 정지 상태)","ADDR","Low 고정","SR1 읽기 → SR2 읽기로 ADDR 지움 → 버스가 다시 돎","-"],
+      ["D1 수신 시작","-","돎","곧바로 STOP = 1","D1 끝 전(ES096 2.8.1)"],
+      ["D1 수신 + 마스터 NACK, 이어서 STOP","RxNE (MSL = 0, BUSY = 0)","놓음","DR 읽기(D1)","-"]],
+    nk:[
+      ["START = 1 → START 조건","SB, MSL, BUSY","Low 고정 (EV5)","SR1 읽기 → DR ← 주소×2+0","없음"],
+      ["주소 바이트 8비트. 9번째 클럭에 아무도 SDA를 당기지 않음","AF (오류 줄), ADDR은 서지 않음","문서에 명시 없음","STOP = 1, AF에 0 쓰기","-"],
+      ["STOP 조건","(MSL = 0, BUSY = 0)","놓음","다음 주소로","-"]]
+  };
+  var cur=0;
+  function renderS(){
+    var key=$("ssc").value, st=SC[key], h='<tr><th>#</th><th>버스</th><th>플래그</th><th>SCL</th><th>소프트웨어</th><th>마감</th></tr>';
+    if(cur>=st.length) cur=st.length-1; if(cur<0) cur=0;
+    st.forEach(function(r,i){h+='<tr'+(i===cur?' class="cur"':'')+'><td class="m">'+(i+1)+'</td><td>'+r[0]+'</td><td class="m">'+r[1]+'</td><td>'+r[2]+'</td><td>'+r[3]+'</td><td>'+r[4]+'</td></tr>';});
+    $("stab").innerHTML=h;
+    var r=st[cur]; $("s_n").textContent=(cur+1)+" / "+st.length; $("s_f").textContent=r[1]; $("s_scl").textContent=r[2]; $("s_dl").textContent=r[4];
+    $("sprev").disabled=cur===0; $("snext").disabled=cur===st.length-1;
+    var notes={wr:"앞 5단계는 마스터 송신(Figure 273), 6단계부터는 마스터 수신 Method 2(Figure 275)이다. 'Low 고정'인 단계는 소프트웨어가 아무리 늦어도 데이터가 깨지지 않는다. 10단계만 마감이 있다.",
+      w2:"송신 쪽은 늦어도 BTF로 버스가 멈출 뿐이라 데이터가 깨지지 않는다. EV8_2에서 STOP을 요청하지 않으면 TxE·BTF가 계속 서 있어 인터럽트가 반복된다.",
+      r1:"ACK = 0을 ADDR 지우기 전에 걸어야 한다. ADDR을 지우는 순간 버스가 다시 돌기 때문이다. ES096 2.8.1 회피책 3은 이 구간에 SCL 핀을 GPIO Low로 붙잡으라고 한다.",
+      nk:"주소에 NACK가 오면 마스터는 버스를 스스로 놓지 않는다. 소프트웨어가 STOP(또는 반복 START)을 내야 한다(RM0008 p.764). 버스 스캐너가 주소마다 이 과정을 되풀이한다."};
+    $("s_note").textContent=notes[key];
+  }
+  $("ssc").addEventListener("change",function(){cur=0;renderS()});
+  $("sprev").addEventListener("click",function(){cur--;renderS()});
+  $("snext").addEventListener("click",function(){cur++;renderS()});
+  $("sreset").addEventListener("click",function(){cur=0;renderS()});
+  renderS();
+})();
+</script>
+</body></html>

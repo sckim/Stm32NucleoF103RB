@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>06_USART_HalfDuplex 예제설명</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+
+/* Layout: 한 열 예제설명(최대 860px) — 문제 → 와이어드-AND 버스 → 배선·핀·클럭 → 버스·단계 시뮬레이터 → 레지스터 대응 → 실행 경로 → 코드 → 실험 → 트러블슈팅 → 문제 → 정리 순서.
+   색: 마스터·하드웨어=보라, 슬레이브·소프트웨어=파랑, 버스=파랑 실선, 충돌=경고색. (01_TIM_TimeBase 예제설명과 같은 기본 토큰) */
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --surface2:#E7ECF0; --fg:#14222C; --muted:#52636F; --line:#CBD5DC;
+  --c0:#1D4ED8; --c0-soft:#DCE6FB; --c1:#C2410C; --c1-soft:#FDE6DA; --c2:#0F766E; --c2-soft:#D5F0EC; --c3:#7E22CE; --c3-soft:#EEDFFB;
+  --code-bg:#0F1B24; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#9A3412; --warn-bg:#FFF1E6; --ok:#166534; --ok-bg:#E4F5EA;
+  --font-body:"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.75;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:860px;margin:0 auto}
+header{padding-block:40px 8px}
+.kicker{font-family:var(--font-mono);font-size:13px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.25;margin:8px 0 12px;text-wrap:balance;font-weight:700}
+.lead{color:var(--muted);margin:0;max-width:62ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0;padding:0;list-style:none}
+nav.toc a{display:block;padding:6px 12px;border:1px solid var(--line);border-radius:6px;color:var(--fg);text-decoration:none;font-size:14px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--c0);outline:2px solid var(--c0);outline-offset:1px}
+section{margin-top:56px}
+h2{font-size:24px;line-height:1.35;margin:0 0 12px;text-wrap:balance;font-weight:700}
+h3{font-size:18px;margin:28px 0 8px;font-weight:700}
+p{margin:0 0 14px;max-width:68ch}
+ul,ol{margin:0 0 14px;padding-left:22px;max-width:68ch}
+li{margin-bottom:4px}
+code{font-family:var(--font-mono);font-size:.9em;background:var(--surface2);padding:1px 6px;border-radius:4px}
+.k0{color:var(--c0);font-weight:700} .k1{color:var(--c1);font-weight:700} .k2{color:var(--c2);font-weight:700} .k3{color:var(--c3);font-weight:700}
+.box{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:16px 18px;margin:16px 0}
+.box.warn{background:var(--warn-bg);border-color:var(--warn)} .box.ok{background:var(--ok-bg);border-color:var(--ok)}
+.box > :last-child{margin-bottom:0}
+.label{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.tablewrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:15px;background:var(--surface)}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--surface2);font-weight:700;white-space:nowrap}
+td.m,th.m{font-family:var(--font-mono);font-size:13.5px}
+td.n{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+
+/* block diagram */
+.diag{max-width:720px;margin:18px auto}
+.diag svg{display:block;width:100%;height:auto}
+#blk .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+#blk .bx.hot{stroke:var(--warn);stroke-width:2.5;fill:var(--warn-bg)}
+#blk .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+#blk .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+#blk .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+#blk .w0{stroke:var(--c0)} #blk .w1{stroke:var(--c1)} #blk .w2{stroke:var(--c2)} #blk .w3{stroke:var(--c3)}
+#blk .d0{fill:var(--c0)} #blk .d1{fill:var(--c1)} #blk .d2{fill:var(--c2)} #blk .d3{fill:var(--c3)}
+#blk .ah{fill:var(--muted)}
+
+/* flow */
+.flow{list-style:none;padding:0;margin:16px 0;display:grid;gap:0;max-width:none}
+.flow li{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:0;padding:0 0 14px;position:relative}
+.flow li:not(:last-child)::before{content:"";position:absolute;left:16px;top:34px;bottom:0;width:2px;background:var(--line)}
+.flow .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:14px;font-weight:600;background:var(--surface2);border:2px solid var(--line)}
+.flow li.hw .n{border-color:var(--c3);color:var(--c3)} .flow li.sw .n{border-color:var(--c0);color:var(--c0)}
+.flow .tx{min-width:0} .flow .tx b{display:block}
+.flow .tx span{color:var(--muted);font-size:14.5px}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:11.5px;padding:0 6px;border-radius:4px;margin-left:6px;vertical-align:1px}
+.tag.hw{background:var(--c3-soft);color:var(--c3)} .tag.sw{background:var(--c0-soft);color:var(--c0)}
+
+/* mode cards */
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:16px 0}
+.mode{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:14px 16px;min-width:0}
+.mode.pick{border:2px solid var(--ok)}
+.mode b{display:block;margin-bottom:2px}
+.mode .reg{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);display:block;margin-bottom:8px}
+.trk{display:flex;gap:3px;margin:8px 0 6px;flex-wrap:wrap}
+.trk span{font-family:var(--font-mono);font-size:11.5px;font-weight:600;padding:2px 6px;border-radius:4px;border:1px solid var(--line)}
+.trk .g{color:var(--muted);border-style:dashed;background:none}
+.trk .r0{background:var(--c0-soft);color:var(--c0);border-color:var(--c0)} .trk .r1{background:var(--c1-soft);color:var(--c1);border-color:var(--c1)}
+.trk .r2{background:var(--c2-soft);color:var(--c2);border-color:var(--c2)} .trk .r3{background:var(--c3-soft);color:var(--c3);border-color:var(--c3)}
+.trk .x{text-decoration:line-through;opacity:.55}
+.mode p{font-size:14.5px;margin:0}
+
+/* simulator */
+.sim{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:18px;margin:16px 0}
+.subhead{font-weight:700;margin:18px 0 6px;padding-top:14px;border-top:1px dashed var(--line)}
+.subhead:first-child{margin-top:0;padding-top:0;border-top:0}
+.ranks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+@media (max-width:560px){.ranks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.rk{border:2px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);min-width:0;position:relative}
+.rk .h{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.rk .c{font-weight:700;font-size:15px;line-height:1.35}
+.rk .p{font-family:var(--font-mono);font-size:11.5px;color:var(--muted)}
+.rk .v{font-family:var(--font-mono);font-size:13px;font-variant-numeric:tabular-nums;margin-top:4px}
+.rk.nx{box-shadow:0 0 0 3px var(--fg) inset}
+.rk.nx::after{content:"다음 트리거";position:absolute;top:-11px;right:8px;font-size:11px;font-weight:700;background:var(--fg);color:var(--bg);padding:0 6px;border-radius:4px}
+.rk.r0 .c{color:var(--c0)} .rk.r1 .c{color:var(--c1)} .rk.r2 .c{color:var(--c2)} .rk.r3 .c{color:var(--c3)}
+.rk.on.r0{background:var(--c0-soft);border-color:var(--c0)} .rk.on.r1{background:var(--c1-soft);border-color:var(--c1)}
+.rk.on.r2{background:var(--c2-soft);border-color:var(--c2)} .rk.on.r3{background:var(--c3-soft);border-color:var(--c3)}
+.regs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.stat{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.stat .k{font-size:12px;color:var(--muted);font-family:var(--font-mono)}
+.stat .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3;overflow-wrap:anywhere}
+.lamp{display:inline-block;padding:0 10px;border-radius:999px;font-size:15px;border:1px solid var(--line)}
+.lamp.on{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+.outs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+@media (max-width:560px){.outs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.oc{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.oc .k{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.oc .v{font-family:var(--font-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.oc .f{font-size:12.5px}
+.oc.bad{border:2px solid var(--warn);background:var(--warn-bg)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+button,select,input{font-family:inherit}
+button{font-size:15px;font-weight:700;padding:9px 14px;border-radius:6px;border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;min-height:44px}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+button.hw{border-color:var(--c3);color:var(--c3)} button.hw:hover{background:var(--c3-soft)}
+button.sw{border-color:var(--c0);color:var(--c0)} button.sw:hover{background:var(--c0-soft)}
+button.plain:hover{background:var(--surface2)}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 16px;margin:10px 0}
+.ctl label{display:block;font-size:14px;color:var(--muted)}
+.ctl label b{font-family:var(--font-mono);color:var(--fg);font-weight:600}
+.ctl select{font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl input[type=range]{width:100%;min-height:32px}
+.calc{font-family:var(--font-mono);font-size:13.5px;line-height:1.65;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-height:5.4em;white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0 0}
+.uart{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);color:var(--code-fg);border-radius:6px;padding:10px 12px;white-space:pre;overflow-x:auto;margin:8px 0 0;min-height:2.6em}
+.log{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:8px 0 0;max-height:7.5em;overflow:auto;white-space:pre-wrap}
+
+/* code */
+pre{background:var(--code-bg);color:var(--code-fg);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:0;font-family:var(--font-mono);font-size:13.5px;line-height:1.7;tab-size:2}
+pre code{background:none;padding:0;font-size:inherit;color:inherit}
+.cm{color:var(--code-cmt)} .kw{color:var(--code-kw)} .hl{color:var(--code-hl)}
+.codepair{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;margin:14px 0;align-items:start}
+@media (max-width:760px){.codepair{grid-template-columns:minmax(0,1fr)}}
+.codepair ol{margin:0;padding-left:20px;font-size:15px} .codepair li{margin-bottom:8px}
+.file{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:18px 0 6px}
+
+/* quiz */
+details{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0;padding:0}
+summary{cursor:pointer;padding:12px 16px;font-weight:500;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--c0)} details[open] summary::before{content:"▾ "}
+summary:focus-visible{outline:3px solid var(--fg);outline-offset:-3px;border-radius:8px}
+details .ans{padding:0 16px 14px;color:var(--fg)} details .ans p{margin-bottom:8px}
+footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+
+/* 타이머 예제설명 추가 토큰 */
+.diag .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.diag .bx.hot{stroke:var(--warn);stroke-width:2.5;fill:var(--warn-bg)}
+.diag .bx.hw{stroke:var(--c3);fill:var(--c3-soft)} .diag .bx.sw{stroke:var(--c0);fill:var(--c0-soft)}
+.diag .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.diag .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.diag .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+.diag .ah{fill:var(--muted)}
+.diag .ax{stroke:var(--muted);stroke-width:1.3;fill:none}
+.diag .gd{stroke:var(--line);stroke-width:1.2;stroke-dasharray:5 4;fill:none}
+.diag .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .diag .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.diag .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .diag .s3{stroke:var(--c3);stroke-width:2.2;fill:none}
+.diag .d1{fill:var(--c1)} .diag .d0{fill:var(--c0)} .diag .d3{fill:var(--c3)}
+.diag .blk{fill:var(--c1-soft);stroke:var(--c1)}
+.diag text.m{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.diag text.t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.wave{margin:12px 0}
+.wave svg{display:block;width:100%;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px}
+.wave .ax{stroke:var(--muted);stroke-width:1.2;fill:none}
+.wave .gd{stroke:var(--line);stroke-width:1;stroke-dasharray:4 4;fill:none}
+.wave .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .wave .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.wave .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .wave .s3{stroke:var(--c3);stroke-width:2.2;fill:none}
+.wave .ev{stroke:var(--c3);stroke-width:1.6}
+.wave .bar{fill:var(--c1)} .wave .bar0{fill:var(--c0)}
+.wave text{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.wave text.tt{font-family:var(--font-body);font-size:12.5px;fill:var(--fg)}
+.bits{display:flex;margin:14px 0;font-family:var(--font-mono);font-size:13.5px;text-align:center}
+.bits div{flex:1;border:2px solid var(--c0);padding:10px 6px;background:var(--c0-soft);min-width:0}
+.bits div.lo{border-color:var(--c2);background:var(--c2-soft)}
+.bits small{display:block;color:var(--muted);font-size:12px}
+.eq{font-family:var(--font-mono);font-size:14.5px;background:var(--surface2);border-left:4px solid var(--c0);padding:10px 14px;margin:14px 0;overflow-x:auto;white-space:pre-wrap}
+.nextprev{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+.nextprev a{border:1px solid var(--line);border-radius:8px;padding:8px 14px;text-decoration:none;color:var(--c0);background:var(--surface)}
+td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
+.rowbad td{background:var(--warn-bg)}
+.cards2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:16px 0}
+.cards2 .mode{min-width:0}
+
+.wave .dot{fill:var(--c3)} .wave .blk{fill:var(--c1-soft);stroke:var(--c1)}
+.capt{font-size:14px;color:var(--muted);margin:6px 2px 14px}
+.stat .v.sm{font-size:15px}
+.sim .row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+
+
+/* USART 묶음(04~06) 추가: 기존 토큰만 사용 */
+.cellgrid{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));gap:3px;margin:10px 0}
+@media (max-width:560px){.cellgrid{grid-template-columns:repeat(8,minmax(0,1fr))}}
+.cellgrid .cl{border:1px solid var(--line);border-radius:4px;background:var(--bg);font-family:var(--font-mono);font-size:12px;text-align:center;min-height:32px;line-height:1.25;padding:2px 0;min-width:0;overflow:hidden}
+.cellgrid .cl small{display:block;font-size:9.5px;color:var(--muted)}
+.cellgrid .cl.nw{background:var(--c1-soft);border-color:var(--c1)}
+.cellgrid .cl.cp{background:var(--c2-soft);border-color:var(--c2)}
+.cellgrid .cl.wp{box-shadow:0 0 0 2px var(--c0) inset}
+.cellgrid .cl.op{outline:2px dashed var(--c3);outline-offset:-2px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13.5px;color:var(--muted);margin:4px 0 0}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1px solid var(--line);background:var(--bg)}
+.legend i.nw{background:var(--c1-soft);border-color:var(--c1)} .legend i.cp{background:var(--c2-soft);border-color:var(--c2)}
+.legend i.wp{box-shadow:0 0 0 2px var(--c0) inset} .legend i.op{outline:2px dashed var(--c3);outline-offset:-2px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;min-height:28px}
+.chips span{font-family:var(--font-mono);font-size:13px;padding:2px 8px;border-radius:4px;border:1px solid var(--c0);background:var(--c0-soft);color:var(--c0)}
+.chips span.a0{border-color:var(--c1);background:var(--c1-soft);color:var(--c1)}
+.ctl input[type=text]{font-family:var(--font-mono);font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl input[type=checkbox]{width:18px;height:18px;vertical-align:-3px;margin-right:6px}
+tr.hit td{background:var(--ok-bg)}
+p code,li code{overflow-wrap:anywhere}
+.lamp.bad{background:var(--warn-bg);color:var(--warn);border-color:var(--warn)}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">STM32 Nucleo-F103RB · USART · 예제설명 · <a href="../02_USART%20개념설명.html" style="color:inherit">↑ 02_USART 개념설명</a></div>
+  <h1>USART 단선 반이중: 한 가닥 선으로 묻고 답하기</h1>
+  <p class="lead">스마트 서보, 일부 센서 버스, RS-485는 송신선과 수신선을 따로 두지 않고 한 선을 번갈아 쓴다. 선이 하나이므로 "지금 누가 말하는가"를 하드웨어(오픈드레인 + 풀업)와 프로토콜(질문 → 응답)로 정해야 한다. 이 예제는 USART1을 단선 모드(<code>CR3.HDSEL</code> = 1, PA9)로 두고, 같은 보드의 USART3(PB10/PB11)를 가짜 슬레이브로 한 선에 묶어 PING/PONG을 주고받는다. 수신은 상대가 보내기 전에 인터럽트로 무장한다. 폴더는 <code>06_USART_HalfDuplex_c</code>이다.</p>
+  <nav class="toc" aria-label="목차">
+    <a href="#s1">1. 문제와 목표</a><a href="#s2">2. 와이어드-AND 버스</a><a href="#s3">3. 배선과 핀</a><a href="#s4">4. 직접 만져 보기</a><a href="#s5">5. 레지스터 대응</a><a href="#s6">6. 실행 경로</a><a href="#s7">7. 코드 읽기</a><a href="#s8">8. 실험</a><a href="#s9">9. 트러블슈팅</a><a href="#s10">10. 확인 문제</a>
+  </nav>
+</header>
+
+<section id="s1">
+<h2>1. 문제: 선 하나를 둘이 나눠 쓴다</h2>
+<p>전이중 UART에서 TX끼리 직접 연결하면, 한쪽이 High를 내고 다른 쪽이 Low를 낼 때 두 푸시풀 출력이 단락된다. 한 선을 공유하려면 각 노드는 선을 <b>Low로 끌어내리거나 놓아 주기만</b> 해야 하고, 놓인 선은 풀업 저항이 High로 만든다. 또 수신 데이터 레지스터가 1바이트뿐이므로 <b>상대가 말하기 전에 들을 준비</b>를 해 두어야 한다. 학습 목표는 다음과 같다.</p>
+<ul>
+  <li><code>USART_CR3.HDSEL</code>이 TX 핀 하나로 송수신하게 만드는 원리와 HAL 초기화 함수를 설명한다.</li>
+  <li>오픈드레인 + 풀업 버스가 와이어드-AND로 동작하는 이유와 F1의 내부 풀업 한계를 설명한다.</li>
+  <li><code>HAL_HalfDuplex_EnableTransmitter/Receiver</code>가 바꾸는 <code>CR1.TE</code>/<code>RE</code>와 TC 대기의 의미를 설명한다.</li>
+  <li>수신을 상대 송신 <b>전에</b> 인터럽트(<code>HAL_UART_Receive_IT</code>, <code>RXNEIE</code>)로 무장해야 하는 이유를 DR 1바이트와 <code>SR.ORE</code>로 설명하고, 자기 에코를 처리한다.</li>
+</ul>
+<div class="box"><div class="label">이 예제의 동작</div><p>1초마다 다음 순서로 한 주기를 돈다. ① 슬레이브(USART3) 수신을 인터럽트로 무장 → ② 마스터(USART1, 57600 bps)가 송신 모드로 <code>PING</code> 송신, 슬레이브 수신 완료 대기 → ③ 마스터를 수신 모드로 바꾸고 응답 수신 무장 → ④ 슬레이브가 자기 에코 수신을 무장한 뒤 <code>PONG</code> 송신, 에코와 마스터 수신 완료 대기. 결과(슬레이브·마스터가 받은 문자열, ok/fail 횟수)를 USART2 가상 COM(115200 bps)으로 출력한다. 송신은 폴링, 수신은 인터럽트이다.</p></div>
+<div class="box warn"><p>이 예제는 검토 전(컴파일만 확인) 상태이다.</p></div>
+</section>
+
+<section id="s2">
+<h2>2. 핵심 개념: HDSEL과 와이어드-AND 버스</h2>
+<div class="tablewrap"><table>
+<tr><th>방식</th><th>선</th><th>방향 결정</th><th>예</th></tr>
+<tr><td>전이중 UART</td><td>TX, RX 2가닥 (교차 연결)</td><td>필요 없음 (동시 송수신)</td><td>01~05 예제, ST-LINK VCP</td></tr>
+<tr><td>USART 단선 반이중</td><td>TX 핀 1가닥 + 풀업</td><td>소프트웨어 (<code>TE</code>/<code>RE</code> 전환)</td><td>스마트 서보 버스, 이 예제의 USART1</td></tr>
+<tr><td>RS-485</td><td>차동 2가닥 (A/B)</td><td>트랜시버의 DE/RE 핀을 GPIO로 제어</td><td>산업용 다중 노드 버스</td></tr>
+</table></div>
+<div class="diag"><svg viewBox="0 0 700 230" role="img" aria-label="풀업 저항 하나와 오픈드레인 노드들이 공유하는 버스">
+<text class="t" x="318" y="22">3.3 V</text><line class="w" x1="300" y1="28" x2="370" y2="28"/>
+<rect class="bx" x="327" y="36" width="16" height="44" rx="2"/><text class="s" x="352" y="62">4.7 kΩ (권장, 외부)</text>
+<line class="w" x1="335" y1="28" x2="335" y2="36"/><line class="w" x1="335" y1="80" x2="335" y2="110"/>
+<line class="s0" x1="40" y1="110" x2="660" y2="110"/><text class="t" x="560" y="100">버스 (점퍼선 1가닥)</text>
+<rect class="bx hw" x="40" y="140" width="170" height="60" rx="6"/><text class="t" x="52" y="162">USART1 (마스터)</text><text class="s" x="52" y="182">PA9 · AF_OD · HDSEL = 1</text>
+<rect class="bx sw" x="260" y="140" width="170" height="60" rx="6"/><text class="t" x="272" y="162">USART3_TX</text><text class="s" x="272" y="182">PB10 · AF_OD</text>
+<rect class="bx sw" x="480" y="140" width="170" height="60" rx="6"/><text class="t" x="492" y="162">USART3_RX</text><text class="s" x="492" y="182">PB11 · 입력 풀업(~40 kΩ)</text>
+<line class="w" x1="125" y1="110" x2="125" y2="140"/><line class="w" x1="345" y1="110" x2="345" y2="140"/><line class="w" x1="565" y1="110" x2="565" y2="140"/>
+<text class="m" x="40" y="222">각 출력은 Low로 끌어내리거나(트랜지스터 ON) 놓아 준다(하이 임피던스). High는 풀업만 만든다.</text>
+</svg><p class="capt">그림 1. 이 예제의 버스. 노드 하나라도 Low를 내면 버스는 Low가 된다(와이어드-AND). 마스터는 HDSEL로 PA9 하나에서 송신과 수신을 모두 하고, 슬레이브 역할의 USART3는 TX·RX 두 핀이 모두 버스에 붙어 있어 자기 송신을 자기 RX로 다시 듣는다.</p></div>
+<div class="tablewrap"><table>
+<tr><th>마스터 출력</th><th>슬레이브 출력</th><th>버스</th><th>해석</th></tr>
+<tr><td>놓음 (1)</td><td>놓음 (1)</td><td class="ok">High</td><td>유휴 또는 둘 다 1 비트</td></tr>
+<tr><td>Low (0)</td><td>놓음 (1)</td><td>Low</td><td>마스터가 말하는 중</td></tr>
+<tr><td>놓음 (1)</td><td>Low (0)</td><td>Low</td><td>슬레이브가 말하는 중</td></tr>
+<tr class="rowbad"><td>Low (0)</td><td>Low (0)</td><td>Low</td><td>동시 송신 — 단락은 없지만 데이터는 깨진다(충돌)</td></tr>
+</table></div>
+<p>RM0008의 단선 모드 설명에 따르면 <code>HDSEL</code> = 1이면 RX 핀은 쓰이지 않고 수신기가 내부에서 TX 핀에 연결된다. TX 핀은 데이터를 보내지 않는 동안 놓여 있으므로, 유휴·수신 중에는 일반 입력처럼 버스 상태만 본다.</p>
+</section>
+
+<section id="s3">
+<h2>3. 배선, 핀, 클럭</h2>
+<div class="tablewrap"><table>
+<tr><th>신호</th><th>핀 (Nucleo 위치)</th><th>GPIO 설정 (소스 확인)</th><th>CRL/CRH 값</th></tr>
+<tr><td>USART1_TX (단선)</td><td>PA9 (Arduino D8, CN10-21)</td><td><code>GPIO_MODE_AF_OD</code>, <code>PULLUP</code>, 고속</td><td><code>GPIOA_CRH[7:4]</code> = 0xF (MODE9 = 11, CNF9 = 11)</td></tr>
+<tr><td>USART3_TX</td><td>PB10 (Arduino D6, CN10-25)</td><td><code>GPIO_MODE_AF_OD</code>, <code>PULLUP</code>, 고속</td><td><code>GPIOB_CRH[11:8]</code> = 0xF</td></tr>
+<tr><td>USART3_RX</td><td>PB11 (Arduino 헤더 없음, CN10-18)</td><td><code>GPIO_MODE_INPUT</code>, <code>PULLUP</code></td><td><code>GPIOB_CRH[15:12]</code> = 0x8 (CNF11 = 10), <code>ODR11</code> = 1</td></tr>
+<tr><td>USART2 TX/RX (로그)</td><td>PA2 / PA3 (ST-LINK VCP)</td><td>AF_PP / 입력</td><td>01 예제와 같음</td></tr>
+<tr><td>NVIC</td><td><code>USART1_IRQn</code>(37), <code>USART3_IRQn</code>(39)</td><td>우선순위 (0, 0), 수신 인터럽트용</td><td>USART2는 인터럽트 미사용(폴링 송신)</td></tr>
+</table></div>
+<div class="box"><div class="label">풀업은 어디에서 오는가</div><p>F1의 GPIO 내부 풀업·풀다운은 <b>입력 모드에서만</b> 동작한다. HAL F1의 <code>HAL_GPIO_Init</code>도 AF 출력 모드에서는 <code>Pull</code> 값을 쓰지 않으므로 PA9·PB10의 <code>GPIO_PULLUP</code>은 효과가 없다. 외부 저항이 없으면 버스를 High로 만드는 것은 PB11 입력의 내부 풀업(데이터시트 R<sub>PU</sub> 약 30~50 kΩ) 하나뿐이다. 상승 에지가 느려지므로 소스 주석대로 4.7 kΩ 외부 풀업을 3.3 V에 다는 것이 안전하다.</p></div>
+<div class="tablewrap"><table>
+<tr><th>USART</th><th>버스 클럭</th><th>보레이트</th><th>BRR</th><th>실제 보레이트 (오차)</th></tr>
+<tr><td>USART1 (마스터)</td><td>APB2 64 MHz</td><td>57600</td><td class="m">0x457</td><td>57 605 bps (+0.01 %)</td></tr>
+<tr><td>USART3 (슬레이브)</td><td>APB1 32 MHz</td><td>57600</td><td class="m">0x22C</td><td>57 554 bps (−0.08 %)</td></tr>
+<tr><td>USART2 (로그)</td><td>APB1 32 MHz</td><td>115200</td><td class="m">0x116</td><td>115 108 bps (−0.08 %)</td></tr>
+</table></div>
+<p>57600 bps에서 1프레임(10비트)은 173.6 µs, <code>PING</code> 4바이트는 약 0.69 ms이다. 클럭은 SYSCLK 64 MHz(HSI ÷ 2 × PLL16), APB1 ÷2, APB2 ÷1로 소스에서 확인했다.</p>
+</section>
+
+<section id="s4">
+<h2>4. 직접 만져 보기: 버스 구동과 수신 무장 순서</h2>
+<p>위쪽은 와이어드-AND 버스, 아래쪽은 main 루프 한 바퀴를 단계별로 실행하는 시뮬레이터이다. 아래쪽은 <b>현재 코드</b>(수신을 송신 전에 인터럽트로 무장)와 비교용 <b>이전 코드</b>(블로킹 송신이 끝난 뒤 블로킹 수신 시작) 두 모델을 고를 수 있다.</p>
+<ol>
+  <li>마스터·슬레이브 출력 버튼을 눌러 버스 레벨이 와이어드-AND와 맞는지 확인한다. 마스터를 수신 모드(TE = 0)로 두면 마스터의 Low가 버스에 나가지 않는다.</li>
+  <li>둘 다 Low를 내 보며 "충돌"이 어떻게 표시되는지 본다.</li>
+  <li><b>현재 코드</b> 모델로 <b>다음 단계</b>를 끝까지 눌러 PING·PONG의 각 바이트가 ISR에서 바로 버퍼로 옮겨지는 것을 본다. 결과 줄이 ok로 끝나는지 확인한다.</li>
+  <li>모델을 <b>이전 코드</b>로 바꿔 같은 과정을 반복한다. USART3의 <code>DR</code>, <code>RXNE</code>, <code>ORE</code>가 어떻게 변하는지 비교한다.</li>
+</ol>
+<div class="sim">
+  <div class="subhead">와이어드-AND 버스</div>
+  <div class="btns">
+    <button class="hw" id="bTE" type="button">마스터 방향: 송신(TE=1)</button>
+    <button class="hw" id="bM" type="button">마스터 출력: 놓음(1)</button>
+    <button class="sw" id="bS" type="button">슬레이브 PB10 출력: 놓음(1)</button>
+  </div>
+  <div class="regs">
+    <div class="stat"><div class="k">USART1 CR1.TE / RE</div><div class="v sm" id="vTR">–</div></div>
+    <div class="stat"><div class="k">PA9 구동</div><div class="v sm" id="vPA9">–</div></div>
+    <div class="stat"><div class="k">PB10 구동</div><div class="v sm" id="vPB10">–</div></div>
+    <div class="stat"><div class="k">버스 레벨</div><div class="v"><span class="lamp" id="vBus">–</span></div></div>
+    <div class="stat"><div class="k">마스터 수신기</div><div class="v sm" id="vMR">–</div></div>
+    <div class="stat"><div class="k">PB11 (슬레이브 RX)</div><div class="v sm" id="vSR">–</div></div>
+  </div>
+  <div class="calc" id="calcBus" aria-live="polite">버튼으로 각 노드의 구동 상태를 바꾼다.</div>
+
+  <div class="subhead">main 루프 한 바퀴 (PING → PONG)</div>
+  <div class="ctl"><div><label for="mdl">모델</label><select id="mdl"><option value="cur">현재 코드 (수신 먼저 무장, Receive_IT + WaitRx)</option><option value="old">이전 코드 (블로킹 송신 후 블로킹 수신)</option></select></div></div>
+  <div class="btns">
+    <button class="sw" id="bStep" type="button">다음 단계</button>
+    <button class="sw" id="bRun" type="button">한 바퀴 끝까지</button>
+    <button class="plain" id="bRst" type="button">초기화</button>
+  </div>
+  <div class="regs">
+    <div class="stat"><div class="k">단계</div><div class="v sm" id="vStep">–</div></div>
+    <div class="stat"><div class="k">USART1 TE / RE / RXNEIE</div><div class="v sm" id="vTR2">–</div></div>
+    <div class="stat"><div class="k">USART3 DR / RXNE / ORE</div><div class="v sm" id="vU3">–</div></div>
+    <div class="stat"><div class="k">USART1 DR / RXNE / ORE</div><div class="v sm" id="vU1">–</div></div>
+    <div class="stat"><div class="k">slave_rx</div><div class="v sm" id="vSx">–</div></div>
+    <div class="stat"><div class="k">rsp (마스터)</div><div class="v sm" id="vRsp">–</div></div>
+    <div class="stat"><div class="k">ok / fail</div><div class="v sm" id="vOF">–</div></div>
+    <div class="stat"><div class="k">버스 위 데이터</div><div class="v sm" id="vWire">–</div></div>
+  </div>
+  <div class="calc" id="calc" aria-live="polite">다음 단계를 눌러 시작한다.</div>
+  <div class="label" style="margin-top:12px">USART2 로그 (115200)</div>
+  <div class="uart" id="uart"></div>
+</div>
+<p style="font-size:14.5px;color:var(--muted)">시뮬레이터 모델: 수신기는 RM0008의 동작을 따른다. <code>RXNE</code> = 1인 상태에서 다음 바이트가 끝나면 <code>ORE</code> = 1이 되고 <code>DR</code>의 앞 바이트는 남지만 새 바이트는 잃는다. 수신이 인터럽트로 무장되어 있으면 ISR이 바이트마다 <code>DR</code>을 곧바로 읽는 것으로 본다(57600 bps의 1프레임 173.6 µs 안에 ISR이 끝난다고 가정). 블로킹 <code>HAL_UART_Transmit</code>은 끝날 때까지 main을 붙잡지만 ISR은 그 사이에도 실행된다. "이전 코드"는 폴더의 예전 버전을 분석한 모델이다. 비트 단위 타이밍과 풀업 상승 시간은 다루지 않는다.</p>
+</section>
+
+<section id="s5">
+<h2>5. HAL 함수와 레지스터의 대응</h2>
+<div class="tablewrap"><table>
+<tr><th>HAL 호출</th><th>레지스터/비트</th><th>의미</th></tr>
+<tr><td><code>HAL_HalfDuplex_Init(&amp;huart1)</code></td><td><code>CR2.LINEN</code> = 0, <code>CR2.CLKEN</code> = 0, <code>CR3.IREN</code> = 0, <code>CR3.SCEN</code> = 0, <code>CR3.HDSEL</code> = 1, <code>BRR</code> = 0x457, <code>CR1.UE</code>/<code>TE</code>/<code>RE</code> = 1</td><td>LIN·동기·스마트카드·IrDA를 끄고 단선 모드 선택</td></tr>
+<tr><td><code>HAL_NVIC_SetPriority/EnableIRQ</code> (MSP)</td><td><code>USART1_IRQn</code>(37), <code>USART3_IRQn</code>(39) 허용, 우선순위 (0, 0)</td><td>수신 인터럽트가 CPU에 도달하게 한다</td></tr>
+<tr><td><code>HAL_UART_Receive_IT(huart, buf, 4)</code></td><td><code>CR3.EIE</code> = 1, <code>CR1.RXNEIE</code> = 1, <code>RxState</code> = BUSY_RX, <code>ErrorCode</code> = NONE</td><td>수신 무장. 이후 바이트마다 인터럽트</td></tr>
+<tr><td><code>HAL_UART_IRQHandler()</code></td><td><code>SR.RXNE</code> → <code>DR</code> 읽어 버퍼 저장. 4바이트가 차면 <code>RXNEIE</code>·<code>EIE</code> = 0, <code>RxState</code> = READY. <code>ORE</code>/<code>FE</code>/<code>NE</code>면 <code>ErrorCode</code>를 남기고 수신 중단</td><td>USART1/3_IRQHandler(진짜 ISR)가 호출</td></tr>
+<tr><td><code>WaitRx()</code> (이 예제)</td><td>레지스터 접근 없음. <code>RxState</code>와 <code>ErrorCode</code>를 읽고, 시간 초과면 <code>HAL_UART_AbortReceive</code>(<code>RXNEIE</code>·<code>EIE</code> = 0, RxState = READY)</td><td>콜백 없이 main에서 완료를 확인</td></tr>
+<tr><td><code>HAL_HalfDuplex_EnableTransmitter()</code></td><td><code>CR1</code>: <code>TE</code> = 1, <code>RE</code> = 0</td><td>마스터 송신 방향. 자기 송신을 듣지 않는다</td></tr>
+<tr><td><code>HAL_HalfDuplex_EnableReceiver()</code></td><td><code>CR1</code>: <code>TE</code> = 0, <code>RE</code> = 1</td><td>마스터 수신 방향. PA9를 놓아 준다</td></tr>
+<tr><td><code>HAL_UART_Transmit()</code></td><td><code>SR.TXE</code> 대기 → <code>DR</code> 쓰기 반복 → <code>SR.TC</code> 대기</td><td>정지 비트까지 나간 뒤 반환. 이후 방향을 바꿔도 마지막 바이트가 잘리지 않는다</td></tr>
+</table></div>
+<div class="tablewrap"><table>
+<tr><th>레지스터</th><th>값</th><th>해석</th></tr>
+<tr><td class="m">USART1_CR3</td><td class="m">0x0008 / 0x0009</td><td>HDSEL(bit3). 수신 무장 중에는 EIE(bit0)도 1</td></tr>
+<tr><td class="m">USART1_CR1 (송신 방향)</td><td class="m">0x2008</td><td>UE | TE</td></tr>
+<tr><td class="m">USART1_CR1 (응답 수신 무장)</td><td class="m">0x2024</td><td>UE | RXNEIE | RE</td></tr>
+<tr><td class="m">USART3_CR1 (수신 무장 중)</td><td class="m">0x202C</td><td>UE | RXNEIE | TE | RE (완료 후 0x200C)</td></tr>
+<tr><td class="m">USART1_BRR / USART3_BRR</td><td class="m">0x0457 / 0x022C</td><td>69 + 7/16 / 34 + 12/16</td></tr>
+</table></div>
+</section>
+
+<section id="s6">
+<h2>6. 실행 경로: main 루프 한 바퀴</h2>
+<ol class="flow">
+<li class="sw"><div class="n">1</div><div class="tx"><b><code>HAL_UART_Receive_IT(&amp;huart3, slave_rx, 4)</code><span class="tag sw">소프트웨어</span></b><span>슬레이브 수신을 먼저 무장한다. USART3 <code>RXNEIE</code> = 1.</span></div></li>
+<li class="sw"><div class="n">2</div><div class="tx"><b><code>EnableTransmitter(&amp;huart1)</code> → <code>HAL_UART_Transmit(&amp;huart1, "PING")</code><span class="tag sw">소프트웨어</span></b><span>USART1 TE = 1, RE = 0. PA9가 4프레임(약 0.69 ms)을 내는 동안 main은 TC까지 블로킹된다.</span></div></li>
+<li class="hw"><div class="n">3</div><div class="tx"><b>PB11 수신 → <code>SR.RXNE</code> → <code>USART3_IRQn</code><span class="tag hw">하드웨어</span></b><span>바이트마다 NVIC가 블로킹 중인 main을 선점한다.</span></div></li>
+<li class="sw"><div class="n">4</div><div class="tx"><b><code>USART3_IRQHandler</code> → <code>HAL_UART_IRQHandler</code><span class="tag sw">ISR</span></b><span>DR을 읽어 <code>slave_rx</code>에 저장. 4바이트째에서 RXNEIE = 0, RxState = READY.</span></div></li>
+<li class="sw"><div class="n">5</div><div class="tx"><b><code>st_slave = WaitRx(&amp;huart3, 20)</code><span class="tag sw">소프트웨어</span></b><span>이미 READY이므로 곧바로 HAL_OK. "PING"이면 응답 단계로 간다.</span></div></li>
+<li class="sw"><div class="n">6</div><div class="tx"><b><code>EnableReceiver(&amp;huart1)</code> → <code>Receive_IT(&amp;huart1, rsp, 4)</code> → <code>Receive_IT(&amp;huart3, echo, 4)</code><span class="tag sw">소프트웨어</span></b><span>마스터는 TE = 0, RE = 1, RXNEIE = 1. 슬레이브는 자기 에코를 받을 준비를 한다. 두 수신 모두 PONG보다 먼저 무장된다.</span></div></li>
+<li class="hw"><div class="n">7</div><div class="tx"><b><code>HAL_UART_Transmit(&amp;huart3, "PONG")</code> → 두 수신기 동시 수신<span class="tag hw">버스</span></b><span>PB10이 낸 신호를 PA9(USART1)와 PB11(USART3)이 함께 듣는다. <code>USART1_IRQHandler</code>와 <code>USART3_IRQHandler</code>가 바이트마다 각각 실행된다(같은 우선순위라 서로 선점하지 않고 차례로 처리).</span></div></li>
+<li class="sw"><div class="n">8</div><div class="tx"><b><code>WaitRx(&amp;huart3)</code>, <code>st_master = WaitRx(&amp;huart1)</code> → 판정·로그<span class="tag sw">소프트웨어</span></b><span><code>rsp</code> == "PONG"이면 ok++. USART2로 한 줄 출력 후 <code>HAL_Delay(1000)</code>.</span></div></li>
+</ol>
+</section>
+
+<section id="s7">
+<h2>7. 코드 읽기</h2>
+<p>배선: PA9(D8) — PB10(D6) — PB11(CN10-18) 세 핀을 점퍼선으로 한 노드에 묶고, 그 노드와 3.3 V 사이에 4.7 kΩ을 단다. GND는 같은 보드이므로 따로 연결할 필요가 없다.</p>
+<div class="file">main.c — MX_USART1_UART_Init (CubeMX 생성 + 주석)</div>
+<div class="codepair">
+<pre><code>huart1.Instance = USART1;
+huart1.Init.BaudRate = 57600;
+huart1.Init.WordLength = UART_WORDLENGTH_8B;
+huart1.Init.StopBits = UART_STOPBITS_1;
+huart1.Init.Parity = UART_PARITY_NONE;
+huart1.Init.Mode = UART_MODE_TX_RX;
+huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+<span class="kw">if</span> (<span class="kw">HAL_HalfDuplex_Init</span>(&amp;huart1) != HAL_OK)
+{
+  Error_Handler();
+}
+<span class="cm">/* HAL_HalfDuplex_Init: CR3.HDSEL = 1, CR2.LINEN/CLKEN = 0, CR3.SCEN/IREN = 0 */</span></code></pre>
+<ol><li><code>HAL_UART_Init</code> 대신 <code>HAL_HalfDuplex_Init</code>을 부르는 것이 유일한 차이이다.</li><li><code>Mode</code> = TX_RX로 두 기능을 모두 켜 두고, 실제 방향은 루프에서 <code>TE</code>/<code>RE</code>로 고른다.</li></ol>
+</div>
+<div class="file">stm32f1xx_hal_msp.c — USART1 핀과 NVIC (USART3도 같은 구조)</div>
+<div class="codepair">
+<pre><code><span class="cm">/**USART1 GPIO Configuration
+PA9     ------&gt; USART1_TX
+*/</span>
+GPIO_InitStruct.Pin = USART1_HD_Pin;
+GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+GPIO_InitStruct.Pull = GPIO_PULLUP;
+GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+<span class="kw">HAL_GPIO_Init</span>(USART1_HD_GPIO_Port, &amp;GPIO_InitStruct);
+
+<span class="cm">/* USART1 interrupt Init */</span>
+<span class="kw">HAL_NVIC_SetPriority</span>(USART1_IRQn, 0, 0);
+<span class="kw">HAL_NVIC_EnableIRQ</span>(USART1_IRQn);</code></pre>
+<ol><li>PA10(USART1_RX)은 설정하지 않는다. 단선 모드에서는 쓰이지 않는다.</li><li><code>AF_OD</code>이므로 PA9는 Low만 능동 구동한다. <code>GPIO_PULLUP</code>은 F1의 AF 출력에서 적용되지 않는다(3절).</li><li>NVIC 허용이 없으면 <code>RXNEIE</code>를 켜도 ISR이 실행되지 않아 <code>WaitRx</code>가 시간 초과된다.</li></ol>
+</div>
+<div class="file">stm32f1xx_it.c — 진짜 ISR</div>
+<div class="codepair">
+<pre><code><span class="kw">void</span> USART1_IRQHandler(<span class="kw">void</span>)
+{
+  <span class="cm">/* [ISR] 마스터(단선) 수신. HAL_UART_IRQHandler 가 SR.RXNE 면 DR 을 읽어 버퍼에 저장하고,
+   * 지정 바이트 수가 차면 CR1.RXNEIE=0, RxState=READY 로 돌린다. 오류(ORE/FE/NE)면 수신을 중단한다. */</span>
+  <span class="kw">HAL_UART_IRQHandler</span>(&amp;huart1);
+}
+
+<span class="kw">void</span> USART3_IRQHandler(<span class="kw">void</span>)
+{
+  <span class="cm">/* [ISR] 가짜 슬레이브 수신 (PING 수신, 자기 PONG 에코 수신). 동작은 USART1_IRQHandler 와 같다. */</span>
+  <span class="kw">HAL_UART_IRQHandler</span>(&amp;huart3);
+}</code></pre>
+<ol><li>핸들러 이름은 시작 파일의 벡터 테이블 이름과 정확히 같아야 한다.</li><li>이 예제는 <code>HAL_UART_RxCpltCallback</code>을 구현하지 않는다. 완료는 <code>RxState</code>로 확인한다.</li></ol>
+</div>
+<div class="file">main.c — WaitRx (USER CODE 0)</div>
+<div class="codepair">
+<pre><code><span class="kw">static</span> HAL_StatusTypeDef WaitRx(UART_HandleTypeDef *huart, uint32_t timeout_ms)
+{
+  uint32_t t0 = <span class="kw">HAL_GetTick</span>();
+  <span class="kw">while</span> (huart-&gt;RxState != HAL_UART_STATE_READY)
+  {
+    <span class="kw">if</span> ((<span class="kw">HAL_GetTick</span>() - t0) &gt; timeout_ms)
+    {
+      <span class="kw">HAL_UART_AbortReceive</span>(huart);
+      <span class="kw">return</span> HAL_TIMEOUT;
+    }
+  }
+  <span class="kw">return</span> (huart-&gt;ErrorCode == HAL_UART_ERROR_NONE) ? HAL_OK : HAL_ERROR;
+}</code></pre>
+<ol><li>ISR이 4바이트를 다 받으면 <code>RxState</code>가 READY가 된다. 오류로 중단되어도 READY가 되므로 <code>ErrorCode</code>로 구분한다.</li><li>시간 초과면 수신을 취소해 다음 주기에 <code>Receive_IT</code>가 BUSY로 거부되지 않게 한다.</li><li>뺄셈 비교 <code>(now − t0) &gt; timeout</code>은 틱 카운터가 넘어가도 올바르게 동작한다.</li></ol>
+</div>
+<div class="file">main.c — main 루프 (USER CODE 3)</div>
+<div class="codepair">
+<pre><code><span class="cm">/* 1) 슬레이브 수신을 먼저 무장한다: USART3-&gt;CR1.RXNEIE=1 (바이트마다 ISR 이 DR 을 읽어 slave_rx 에 저장)
+ *    마스터가 송신을 시작한 뒤에 받기 시작하면 DR(1바이트) 에 첫 바이트만 남고 나머지는 ORE 로 사라진다. */</span>
+<span class="kw">HAL_UART_Receive_IT</span>(&amp;huart3, slave_rx, 4);
+
+<span class="cm">/* 2) 마스터: 송신 모드로 바꾸고 "PING" 전송 (마지막 바이트 TC 까지 대기) */</span>
+<span class="kw">HAL_HalfDuplex_EnableTransmitter</span>(&amp;huart1);                 <span class="cm">/* USART1-&gt;CR1.TE=1, RE=0 */</span>
+<span class="kw">HAL_UART_Transmit</span>(&amp;huart1, req, 4, 50);
+st_slave = WaitRx(&amp;huart3, 20);                            <span class="cm">/* 4바이트 = 약 0.7ms (57600bps) */</span>
+
+<span class="kw">if</span> (st_slave == HAL_OK &amp;&amp; memcmp(slave_rx, <span class="hl">"PING"</span>, 4) == 0)
+{
+  <span class="cm">/* 3) 마스터: 수신 모드로 바꾸고 응답 수신을 먼저 무장한다 (USART1-&gt;CR1.TE=0, RE=1, RXNEIE=1) */</span>
+  <span class="kw">HAL_HalfDuplex_EnableReceiver</span>(&amp;huart1);
+  <span class="kw">HAL_UART_Receive_IT</span>(&amp;huart1, rsp, 4);
+
+  <span class="cm">/* 4) 슬레이브: 자기 송신이 PB11 로 되돌아오므로(같은 선) 에코 4바이트를 받을 수신도 먼저 무장한 뒤 "PONG" 응답 */</span>
+  uint8_t pong[4] = { <span class="hl">'P'</span>, <span class="hl">'O'</span>, <span class="hl">'N'</span>, <span class="hl">'G'</span> };
+  uint8_t echo[4];
+  <span class="kw">HAL_UART_Receive_IT</span>(&amp;huart3, echo, 4);
+  <span class="kw">HAL_UART_Transmit</span>(&amp;huart3, pong, 4, 50);
+  WaitRx(&amp;huart3, 20);                                     <span class="cm">/* 자기 응답의 에코 제거 */</span>
+  st_master = WaitRx(&amp;huart1, 20);                         <span class="cm">/* 마스터가 응답 수신 */</span>
+}
+
+<span class="kw">if</span> (st_master == HAL_OK &amp;&amp; memcmp(rsp, <span class="hl">"PONG"</span>, 4) == 0) ok++; <span class="kw">else</span> fail++;</code></pre>
+<ol><li>모든 수신이 상대 송신보다 <b>먼저</b> 무장된다. 송신은 블로킹이어도 ISR이 바이트마다 DR을 비우므로 오버런이 생기지 않는다.</li><li>방향 전환은 송신이 TC까지 끝난 뒤에 한다. <code>HAL_UART_Transmit</code>이 TC를 기다리므로 순서만 지키면 된다.</li><li>마스터는 PING 송신 중 RE = 0이라 자기 송신을 듣지 않는다. USART3는 전이중 그대로라 PONG을 자기 RX로 다시 듣는다. 그 4바이트를 <code>echo</code>로 받아 버린다.</li><li>결과 출력(<code>snprintf</code> → USART2)과 <code>HAL_Delay(1000)</code>는 이전과 같다.</li></ol>
+</div>
+<div class="box ok"><div class="label">기대 출력 (USART2, 정상 배선)</div><pre><code>#0  slave got "PING"  master got "PONG"  ok=1 fail=0
+#1  slave got "PING"  master got "PONG"  ok=2 fail=0</code></pre></div>
+<div class="box"><div class="label">이전 버전의 문제와 수정</div><p>이전 버전은 수신을 송신이 끝난 <b>뒤에</b> 블로킹 <code>HAL_UART_Receive(&amp;huart3, slave_rx, 4, 50)</code>로 시작했다. USART 수신 데이터 레지스터는 1바이트뿐이라, PING이 버스를 지나는 동안 아무도 <code>USART3-&gt;DR</code>을 읽지 않으면 첫 바이트 'P'만 DR에 남고(RXNE = 1) 둘째 바이트가 끝나는 순간 <code>SR.ORE</code> = 1이 되며 'I', 'N', 'G'는 사라진다. 이후 수신 함수는 'P' 하나를 읽고 나머지를 기다리다 시간 초과되어, 출력은 매번 <code>slave got "P"  master got ""</code>, fail 증가였다(소스 분석 결과). 현재 코드는 각 수신을 상대 송신 전에 <code>HAL_UART_Receive_IT</code>로 무장하고, 완료를 <code>WaitRx</code>로 확인하는 구조로 고쳤다. 시뮬레이터의 "이전 코드" 모델로 두 구조를 비교할 수 있다.</p></div>
+</section>
+
+<section id="s8">
+<h2>8. 실험</h2>
+<h3>실험 A. 그대로 실행</h3><p>배선 후 실행해 로그가 ok만 증가하는지 확인한다. AD2로 버스를 보면서 PING과 PONG 사이의 간격(방향 전환 + 수신 무장 시간)을 측정한다.</p>
+<h3>실험 B. 무장 순서 바꾸기 (실패 재현)</h3><p>1)의 <code>HAL_UART_Receive_IT(&amp;huart3, slave_rx, 4)</code> 줄을 <code>HAL_UART_Transmit(&amp;huart1, …)</code> 아래로 옮긴다. 송신 중에 아무도 DR을 읽지 않으므로 이전 버전처럼 'P'만 남고, 무장 직후 ORE 오류 인터럽트가 걸려 <code>WaitRx</code>가 HAL_ERROR를 돌려줄 것으로 예측된다. <code>slave got</code> 문자열과 fail 증가를 확인한다.</p>
+<h3>실험 C. 에코 수신을 지우기</h3><p>4)의 <code>HAL_UART_Receive_IT(&amp;huart3, echo, 4)</code>와 그 <code>WaitRx</code>를 지운다. 이번 주기는 성공하지만 USART3의 DR에 PONG의 'P'와 <code>ORE</code>가 남는다. 다음 주기의 슬레이브 수신이 어떻게 되는지 예측하고 확인한다.</p>
+<h3>실험 D. 풀업 저항과 에지</h3><p>외부 4.7 kΩ이 있을 때와 없을 때(PB11 내부 풀업만) 상승 에지 시간을 비교한다. 57600 bps의 1비트는 17.4 µs이다.</p>
+</section>
+
+<section id="s9">
+<h2>9. 트러블슈팅</h2>
+<div class="tablewrap"><table>
+<tr><th>증상</th><th>원인</th><th>점검/조치</th></tr>
+<tr><td>slave got ""이고 fail만 증가</td><td>배선 누락(PA9–PB11), 보레이트 불일치, <code>USART3_IRQn</code> 미허용 또는 핸들러 누락</td><td>세 핀 연결, 양쪽 57600 확인. NVIC 허용과 <code>USART3_IRQHandler</code> → <code>HAL_UART_IRQHandler(&amp;huart3)</code> 확인</td></tr>
+<tr><td>slave got "P"만 나온다</td><td>수신 무장이 송신 뒤에 있음(이전 버전 구조) → DR 1바이트, 오버런</td><td>모든 <code>Receive_IT</code>를 상대 송신보다 먼저 호출</td></tr>
+<tr><td>slave는 PING인데 master got ""</td><td><code>USART1_IRQn</code> 미허용, <code>EnableReceiver</code> 누락(RE = 0), 응답 무장이 PONG 송신 뒤</td><td>CR1 = 0x2024인지 디버거로 확인, 순서 3) → 4) 유지</td></tr>
+<tr><td>가끔 HAL_ERROR(fail)가 섞인다</td><td>이전 주기의 에코나 잡음이 DR에 남아 ORE/FE 발생</td><td>에코 수신 유지, 외부 풀업 연결, <code>huart-&gt;ErrorCode</code> 값을 로그로 출력</td></tr>
+<tr><td>파형이 둥글고 가끔 깨진다</td><td>외부 풀업 없음 — PB11 내부 풀업(수십 kΩ)만으로 상승</td><td>4.7 kΩ 외부 풀업을 3.3 V에 연결</td></tr>
+<tr><td>버스가 계속 Low이다</td><td>PB10 또는 PA9가 푸시풀(AF_PP)이거나 다른 장치가 Low를 잡고 있음</td><td>CRH 값이 0xF(AF_OD 50 MHz)인지 확인. 푸시풀끼리 연결하면 단락 위험</td></tr>
+</table></div>
+</section>
+
+<section id="s10">
+<h2>10. 확인 문제</h2>
+<details><summary><b>문제 1.</b> 두 노드의 TX를 푸시풀로 두고 한 선에 묶으면 어떤 일이 생기는가?</summary>
+<div class="ans"><p>한쪽이 High(3.3 V로 구동), 다른 쪽이 Low(GND로 구동)일 때 두 출력 트랜지스터를 통해 전원과 GND가 단락된다. 큰 전류로 핀이 손상될 수 있고 버스 레벨도 정해지지 않는다. 오픈드레인은 High를 구동하지 않으므로 이런 충돌이 단락으로 이어지지 않는다.</p></div></details>
+<details><summary><b>문제 2.</b> 송신 후 TXE만 확인하고 바로 수신 방향으로 바꾸면 무엇이 문제인가?</summary>
+<div class="ans"><p>TXE는 DR이 비었다는 뜻일 뿐, 마지막 바이트는 아직 시프트 레지스터에서 나가는 중이다. 이때 TE를 끄면 마지막 프레임이 잘린다. TC(전송 완료)는 정지 비트까지 나간 뒤 서므로 TC를 기다려야 한다.</p></div></details>
+<details><summary><b>문제 3.</b> 이전 버전에서 slave_rx에 'P' 한 글자만 들어간 이유와, 현재 코드가 이를 피하는 방법은?</summary>
+<div class="ans"><p>수신 DR은 한 칸이다. 블로킹 송신이 끝날 때까지 DR을 읽는 코드가 실행되지 않아 첫 바이트만 남고 둘째 바이트에서 ORE가 서며 나머지는 사라졌다. 현재 코드는 송신 전에 <code>HAL_UART_Receive_IT</code>로 RXNEIE를 켜 두어, main이 송신에 묶여 있어도 ISR이 바이트마다 DR을 읽는다.</p></div></details>
+<details><summary><b>문제 4.</b> <code>HAL_UART_RxCpltCallback</code>이 없는데 main은 수신 완료를 어떻게 아는가? 시간 초과 때 <code>HAL_UART_AbortReceive</code>를 부르는 이유는?</summary>
+<div class="ans"><p>HAL은 지정 바이트 수를 다 받으면(또는 오류로 중단하면) <code>RxState</code>를 READY로 돌린다. <code>WaitRx</code>는 이 상태를 폴링하고 <code>ErrorCode</code>로 성공·오류를 구분한다. 시간 초과 때 취소하지 않으면 RxState가 BUSY_RX로 남아 다음 주기의 <code>Receive_IT</code>가 HAL_BUSY로 거부된다.</p></div></details>
+</section>
+
+<section>
+  <h2>정리</h2>
+  <div class="tablewrap"><table><tr><th>예제</th><th>계층</th><th>수신/출력 방식</th><th>핵심</th></tr>
+  <tr><td class="m"><a href="../01_USART_printf/01_USART_printf%20예제설명.html">01_USART_printf</a></td><td>HAL</td><td>송신(블로킹)</td><td>printf → __io_putchar → UART</td></tr>
+  <tr><td class="m"><a href="../02_USART_Interrupt/02_USART_Interrupt%20예제설명.html">02_USART_Interrupt</a></td><td>HAL+NVIC</td><td>1바이트 수신 인터럽트</td><td>콜백 → 플래그 → main</td></tr>
+  <tr><td class="m"><a href="../03_USART_RingBuffer/UART%20링%20버퍼%20예제설명.html">03_USART_RingBuffer</a></td><td>HAL</td><td>인터럽트 + 링 버퍼</td><td>ISR→main lock-free FIFO</td></tr>
+  <tr><td class="m"><a href="../04_USART_DMA_IdleLine_c/04_USART_DMA_IdleLine%20예제설명.html">04_USART_DMA_IdleLine_c</a></td><td>HAL+DMA</td><td>DMA 원형 + IDLE</td><td>가변 길이 패킷</td></tr>
+  <tr><td class="m"><a href="../05_UART_CLI_c/05_UART_CLI%20예제설명.html">05_UART_CLI_c</a></td><td>HAL</td><td>줄 단위 수신</td><td>줄 편집, 명령 테이블</td></tr>
+  <tr><td class="m"><b>06_USART_HalfDuplex_c (이 예제설명)</b></td><td>HAL</td><td>단선 반이중</td><td>방향 전환, 오픈드레인</td></tr>
+  <tr><td class="m"><a href="../07_USART_Stack/스택%20예제설명.html">07_USART_Stack</a></td><td>HAL+CMSIS</td><td>인터럽트 + 스택</td><td>LIFO 괄호 검사, PRIMASK</td></tr>
+  <tr><td class="m"><a href="../08_USART_printf_Dual/08_USART_printf_Dual%20예제설명.html">08_USART_printf_Dual</a></td><td>HAL</td><td>송신 2포트</td><td>USART2+USART1(D8), AD2 파형</td></tr>
+  </table></div>
+  <div class="nextprev"><a href="../05_UART_CLI_c/05_UART_CLI%20예제설명.html">← 05_UART_CLI_c</a><a href="../07_USART_Stack/스택%20예제설명.html">07_USART_Stack →</a></div>
+  <footer>근거: 06_USART_HalfDuplex_c 소스(main.c, stm32f1xx_hal_msp.c, stm32f1xx_it.c, main.h, USART_HalfDuplex.ioc, 2026-11-04 수정본). 계층: HAL(송신 폴링 + 수신 인터럽트). HAL 함수의 레지스터 동작은 STM32F1 HAL UART·GPIO 드라이버 소스 기준이다. 레지스터·비트 이름은 RM0008(STM32F101xx~F107xx 레퍼런스 매뉴얼) 기준이다. 클럭은 SYSCLK 64 MHz(HSI/2 × PLL16), APB1 ÷2(32 MHz), APB2 ÷1(64 MHz) 구성을 기준으로 한다. 7절의 기대 출력과 "이전 버전의 문제"는 소스 분석 결과이며 보드에서 확인하지 않았다. 코드는 해당 폴더의 소스에서 발췌한 것이며 일부 줄이 생략되어 있다.</footer>
+</section>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  /* ---- 와이어드-AND 버스 ---- */
+  var B={te:1,m:1,s:1};
+  function bus(){
+    var mDrive=B.te&&B.m===0, sDrive=B.s===0, lv=(mDrive||sDrive)?0:1;
+    $('bTE').textContent='마스터 방향: '+(B.te?'송신(TE=1, RE=0)':'수신(TE=0, RE=1)');
+    $('bM').textContent='마스터 출력: '+(B.m?'놓음(1)':'Low(0)');
+    $('bS').textContent='슬레이브 PB10 출력: '+(B.s?'놓음(1)':'Low(0)');
+    $('vTR').textContent='TE='+B.te+' / RE='+(B.te?0:1);
+    $('vPA9').textContent=B.te?(B.m?'놓음 (Hi-Z)':'Low 구동'):'놓음 (TE=0)';
+    $('vPB10').textContent=B.s?'놓음 (Hi-Z)':'Low 구동';
+    var L=$('vBus');L.textContent=lv?'High':'Low';L.className='lamp'+(lv?' on':'')+(mDrive&&sDrive?' bad':'');
+    $('vMR').textContent=B.te?'꺼짐 (RE=0)':'버스 = '+(lv?'1':'0');
+    $('vSR').textContent='버스 = '+(lv?'1':'0');
+    var t='버스 = NOT(PA9 Low 구동 OR PB10 Low 구동) = '+(lv?'1 (High, 풀업)':'0 (Low)');
+    if(mDrive&&sDrive)t+='\n충돌: 두 노드가 동시에 송신 중이다. 오픈드레인이라 단락은 없지만 데이터가 깨진다.';
+    else if(!B.te&&B.m===0)t+='\n마스터는 TE=0이라 PA9를 놓고 있다. 출력값 0은 버스에 나가지 않는다.';
+    else if(B.te&&B.m===1&&sDrive)t+='\n마스터가 1(놓음)을 보내는 중에 슬레이브가 Low를 내면 버스는 0이 된다. 마스터가 RE=1이었다면 비트 불일치로 충돌을 알 수 있다.';
+    $('calcBus').textContent=t;
+  }
+  $('bTE').onclick=function(){B.te^=1;bus()};$('bM').onclick=function(){B.m^=1;bus()};$('bS').onclick=function(){B.s^=1;bus()};
+  /* ---- main 루프 단계 모델 ---- */
+  var S;
+  function rxNew(){return {dr:'',rxne:0,ore:0}}
+  function init(){S={k:0,te:1,re:1,ie1:0,u3:rxNew(),u1:rxNew(),sx:'',rsp:'',ok:S?S.ok:0,fail:S?S.fail:0,seq:S?S.seq:0,wire:'(유휴)',sts:null,stm:false,done:false};}
+  /* 수신기 1바이트: 인터럽트 무장이면 ISR이 즉시 DR을 읽는다. 아니면 RXNE가 이미 1일 때 ORE, 새 바이트 손실 */
+  function hear(u,ch,armed,store,who){
+    if(armed){store.v+=ch;return who+'_IRQHandler → DR \''+ch+'\' 읽어 저장'}
+    if(u.rxne){u.ore=1;return 'RXNE=1 상태 → ORE=1, \''+ch+'\' 손실'}
+    u.dr=ch;u.rxne=1;return 'DR=\''+ch+'\', RXNE=1 (아무도 안 읽음)'}
+  function readBlocking(u,n,store){
+    var got='',note='';
+    if(u.rxne){got+=u.dr;note='DR의 \''+u.dr+'\' 읽음 (SR→DR 읽기로 RXNE·ORE 클리어)';u.rxne=0;u.ore=0;u.dr=''}
+    if(got.length<n){note+=(note?', ':'')+'남은 '+(n-got.length)+'바이트는 오지 않음 → 50 ms 후 HAL_TIMEOUT';store.v+=got;return {ok:false,note:note}}
+    store.v+=got;return {ok:true,note:note}}
+  var NAMES={
+    cur:['슬레이브 수신 무장','PING 송신','WaitRx(huart3)','응답 단계','판정·로그'],
+    old:['EnableTransmitter','PING 송신','블로킹 수신','응답 단계','판정·로그']};
+  var STEPS={
+    cur:[
+      function(){S.wire='(유휴)';return '1) HAL_UART_Receive_IT(&huart3, slave_rx, 4): USART3 CR1.RXNEIE=1, CR3.EIE=1, RxState=BUSY_RX\n   상대(마스터)가 보내기 전에 수신을 무장한다.'},
+      function(){S.te=1;S.re=0;S.ie1=0;var st={v:''},log=[],c='PING';for(var i=0;i<4;i++)log.push('  \''+c[i]+'\' → USART3: '+hear(S.u3,c[i],true,st,'USART3'));S.sx=st.v;S.wire='PING (PA9 → 버스)';
+        return '2) EnableTransmitter(&huart1): TE=1, RE=0 → HAL_UART_Transmit(&huart1, "PING"): main은 TC까지 블로킹\n   그 사이 바이트마다 USART3_IRQn이 main을 선점한다.\n'+log.join('\n')+'\n  4바이트 완료 → USART3 RXNEIE=0, RxState=READY'},
+      function(){S.sts=true;S.wire='(유휴)';return '   st_slave = WaitRx(&huart3, 20): RxState == READY, ErrorCode == NONE → HAL_OK\n   slave_rx == "PING" → 응답 단계로'},
+      function(){return pong(true)},
+      finish
+    ],
+    old:[
+      function(){S.te=1;S.re=0;S.wire='(유휴)';return '[이전 코드] 1) HAL_HalfDuplex_EnableTransmitter(&huart1): USART1 CR1 TE=1, RE=0\n   슬레이브 수신은 아직 무장되지 않았다.'},
+      function(){var log=[],c='PING';for(var i=0;i<4;i++)log.push('  \''+c[i]+'\' → USART3: '+hear(S.u3,c[i],false));S.wire='PING (PA9 → 버스)';
+        return '1) HAL_UART_Transmit(&huart1, "PING"): TC까지 블로킹. 그동안 USART3 DR을 읽는 코드는 실행되지 않는다.\n'+log.join('\n')+'\n  USART1은 RE=0이라 자기 송신을 듣지 않는다.'},
+      function(){var st={v:''},r=readBlocking(S.u3,4,st);S.sx=st.v;S.sts=r.ok;S.wire='(유휴)';
+        return '2) HAL_UART_Receive(&huart3, slave_rx, 4, 50): '+r.note+'\n  st_slave = '+(r.ok?'HAL_OK':'HAL_TIMEOUT')+', slave_rx = "'+S.sx+'"'},
+      function(){if(S.sts&&S.sx==='PING')return pong(false);
+        return 'if (st_slave == HAL_OK && slave_rx == "PING") → 거짓. PONG 단계를 건너뛴다. st_master = HAL_ERROR'},
+      finish
+    ]
+  };
+  function pong(armed){
+    S.te=0;S.re=1;S.ie1=armed?1:0;var c='PONG',l=[],st1={v:''},st3={v:''};
+    for(var i=0;i<4;i++)l.push('  \''+c[i]+'\' → USART1: '+hear(S.u1,c[i],armed,st1,'USART1')+' | USART3(에코): '+hear(S.u3,c[i],armed,st3,'USART3'));
+    S.wire='PONG (PB10 → 버스)';
+    var t;
+    if(armed){S.rsp=st1.v;S.stm=true;S.ie1=0;
+      t='3) EnableReceiver(&huart1): TE=0, RE=1 → Receive_IT(&huart1, rsp, 4): RXNEIE=1\n4) Receive_IT(&huart3, echo, 4) → HAL_UART_Transmit(&huart3, "PONG")\n'+l.join('\n')+
+        '\n  WaitRx(&huart3): 에코 "'+st3.v+'" 수신 완료(버림),  st_master = WaitRx(&huart1) → HAL_OK, rsp = "'+S.rsp+'"'}
+    else{var e={v:''},r3=readBlocking(S.u3,4,e),m={v:''},r1=readBlocking(S.u1,4,m);S.rsp=m.v;S.stm=r1.ok;
+      t='3) EnableReceiver: USART1 TE=0, RE=1 → HAL_UART_Transmit(&huart3, "PONG")\n'+l.join('\n')+'\n  에코 제거 Receive(&huart3): '+r3.note+'\n  마스터 Receive(&huart1): '+r1.note}
+    return t}
+  function finish(){
+    var good=S.stm&&S.rsp==='PONG';if(good)S.ok++;else S.fail++;
+    var line='#'+S.seq+'  slave got "'+S.sx.slice(0,4)+'"  master got "'+S.rsp.slice(0,4)+'"  ok='+S.ok+' fail='+S.fail;S.seq++;
+    var u=$('uart');u.textContent=(u.textContent?u.textContent+'\n':'')+line;var ls=u.textContent.split('\n');if(ls.length>6)u.textContent=ls.slice(-6).join('\n');
+    S.done=true;S.wire='(유휴)';
+    return (good?'rsp == "PONG" → ok++':'rsp != "PONG" 또는 st_master != HAL_OK → fail++')+'\nUSART2로 결과 출력, HAL_Delay(1000). 다음 단계를 누르면 새 바퀴를 시작한다.'}
+  function step(){
+    if(S.done){var keep={ok:S.ok,fail:S.fail,seq:S.seq};init();S.ok=keep.ok;S.fail=keep.fail;S.seq=keep.seq}
+    var list=STEPS[$('mdl').value];
+    var t=list[S.k](); S.k++; $('calc').textContent=t; render()}
+  function run(){var g=0;do{step();g++}while(!S.done&&g<10)}
+  function u(x){return (x.dr?'\''+x.dr+'\'':'–')+' / '+x.rxne+' / '+x.ore}
+  function render(){
+    var names=NAMES[$('mdl').value];
+    $('vStep').textContent=S.k===0?'시작 전':S.k+'/5 '+names[S.k-1];
+    $('vTR2').textContent='TE='+S.te+' / RE='+S.re+' / '+S.ie1;
+    $('vU3').textContent=u(S.u3);$('vU1').textContent=u(S.u1);
+    $('vSx').textContent='"'+S.sx+'"';$('vRsp').textContent='"'+S.rsp+'"';
+    $('vOF').textContent=S.ok+' / '+S.fail;$('vWire').textContent=S.wire;
+  }
+  $('bStep').onclick=step;$('bRun').onclick=run;
+  $('bRst').onclick=function(){S=null;init();$('uart').textContent='';$('calc').textContent='다음 단계를 눌러 시작한다.';render()};
+  $('mdl').onchange=function(){var k={ok:S.ok,fail:S.fail,seq:S.seq};init();S.ok=k.ok;S.fail=k.fail;S.seq=k.seq;$('calc').textContent='모델 변경: 다음 단계를 눌러 시작한다.';render()};
+  bus();S=null;init();render();
+})();
+</script>
+</body></html>

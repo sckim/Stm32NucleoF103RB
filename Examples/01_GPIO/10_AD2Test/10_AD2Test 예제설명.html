@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>10_AD2Test 예제설명</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+
+/* Layout: 한 열 예제설명(최대 860px) — 문제(헤더 배선 검증) → 순차 펄스·UART 프레임 → 핀 매핑·AD2 배선 → 시뮬레이터 → HAL↔레지스터 → 실행 경로 → 코드 → 실험 → 트러블슈팅 → 문제 순서.
+   색을 전 구간에서 고정한다: D2~D12=파랑, D13(LD2)=주황, A4·A5=청록, UART TX(PA2)=보라. (타이머 예제설명과 같은 기본 토큰) */
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --surface2:#E7ECF0; --fg:#14222C; --muted:#52636F; --line:#CBD5DC;
+  --c0:#1D4ED8; --c0-soft:#DCE6FB; --c1:#C2410C; --c1-soft:#FDE6DA; --c2:#0F766E; --c2-soft:#D5F0EC; --c3:#7E22CE; --c3-soft:#EEDFFB;
+  --code-bg:#0F1B24; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#9A3412; --warn-bg:#FFF1E6; --ok:#166534; --ok-bg:#E4F5EA;
+  --font-body:"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.75;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:860px;margin:0 auto}
+header{padding-block:40px 8px}
+.kicker{font-family:var(--font-mono);font-size:13px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.25;margin:8px 0 12px;text-wrap:balance;font-weight:700}
+.lead{color:var(--muted);margin:0;max-width:62ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0;padding:0;list-style:none}
+nav.toc a{display:block;padding:6px 12px;border:1px solid var(--line);border-radius:6px;color:var(--fg);text-decoration:none;font-size:14px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--c0);outline:2px solid var(--c0);outline-offset:1px}
+section{margin-top:56px}
+h2{font-size:24px;line-height:1.35;margin:0 0 12px;text-wrap:balance;font-weight:700}
+h3{font-size:18px;margin:28px 0 8px;font-weight:700}
+p{margin:0 0 14px;max-width:68ch}
+ul,ol{margin:0 0 14px;padding-left:22px;max-width:68ch}
+li{margin-bottom:4px}
+code{font-family:var(--font-mono);font-size:.9em;background:var(--surface2);padding:1px 6px;border-radius:4px}
+.k0{color:var(--c0);font-weight:700} .k1{color:var(--c1);font-weight:700} .k2{color:var(--c2);font-weight:700} .k3{color:var(--c3);font-weight:700}
+.box{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:16px 18px;margin:16px 0}
+.box.warn{background:var(--warn-bg);border-color:var(--warn)} .box.ok{background:var(--ok-bg);border-color:var(--ok)}
+.box > :last-child{margin-bottom:0}
+.label{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.tablewrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:15px;background:var(--surface)}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--surface2);font-weight:700;white-space:nowrap}
+td.m,th.m{font-family:var(--font-mono);font-size:13.5px}
+td.n{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+
+/* block diagram */
+.diag{max-width:720px;margin:18px auto}
+.diag svg{display:block;width:100%;height:auto}
+#blk .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+#blk .bx.hot{stroke:var(--warn);stroke-width:2.5;fill:var(--warn-bg)}
+#blk .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+#blk .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+#blk .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+#blk .w0{stroke:var(--c0)} #blk .w1{stroke:var(--c1)} #blk .w2{stroke:var(--c2)} #blk .w3{stroke:var(--c3)}
+#blk .d0{fill:var(--c0)} #blk .d1{fill:var(--c1)} #blk .d2{fill:var(--c2)} #blk .d3{fill:var(--c3)}
+#blk .ah{fill:var(--muted)}
+
+/* flow */
+.flow{list-style:none;padding:0;margin:16px 0;display:grid;gap:0;max-width:none}
+.flow li{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:0;padding:0 0 14px;position:relative}
+.flow li:not(:last-child)::before{content:"";position:absolute;left:16px;top:34px;bottom:0;width:2px;background:var(--line)}
+.flow .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:14px;font-weight:600;background:var(--surface2);border:2px solid var(--line)}
+.flow li.hw .n{border-color:var(--c3);color:var(--c3)} .flow li.sw .n{border-color:var(--c0);color:var(--c0)}
+.flow .tx{min-width:0} .flow .tx b{display:block}
+.flow .tx span{color:var(--muted);font-size:14.5px}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:11.5px;padding:0 6px;border-radius:4px;margin-left:6px;vertical-align:1px}
+.tag.hw{background:var(--c3-soft);color:var(--c3)} .tag.sw{background:var(--c0-soft);color:var(--c0)}
+
+/* mode cards */
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:16px 0}
+.mode{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:14px 16px;min-width:0}
+.mode.pick{border:2px solid var(--ok)}
+.mode b{display:block;margin-bottom:2px}
+.mode .reg{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);display:block;margin-bottom:8px}
+.trk{display:flex;gap:3px;margin:8px 0 6px;flex-wrap:wrap}
+.trk span{font-family:var(--font-mono);font-size:11.5px;font-weight:600;padding:2px 6px;border-radius:4px;border:1px solid var(--line)}
+.trk .g{color:var(--muted);border-style:dashed;background:none}
+.trk .r0{background:var(--c0-soft);color:var(--c0);border-color:var(--c0)} .trk .r1{background:var(--c1-soft);color:var(--c1);border-color:var(--c1)}
+.trk .r2{background:var(--c2-soft);color:var(--c2);border-color:var(--c2)} .trk .r3{background:var(--c3-soft);color:var(--c3);border-color:var(--c3)}
+.trk .x{text-decoration:line-through;opacity:.55}
+.mode p{font-size:14.5px;margin:0}
+
+/* simulator */
+.sim{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:18px;margin:16px 0}
+.subhead{font-weight:700;margin:18px 0 6px;padding-top:14px;border-top:1px dashed var(--line)}
+.subhead:first-child{margin-top:0;padding-top:0;border-top:0}
+.ranks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+@media (max-width:560px){.ranks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.rk{border:2px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);min-width:0;position:relative}
+.rk .h{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.rk .c{font-weight:700;font-size:15px;line-height:1.35}
+.rk .p{font-family:var(--font-mono);font-size:11.5px;color:var(--muted)}
+.rk .v{font-family:var(--font-mono);font-size:13px;font-variant-numeric:tabular-nums;margin-top:4px}
+.rk.nx{box-shadow:0 0 0 3px var(--fg) inset}
+.rk.nx::after{content:"다음 트리거";position:absolute;top:-11px;right:8px;font-size:11px;font-weight:700;background:var(--fg);color:var(--bg);padding:0 6px;border-radius:4px}
+.rk.r0 .c{color:var(--c0)} .rk.r1 .c{color:var(--c1)} .rk.r2 .c{color:var(--c2)} .rk.r3 .c{color:var(--c3)}
+.rk.on.r0{background:var(--c0-soft);border-color:var(--c0)} .rk.on.r1{background:var(--c1-soft);border-color:var(--c1)}
+.rk.on.r2{background:var(--c2-soft);border-color:var(--c2)} .rk.on.r3{background:var(--c3-soft);border-color:var(--c3)}
+.regs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.stat{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.stat .k{font-size:12px;color:var(--muted);font-family:var(--font-mono)}
+.stat .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3;overflow-wrap:anywhere}
+.lamp{display:inline-block;padding:0 10px;border-radius:999px;font-size:15px;border:1px solid var(--line)}
+.lamp.on{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+.outs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+@media (max-width:560px){.outs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.oc{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.oc .k{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.oc .v{font-family:var(--font-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.oc .f{font-size:12.5px}
+.oc.bad{border:2px solid var(--warn);background:var(--warn-bg)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+button,select,input{font-family:inherit}
+button{font-size:15px;font-weight:700;padding:9px 14px;border-radius:6px;border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;min-height:44px}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+button.hw{border-color:var(--c3);color:var(--c3)} button.hw:hover{background:var(--c3-soft)}
+button.sw{border-color:var(--c0);color:var(--c0)} button.sw:hover{background:var(--c0-soft)}
+button.plain:hover{background:var(--surface2)}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 16px;margin:10px 0}
+.ctl label{display:block;font-size:14px;color:var(--muted)}
+.ctl label b{font-family:var(--font-mono);color:var(--fg);font-weight:600}
+.ctl select{font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl input[type=range]{width:100%;min-height:32px}
+.calc{font-family:var(--font-mono);font-size:13.5px;line-height:1.65;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-height:5.4em;white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0 0}
+.uart{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);color:var(--code-fg);border-radius:6px;padding:10px 12px;white-space:pre;overflow-x:auto;margin:8px 0 0;min-height:2.6em}
+.log{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:8px 0 0;max-height:7.5em;overflow:auto;white-space:pre-wrap}
+
+/* code */
+pre{background:var(--code-bg);color:var(--code-fg);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:0;font-family:var(--font-mono);font-size:13.5px;line-height:1.7;tab-size:2}
+pre code{background:none;padding:0;font-size:inherit;color:inherit}
+.cm{color:var(--code-cmt)} .kw{color:var(--code-kw)} .hl{color:var(--code-hl)}
+.codepair{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;margin:14px 0;align-items:start}
+@media (max-width:760px){.codepair{grid-template-columns:minmax(0,1fr)}}
+.codepair ol{margin:0;padding-left:20px;font-size:15px} .codepair li{margin-bottom:8px}
+.file{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:18px 0 6px}
+
+/* quiz */
+details{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0;padding:0}
+summary{cursor:pointer;padding:12px 16px;font-weight:500;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--c0)} details[open] summary::before{content:"▾ "}
+summary:focus-visible{outline:3px solid var(--fg);outline-offset:-3px;border-radius:8px}
+details .ans{padding:0 16px 14px;color:var(--fg)} details .ans p{margin-bottom:8px}
+footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+
+/* 타이머 예제설명 추가 토큰 */
+.diag .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.diag .bx.hot{stroke:var(--warn);stroke-width:2.5;fill:var(--warn-bg)}
+.diag .bx.hw{stroke:var(--c3);fill:var(--c3-soft)} .diag .bx.sw{stroke:var(--c0);fill:var(--c0-soft)}
+.diag .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.diag .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.diag .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+.diag .ah{fill:var(--muted)}
+.diag .ax{stroke:var(--muted);stroke-width:1.3;fill:none}
+.diag .gd{stroke:var(--line);stroke-width:1.2;stroke-dasharray:5 4;fill:none}
+.diag .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .diag .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.diag .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .diag .s3{stroke:var(--c3);stroke-width:2.2;fill:none}
+.diag .d1{fill:var(--c1)} .diag .d0{fill:var(--c0)} .diag .d3{fill:var(--c3)}
+.diag .blk{fill:var(--c1-soft);stroke:var(--c1)}
+.diag text.m{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.diag text.t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.wave{margin:12px 0}
+.wave svg{display:block;width:100%;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px}
+.wave .ax{stroke:var(--muted);stroke-width:1.2;fill:none}
+.wave .gd{stroke:var(--line);stroke-width:1;stroke-dasharray:4 4;fill:none}
+.wave .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .wave .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.wave .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .wave .s3{stroke:var(--c3);stroke-width:2.2;fill:none}
+.wave .ev{stroke:var(--c3);stroke-width:1.6}
+.wave .bar{fill:var(--c1)} .wave .bar0{fill:var(--c0)}
+.wave text{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.wave text.tt{font-family:var(--font-body);font-size:12.5px;fill:var(--fg)}
+.bits{display:flex;margin:14px 0;font-family:var(--font-mono);font-size:13.5px;text-align:center}
+.bits div{flex:1;border:2px solid var(--c0);padding:10px 6px;background:var(--c0-soft);min-width:0}
+.bits div.lo{border-color:var(--c2);background:var(--c2-soft)}
+.bits small{display:block;color:var(--muted);font-size:12px}
+.eq{font-family:var(--font-mono);font-size:14.5px;background:var(--surface2);border-left:4px solid var(--c0);padding:10px 14px;margin:14px 0;overflow-x:auto;white-space:pre-wrap}
+.nextprev{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+.nextprev a{border:1px solid var(--line);border-radius:8px;padding:8px 14px;text-decoration:none;color:var(--c0);background:var(--surface)}
+td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
+.rowbad td{background:var(--warn-bg)}
+.cards2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:16px 0}
+.cards2 .mode{min-width:0}
+
+.wave .dot{fill:var(--c3)} .wave .blk{fill:var(--c1-soft);stroke:var(--c1)}
+.capt{font-size:14px;color:var(--muted);margin:6px 2px 14px}
+.stat .v.sm{font-size:15px}
+.sim .row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+
+/* AD2 예제설명 추가 */
+.oc.cur{border:2px solid var(--c0);background:var(--c0-soft)}
+.oc.cur.ld{border-color:var(--c1);background:var(--c1-soft)} .oc.cur.an{border-color:var(--c2);background:var(--c2-soft)}
+.outs.w7{grid-template-columns:repeat(7,minmax(0,1fr))}
+@media (max-width:560px){.outs.w7{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.ctl input[type=text]{font-family:var(--font-mono);font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 예제설명 · <a href="../01_GPIO%20개념설명.html" style="color:inherit">↑ 01_GPIO 개념설명</a></div>
+  <h1>헤더 핀 14개 순차 점등과 UART 프레임: AD2로 배선 검증하기</h1>
+  <p class="lead">보드의 Arduino 헤더 라벨(D2, D3 …)은 MCU 핀 순서와 무관하게 포트 A, B, C에 흩어져 있다. 라벨을 믿고 배선했다가 핀이 어긋나면 펌웨어를 아무리 고쳐도 동작하지 않는다. 이 예제설명은 D2~D13, A4, A5 열네 핀을 1초씩 차례로 High로 만들고 한 바퀴마다 USART2로 <code>Hello, AD2</code>를 보내는 <code>10_AD2Test</code> 예제를 해석하고, Analog Discovery 2 로직 분석기로 펄스 순서와 UART 프레임을 관찰하는 방법을 다룬다.</p>
+  <nav class="toc" aria-label="목차">
+    <a href="#s1">1. 문제: 라벨과 실제 핀</a><a href="#s2">2. 순차 펄스와 UART 프레임</a><a href="#s3">3. 핀 매핑·AD2 배선</a><a href="#s4">4. 직접 만져 보기</a><a href="#s5">5. 레지스터 대응</a><a href="#s6">6. 실행 경로</a><a href="#s7">7. 코드 읽기</a><a href="#s8">8. 실험</a><a href="#s9">9. 트러블슈팅</a><a href="#s10">10. 확인 문제</a>
+  </nav>
+</header>
+
+<section id="s1">
+<h2>1. 문제: 헤더 라벨과 MCU 핀은 다르다</h2>
+<p>D2는 PA10, D3는 PB3, D9는 PC7이다. 일부 핀(PB3, PB4)은 리셋 직후 JTAG 디버그 기능이 점유하고 있어 GPIO로 쓰려면 별도 설정이 필요하다. 이 예제는 한 번에 한 핀만 High로 만들기 때문에, 로직 분석기 채널에 펄스가 나타나는 순서만 보면 배선과 매핑이 맞는지 바로 알 수 있다. 학습 목표는 다음과 같다.</p>
+<ul>
+<li>Arduino 헤더 라벨 ↔ MCU 포트·비트 ↔ HAL 핀 마스크 대응 표를 소스에서 만든다.</li>
+<li>핀 표(<code>GpioPin</code> 배열)와 반복문으로 서로 다른 포트의 핀을 같은 코드로 다룬다.</li>
+<li><code>HAL_Delay()</code>와 SysTick의 관계, 실제 대기 시간이 1 ms 더 길어질 수 있는 이유를 설명한다.</li>
+<li>115200 8N1 UART 프레임을 비트 단위로 그리고, AD2의 UART 디코더로 해석한다.</li>
+</ul>
+<div class="box"><div class="label">이 예제의 동작</div><p>main 루프는 <code>arduino_pins[]</code>의 14개 핀을 순서대로 SET → <code>HAL_Delay(1000)</code> → RESET 한다. 14개를 모두 돌면 <code>HAL_UART_Transmit()</code>으로 <code>"Hello, AD2\r\n"</code>(12바이트)을 PA2(USART2_TX)로 블로킹 송신하고 처음부터 반복한다. 한 바퀴는 약 14초이다. D13은 LD2와 같은 PA5이므로 13번째 슬롯에서는 보드 LED도 켜진다.</p></div>
+</section>
+
+<section id="s2">
+<h2>2. 순차 펄스와 UART 프레임</h2>
+<div class="wave"><svg viewBox="0 0 640 330" role="img" aria-label="14개 핀이 1초씩 차례로 High가 되고 한 바퀴 끝에 PA2에서 UART 프레임이 나가는 타이밍도">
+<text x="4" y="29">D2 PA10</text>
+<polyline class="s0" points="104,29 104,29 104,17 140,17 140,29 620,29"/>
+<text x="4" y="48">D3 PB3</text>
+<polyline class="s0" points="104,48 140,48 140,36 176,36 176,48 620,48"/>
+<text x="4" y="67">D4 PB5</text>
+<polyline class="s0" points="104,67 176,67 176,55 212,55 212,67 620,67"/>
+<text x="4" y="86">D5 PB4</text>
+<polyline class="s0" points="104,86 212,86 212,74 248,74 248,86 620,86"/>
+<text x="4" y="105">D6 PB10</text>
+<polyline class="s0" points="104,105 248,105 248,93 284,93 284,105 620,105"/>
+<text x="4" y="124">D7 PA8</text>
+<polyline class="s0" points="104,124 284,124 284,112 320,112 320,124 620,124"/>
+<text x="4" y="143">D8 PA9</text>
+<polyline class="s0" points="104,143 320,143 320,131 356,131 356,143 620,143"/>
+<text x="4" y="162">D9 PC7</text>
+<polyline class="s0" points="104,162 356,162 356,150 392,150 392,162 620,162"/>
+<text x="4" y="181">D10 PB6</text>
+<polyline class="s0" points="104,181 392,181 392,169 428,169 428,181 620,181"/>
+<text x="4" y="200">D11 PA7</text>
+<polyline class="s0" points="104,200 428,200 428,188 464,188 464,200 620,200"/>
+<text x="4" y="219">D12 PA6</text>
+<polyline class="s0" points="104,219 464,219 464,207 500,207 500,219 620,219"/>
+<text x="4" y="238">D13 PA5</text>
+<polyline class="s1" points="104,238 500,238 500,226 536,226 536,238 620,238"/>
+<text x="4" y="257">A4 PC1</text>
+<polyline class="s2" points="104,257 536,257 536,245 572,245 572,257 620,257"/>
+<text x="4" y="276">A5 PC0</text>
+<polyline class="s2" points="104,276 572,276 572,264 608,264 608,276 620,276"/>
+<text x="4" y="295">TX PA2</text>
+<polyline class="s3" points="104,283 608,283"/>
+<rect class="bar" x="609" y="283" width="8" height="12"/>
+<polyline class="s3" points="617,283 620,283"/>
+<line class="ax" x1="104" y1="303" x2="620" y2="303"/>
+<line class="gd" x1="104" y1="12" x2="104" y2="303"/>
+<text x="98" y="319">0 s</text>
+<line class="gd" x1="356" y1="12" x2="356" y2="303"/>
+<text x="350" y="319">7 s</text>
+<line class="gd" x1="608" y1="12" x2="608" y2="303"/>
+<text x="602" y="319">14 s</text>
+<text class="tt" x="430" y="319">UART 12 B ≈ 1.04 ms</text>
+</svg><p class="capt">그림 1. 한 바퀴의 타이밍. 핀마다 약 1초 폭의 High 펄스가 한 번씩, 겹치지 않고 차례로 나온다. 마지막에 PA2(TX)에서 약 1.04 ms 동안 UART 프레임 12개가 나간다 (시간축 비율과 무관하게 크게 표시). 파랑 = D2~D12, 주황 = D13(LD2), 청록 = A4·A5, 보라 = TX.</p></div>
+<div class="tablewrap"><table>
+<tr><th>항목</th><th>값</th><th>근거</th></tr>
+<tr><td>핀당 High 시간</td><td>1000 ~ 1001 ms</td><td><code>HAL_Delay(1000)</code>는 경계 오차를 막기 위해 1틱을 더해 기다린다(시작 시점이 틱 중간이면 1000 ms보다 조금 길다)</td></tr>
+<tr><td>핀 사이 간격</td><td>µs 단위</td><td>RESET 직후 다음 핀 SET. 두 핀이 동시에 High인 구간은 없다</td></tr>
+<tr><td>UART 송신 시간</td><td>12 B × 10 bit / 115200 ≈ 1.04 ms</td><td>8N1 = 시작 1 + 데이터 8 + 정지 1 = 10비트</td></tr>
+<tr><td>한 바퀴</td><td>약 14.0 s (14.00 ~ 14.02 s + 1.04 ms)</td><td>14 × HAL_Delay + 송신 시간</td></tr>
+</table></div>
+<p>UART는 유휴 상태가 High(1)이고, 시작 비트 0으로 프레임을 알린 뒤 데이터를 <b>LSB부터</b> 보내고 정지 비트 1로 끝낸다. 115200 bps에서 비트 하나는 1/115200 = 8.68 µs이다.</p>
+<div class="wave"><svg viewBox="0 0 640 150" role="img" aria-label="문자 H(0x48)의 UART 프레임: 시작 비트, 데이터 8비트 LSB 먼저, 정지 비트">
+<polyline class="s3" points="20,40 70,40 70,90 120,90 120,90 170,90 170,90 220,90 220,90 270,90 270,40 320,40 320,90 370,90 370,90 420,90 420,40 470,40 470,90 520,90 520,40 570,40 570,40 625,40"/>
+<line class="gd" x1="70" y1="30" x2="70" y2="100"/>
+<text x="87" y="116">S</text>
+<text class="tt" x="91" y="134">0</text>
+<line class="gd" x1="120" y1="30" x2="120" y2="100"/>
+<text x="137" y="116">b0</text>
+<text class="tt" x="141" y="134">0</text>
+<line class="gd" x1="170" y1="30" x2="170" y2="100"/>
+<text x="187" y="116">b1</text>
+<text class="tt" x="191" y="134">0</text>
+<line class="gd" x1="220" y1="30" x2="220" y2="100"/>
+<text x="237" y="116">b2</text>
+<text class="tt" x="241" y="134">0</text>
+<line class="gd" x1="270" y1="30" x2="270" y2="100"/>
+<text x="287" y="116">b3</text>
+<text class="tt" x="291" y="134">1</text>
+<line class="gd" x1="320" y1="30" x2="320" y2="100"/>
+<text x="337" y="116">b4</text>
+<text class="tt" x="341" y="134">0</text>
+<line class="gd" x1="370" y1="30" x2="370" y2="100"/>
+<text x="387" y="116">b5</text>
+<text class="tt" x="391" y="134">0</text>
+<line class="gd" x1="420" y1="30" x2="420" y2="100"/>
+<text x="437" y="116">b6</text>
+<text class="tt" x="441" y="134">1</text>
+<line class="gd" x1="470" y1="30" x2="470" y2="100"/>
+<text x="487" y="116">b7</text>
+<text class="tt" x="491" y="134">0</text>
+<line class="gd" x1="520" y1="30" x2="520" y2="100"/>
+<text x="537" y="116">P</text>
+<text class="tt" x="541" y="134">1</text>
+<line class="gd" x1="570" y1="30" x2="570" y2="100"/>
+<text x="22" y="34">idle 1</text><text x="70" y="24">8.68 µs/비트, 프레임 10비트 = 86.8 µs</text>
+</svg><p class="capt">그림 2. 첫 글자 'H'(0x48 = 0100 1000b)의 프레임. LSB부터 보내므로 데이터 비트 순서는 0, 0, 0, 1, 0, 0, 1, 0이다. 로직 분석기에서 보이는 파형 그대로이다.</p></div>
+</section>
+
+<section id="s3">
+<h2>3. 핀 매핑과 AD2 배선</h2>
+<p>아래 표는 <code>main.h</code>의 라벨 정의와 <code>arduino_pins[]</code> 순서를 그대로 옮긴 것이다. HAL 핀 값은 비트 번호가 아니라 마스크(<code>GPIO_PIN_n = 1 &lt;&lt; n</code>)이다. 커넥터 이름은 Nucleo-64 사용자 매뉴얼(UM1724)의 Arduino 커넥터 구분(CN9: D0~D7, CN5: D8~D15, CN8: A0~A5)을 따른다.</p>
+<div class="tablewrap"><table>
+<tr><th>순서</th><th>헤더</th><th>MCU 핀</th><th>HAL 마스크</th><th>설정 필드</th><th>AD2 채널</th><th>비고</th></tr>
+<tr><td class="n">1</td><td>D2 (CN9)</td><td class="m">PA10</td><td class="m">0x0400</td><td class="m">GPIOA_CRH [11:8]</td><td class="m">DIO 0</td><td>USART1_RX와 같은 핀 (이 예제에서는 GPIO)</td></tr>
+<tr><td class="n">2</td><td>D3 (CN9)</td><td class="m">PB3</td><td class="m">0x0008</td><td class="m">GPIOB_CRL [15:12]</td><td class="m">DIO 1</td><td>리셋 시 JTDO. NOJTAG 설정 필요</td></tr>
+<tr><td class="n">3</td><td>D4 (CN9)</td><td class="m">PB5</td><td class="m">0x0020</td><td class="m">GPIOB_CRL [23:20]</td><td class="m">DIO 2</td><td></td></tr>
+<tr><td class="n">4</td><td>D5 (CN9)</td><td class="m">PB4</td><td class="m">0x0010</td><td class="m">GPIOB_CRL [19:16]</td><td class="m">DIO 3</td><td>리셋 시 NJTRST. NOJTAG 설정 필요</td></tr>
+<tr><td class="n">5</td><td>D6 (CN9)</td><td class="m">PB10</td><td class="m">0x0400</td><td class="m">GPIOB_CRH [11:8]</td><td class="m">DIO 4</td><td></td></tr>
+<tr><td class="n">6</td><td>D7 (CN9)</td><td class="m">PA8</td><td class="m">0x0100</td><td class="m">GPIOA_CRH [3:0]</td><td class="m">DIO 5</td><td></td></tr>
+<tr><td class="n">7</td><td>D8 (CN5)</td><td class="m">PA9</td><td class="m">0x0200</td><td class="m">GPIOA_CRH [7:4]</td><td class="m">DIO 6</td><td>USART1_TX와 같은 핀</td></tr>
+<tr><td class="n">8</td><td>D9 (CN5)</td><td class="m">PC7</td><td class="m">0x0080</td><td class="m">GPIOC_CRL [31:28]</td><td class="m">DIO 7</td><td></td></tr>
+<tr><td class="n">9</td><td>D10 (CN5)</td><td class="m">PB6</td><td class="m">0x0040</td><td class="m">GPIOB_CRL [27:24]</td><td class="m">DIO 8</td><td></td></tr>
+<tr><td class="n">10</td><td>D11 (CN5)</td><td class="m">PA7</td><td class="m">0x0080</td><td class="m">GPIOA_CRL [31:28]</td><td class="m">DIO 9</td><td></td></tr>
+<tr><td class="n">11</td><td>D12 (CN5)</td><td class="m">PA6</td><td class="m">0x0040</td><td class="m">GPIOA_CRL [27:24]</td><td class="m">DIO 10</td><td></td></tr>
+<tr><td class="n">12</td><td><span class="k1">D13 (CN5)</span></td><td class="m">PA5</td><td class="m">0x0020</td><td class="m">GPIOA_CRL [23:20]</td><td class="m">DIO 11</td><td>온보드 LD2 (코드 라벨 <code>LD2</code>)</td></tr>
+<tr><td class="n">13</td><td><span class="k2">A4 (CN8)</span></td><td class="m">PC1</td><td class="m">0x0002</td><td class="m">GPIOC_CRL [7:4]</td><td class="m">DIO 12</td><td>아날로그 헤더지만 디지털 출력으로 사용</td></tr>
+<tr><td class="n">14</td><td><span class="k2">A5 (CN8)</span></td><td class="m">PC0</td><td class="m">0x0001</td><td class="m">GPIOC_CRL [3:0]</td><td class="m">DIO 13</td><td></td></tr>
+<tr><td class="n">–</td><td><span class="k3">USART2_TX</span></td><td class="m">PA2</td><td class="m">0x0004</td><td class="m">GPIOA_CRL [11:8]</td><td class="m">DIO 14</td><td>AF 푸시풀. 아래 주의 참고</td></tr>
+<tr><td class="n">–</td><td>GND</td><td>–</td><td>–</td><td>–</td><td>GND (↓)</td><td>AD2와 보드의 접지를 반드시 연결</td></tr>
+</table></div>
+<p>14개 핀의 설정 필드 값은 모두 <code>0x1</code>(MODE = 01: 최대 10 MHz 출력, CNF = 00: 범용 푸시풀)이다. 제외한 핀은 D0/D1(PA3/PA2, USART2와 겹침)과 D14/D15(PB9/PB8, I2C)이다.</p>
+<div class="box warn"><div class="label">주의: UART 프로브 위치</div><p>PA2는 Arduino 헤더의 D1 자리에 해당하지만, Nucleo-64 기본 납땜 브리지 설정(SB13·SB14 ON, SB62·SB63 OFF)에서는 PA2/PA3가 ST-LINK 가상 COM 쪽에만 연결되고 Arduino D0/D1 커넥터에는 연결되지 않는다(UM1724의 USART 통신 절). AD2로 TX를 볼 때는 D1 대신 모포 커넥터 <b>CN10-35(PA2)</b>에 DIO 14를 연결한다(UM1724 표 27). 보드의 브리지 설정을 바꾼 경우에는 D1에서도 관찰할 수 있다.</p></div>
+<h3>클럭</h3>
+<div class="tablewrap"><table>
+<tr><th>단계</th><th>설정</th><th>클럭</th></tr>
+<tr><td>SYSCLK</td><td>HSI 8 MHz ÷2 → PLL ×16</td><td>64 MHz</td></tr>
+<tr><td>APB1 (USART2)</td><td>÷2</td><td>32 MHz → <code>USART2_BRR</code> 계산 기준</td></tr>
+<tr><td>APB2 (GPIO, AFIO)</td><td>÷1</td><td>64 MHz</td></tr>
+<tr><td>SysTick</td><td><code>HAL_InitTick</code>: HCLK/1000</td><td>1 kHz (1 ms 틱)</td></tr>
+</table></div>
+</section>
+
+<section id="s4">
+<h2>4. 직접 만져 보기</h2>
+<p>위쪽은 main 루프를 한 단계씩 실행하며 어느 핀이 High인지, <code>BSRR</code>에 어떤 값이 쓰이는지, 경과 시간이 얼마인지 보여 준다. 아래쪽은 송신 문자열의 각 바이트를 UART 프레임으로 바꿔 그린다.</p>
+<ol>
+<li><b>다음 단계</b>를 눌러 D2 → D3 … 순서로 SET과 RESET이 번갈아 일어나는 것을 본다. BSRR 값의 상위 16비트(BR)와 하위 16비트(BS)를 구분한다.</li>
+<li>14번째 핀(A5)을 끄고 나면 <code>HAL_UART_Transmit</code> 단계가 오고 UART 창에 한 줄이 찍힌다.</li>
+<li>지연 슬라이더를 1 ms로 줄이고 <b>한 바퀴</b>를 눌러 한 바퀴 시간이 어떻게 줄어드는지 확인한다.</li>
+<li>아래에서 문자를 바꿔 가며 LSB 우선 비트열과 프레임 파형을 확인한다. <code>\r</code>(0x0D)과 <code>\n</code>(0x0A)도 본다.</li>
+</ol>
+<div class="sim" id="simbox">
+  <div class="subhead">순차 출력</div>
+  <div class="ctl">
+    <div><label for="dly">HAL_Delay 인자 = <b id="l_dly"></b> ms</label><input id="dly" type="range" min="1" max="1000" step="1" value="1000"></div>
+  </div>
+  <div class="outs w7" id="pins"></div>
+  <div class="regs">
+    <div class="stat"><div class="k">다음 실행</div><div class="v sm" id="vNext">–</div></div>
+    <div class="stat"><div class="k">마지막 BSRR 쓰기</div><div class="v sm" id="vBsrr">–</div></div>
+    <div class="stat"><div class="k">경과 시간 (이번 바퀴)</div><div class="v sm" id="vTime">–</div></div>
+    <div class="stat"><div class="k">완료한 바퀴</div><div class="v" id="vLoop">–</div></div>
+  </div>
+  <div class="btns">
+    <button class="sw" id="bStep" type="button">다음 단계</button>
+    <button class="sw" id="bLoop" type="button">한 바퀴</button>
+    <button class="plain" id="bAuto" type="button">자동 재생</button>
+    <button class="plain" id="bReset" type="button">초기화</button>
+  </div>
+  <div class="calc" id="calc" aria-live="polite">다음 단계를 눌러 main 루프를 진행한다.</div>
+  <div class="label" style="margin-top:12px">UART 출력 (PA2, 115200 8N1)</div>
+  <div class="uart" id="uart"></div>
+  <div class="subhead" style="margin-top:18px">UART 바이트 프레임</div>
+  <div class="ctl">
+    <div><label for="ch">"Hello, AD2\r\n"의 바이트 = <b id="l_ch"></b></label><select id="ch"></select></div>
+  </div>
+  <div class="regs">
+    <div class="stat"><div class="k">16진수 / 2진수</div><div class="v sm" id="vHex">–</div></div>
+    <div class="stat"><div class="k">선로 비트열 (S·LSB→MSB·P)</div><div class="v sm" id="vBits">–</div></div>
+    <div class="stat"><div class="k">프레임 시간</div><div class="v sm" id="vFt">–</div></div>
+  </div>
+  <div class="wave" id="frame"></div>
+</div>
+<p style="font-size:14.5px;color:var(--muted)">시뮬레이터 모델: 핀당 High 시간은 <code>HAL_Delay</code> 인자 d에 대해 d ~ d+1 ms 범위로 보고, 경과 시간은 평균값 d + 0.5 ms로 누적한다. 핀 전환에 걸리는 수 µs와 <code>HAL_UART_Transmit</code>의 함수 호출 오버헤드는 무시한다. 보레이트는 115200으로 계산하며, 실제 BRR(0x116)로 생기는 −0.08 % 오차는 반영하지 않는다.</p>
+</section>
+
+<section id="s5">
+<h2>5. HAL 호출과 레지스터의 대응</h2>
+<div class="tablewrap"><table>
+<tr><th>HAL 호출 (위치)</th><th>레지스터 / 비트</th><th>의미</th></tr>
+<tr><td><code>HAL_Init()</code></td><td><code>STK_LOAD</code>, <code>STK_CTRL</code>, NVIC 우선순위 그룹</td><td>SysTick 1 ms 시작(처음에는 HSI 8 MHz 기준). <code>HAL_RCC_ClockConfig</code>가 64 MHz로 바꾼 뒤 틱을 다시 설정해 LOAD = 63999가 된다</td></tr>
+<tr><td><code>__HAL_RCC_AFIO_CLK_ENABLE()</code> (HAL_MspInit)</td><td><code>RCC_APB2ENR.AFIOEN</code></td><td>AFIO_MAPR 쓰기 전 필수</td></tr>
+<tr><td><code>__HAL_AFIO_REMAP_SWJ_NOJTAG()</code> (HAL_MspInit)</td><td><code>AFIO_MAPR.SWJ_CFG[2:0]</code> = 010</td><td>JTAG-DP 끔, SW-DP 유지 → PA15, PB3, PB4가 GPIO로 풀린다</td></tr>
+<tr><td><code>__HAL_RCC_GPIOA/B/C/D_CLK_ENABLE()</code></td><td><code>RCC_APB2ENR</code> IOPAEN·IOPBEN·IOPCEN·IOPDEN</td><td>포트 클럭 허용</td></tr>
+<tr><td><code>HAL_GPIO_WritePin(…, GPIO_PIN_RESET)</code> (초기화 전)</td><td><code>GPIOx_BSRR</code> = 마스크 &lt;&lt; 16 (BRy)</td><td>ODR을 먼저 0으로. 출력으로 바뀌는 순간 High 글리치가 생기지 않는다</td></tr>
+<tr><td><code>HAL_GPIO_Init(OUTPUT_PP, NOPULL, MEDIUM)</code></td><td><code>GPIOx_CRL/CRH</code> 해당 니블 = 0x1</td><td>MODE = 01(10 MHz), CNF = 00(푸시풀)</td></tr>
+<tr><td><code>HAL_UART_Init()</code> → <code>HAL_UART_MspInit()</code></td><td><code>RCC_APB1ENR.USART2EN</code>, <code>GPIOA_CRL</code> PA2·PA3 니블 = 0xA</td><td>USART2 클럭, PA2·PA3 대체 기능 푸시풀 2 MHz (CubeMX 설정 그대로)</td></tr>
+<tr><td><code>HAL_UART_Init()</code></td><td><code>USART2_BRR</code> = 0x0116, <code>CR1</code> = 0x200C</td><td>DIV_Mantissa = 17, DIV_Fraction = 6. UE·TE·RE = 1, M = 0, PCE = 0. <code>CR2.STOP</code> = 00</td></tr>
+<tr><td><code>HAL_GPIO_WritePin(port, pin, SET)</code></td><td><code>GPIOx_BSRR</code> = 마스크 (BSy)</td><td>해당 핀만 1. 읽기 없이 쓰기 1회라 원자적</td></tr>
+<tr><td><code>HAL_Delay(1000)</code></td><td><code>uwTick</code> (SysTick_Handler → HAL_IncTick)</td><td>틱 차이가 1001이 될 때까지 폴링</td></tr>
+<tr><td><code>HAL_UART_Transmit(…, HAL_MAX_DELAY)</code></td><td><code>USART_SR.TXE</code> 대기 → <code>USART_DR</code> 쓰기, 끝에 <code>SR.TC</code> 대기</td><td>12바이트 블로킹 송신 (인터럽트 없음)</td></tr>
+</table></div>
+<div class="eq">USARTDIV = f_PCLK1 / (16 × baud) = 32 000 000 / (16 × 115200) = 17.361
+DIV_Mantissa = 17 (0x11),  DIV_Fraction = round(0.361 × 16) = 6  →  BRR = 0x116
+실제 보레이트 = 32 MHz / (16 × 17.375) = 115 108 bps  (오차 −0.08 %)</div>
+</section>
+
+<section id="s6">
+<h2>6. 초기화부터 핀 출력까지의 경로</h2>
+<ol class="flow">
+<li class="sw"><div class="n">1</div><div class="tx"><b><code>HAL_Init()</code> → <code>HAL_MspInit()</code><span class="tag sw">소프트웨어</span></b><span>SysTick 1 ms, AFIO 클럭, <code>SWJ_CFG</code> = 010으로 PB3·PB4 해방.</span></div></li>
+<li class="sw"><div class="n">2</div><div class="tx"><b><code>SystemClock_Config()</code><span class="tag sw">소프트웨어</span></b><span>PLL 64 MHz로 전환, SysTick 재설정.</span></div></li>
+<li class="sw"><div class="n">3</div><div class="tx"><b><code>MX_GPIO_Init()</code>, <code>MX_USART2_UART_Init()</code><span class="tag sw">소프트웨어</span></b><span>14개 핀 ODR = 0 → 출력 모드. USART2 115200 8N1.</span></div></li>
+<li class="sw"><div class="n">4</div><div class="tx"><b><code>HAL_GPIO_WritePin(SET)</code> → <code>BSRR</code> = 마스크<span class="tag sw">소프트웨어</span></b><span>예: D2이면 <code>GPIOA_BSRR</code> = 0x0000 0400.</span></div></li>
+<li class="hw"><div class="n">5</div><div class="tx"><b>ODR 비트 → 출력 드라이버 → 핀 3.3 V<span class="tag hw">하드웨어</span></b><span>AD2의 해당 DIO 채널이 High로 바뀐다.</span></div></li>
+<li class="hw"><div class="n">6</div><div class="tx"><b>SysTick 예외 1 ms마다<span class="tag hw">하드웨어</span></b><span><code>SysTick_Handler</code> → <code>HAL_IncTick()</code>으로 <code>uwTick</code> 증가. main은 <code>HAL_Delay</code> 안에서 이 값을 폴링한다.</span></div></li>
+<li class="sw"><div class="n">7</div><div class="tx"><b><code>HAL_GPIO_WritePin(RESET)</code> → <code>BSRR</code> = 마스크 &lt;&lt; 16<span class="tag sw">소프트웨어</span></b><span>예: D2이면 0x0400 0000. 다음 핀으로 이동.</span></div></li>
+<li class="sw"><div class="n">8</div><div class="tx"><b>14개 후 <code>HAL_UART_Transmit()</code><span class="tag sw">소프트웨어</span></b><span>바이트마다 TXE를 기다려 DR에 쓴다.</span></div></li>
+<li class="hw"><div class="n">9</div><div class="tx"><b>USART2 시프트 레지스터 → PA2<span class="tag hw">하드웨어</span></b><span>시작 비트, 데이터 8비트(LSB 먼저), 정지 비트를 8.68 µs 간격으로 내보낸다. 마지막에 TC = 1.</span></div></li>
+</ol>
+<div class="tablewrap"><table>
+<tr><th>구분</th><th>이름</th><th>위치</th><th>역할</th></tr>
+<tr><td>ISR</td><td><code>SysTick_Handler</code></td><td>stm32f1xx_it.c</td><td>1 ms마다 <code>HAL_IncTick()</code></td></tr>
+<tr><td>HAL MSP 콜백</td><td><code>HAL_MspInit</code></td><td>stm32f1xx_hal_msp.c</td><td><code>HAL_Init()</code> 안에서 호출. AFIO/PWR 클럭, SWJ 설정</td></tr>
+<tr><td>HAL MSP 콜백</td><td><code>HAL_UART_MspInit</code></td><td>stm32f1xx_hal_msp.c</td><td><code>HAL_UART_Init()</code> 안에서 호출. USART2 클럭, PA2·PA3</td></tr>
+</table></div>
+</section>
+
+<section id="s7">
+<h2>7. 코드 읽기</h2>
+<p>보드만 있으면 LD2로 13번째 슬롯을 볼 수 있고, 나머지 핀과 TX는 AD2 같은 로직 분석기로 관찰한다.</p>
+<div class="file">main.c — 핀 표 (USER CODE PTD / PV)</div>
+<div class="codepair">
+<pre><code><span class="kw">typedef</span> <span class="kw">struct</span>
+{
+  GPIO_TypeDef *port;
+  uint16_t pin; <span class="cm">// HAL 핀 마스크 (GPIO_PIN_x = 1 &lt;&lt; n)</span>
+} GpioPin;
+
+<span class="cm">// NUCLEO-F103RB의 D2~D13과 A4/A5 아날로그 헤더 핀을 순서대로 출력한다.</span>
+<span class="cm">// PA3/PA2는 USART2 RX/TX로 쓰므로 순차 GPIO 출력에서 제외한다 (Arduino D0/D1 자리).</span>
+<span class="cm">// 단, 보드 기본 설정(SB62/SB63 OFF)에서 PA2/PA3는 D1/D0 핀과 끊겨 있고 ST-LINK 가상 COM에만 연결된다.</span>
+<span class="cm">// D14/D15(PB9/PB8, I2C)는 사용하지 않는다.</span>
+<span class="kw">static</span> <span class="kw">const</span> GpioPin arduino_pins[] = {
+    {D2_GPIO_Port, D2_Pin}, <span class="cm">// D2</span>
+    {D3_GPIO_Port, D3_Pin}, <span class="cm">// D3</span>
+    <span class="cm">/* … D4 ~ D12 … */</span>
+    {LD2_GPIO_Port, LD2_Pin}, <span class="cm">// LD2</span>
+    {A4_GPIO_Port, A4_Pin}, <span class="cm">// A4</span>
+    {A5_GPIO_Port, A5_Pin}, <span class="cm">// A5</span>
+};
+<span class="kw">#define</span> GPIO_PIN_COUNT (<span class="kw">sizeof</span>(arduino_pins) / <span class="kw">sizeof</span>(arduino_pins[0]))</code></pre>
+<ol><li>포트(구조체 포인터)와 마스크를 한 쌍으로 묶어, 포트가 달라도 같은 반복문으로 다룬다.</li><li><code>D2_Pin</code>, <code>D2_GPIO_Port</code>는 CubeMX 라벨에서 생성된 <code>main.h</code>의 정의이다. 라벨 이름만 바꾸면 코드는 그대로 둘 수 있다.</li><li><code>const</code> 배열이므로 플래시에 놓인다. <code>GPIO_PIN_COUNT</code>는 컴파일 시간에 14가 된다.</li></ol>
+</div>
+<div class="file">main.c — main 루프 (USER CODE 3)</div>
+<div class="codepair">
+<pre><code><span class="kw">while</span> (1)
+{
+  <span class="kw">for</span> (uint32_t i = 0; i &lt; GPIO_PIN_COUNT; i++)
+  {
+    <span class="cm">// 현재 핀을 1000ms 켠 뒤 끄고 다음 핀으로 이동한다. (GPIOx_BSRR)</span>
+    <span class="kw">HAL_GPIO_WritePin</span>(arduino_pins[i].port, arduino_pins[i].pin, GPIO_PIN_SET);
+    <span class="kw">HAL_Delay</span>(1000); <span class="cm">// SysTick ISR(HAL_IncTick)이 증가시키는 uwTick 기반</span>
+    <span class="kw">HAL_GPIO_WritePin</span>(arduino_pins[i].port, arduino_pins[i].pin, GPIO_PIN_RESET);
+  }
+  <span class="cm">// 순차 출력이 끝날 때마다 PA2(USART2_TX -&gt; ST-LINK 가상 COM, 모포 CN10-35)로 메시지 전송 (폴링: TXE/TC는 HAL이 처리)</span>
+  <span class="kw">const</span> <span class="kw">char</span> msg[] = <span class="hl">"Hello, AD2\r\n"</span>;
+  <span class="kw">HAL_UART_Transmit</span>(&amp;huart2, (uint8_t *)msg, strlen(msg), HAL_MAX_DELAY);
+}</code></pre>
+<ol><li>SET과 RESET은 모두 <code>BSRR</code> 쓰기 1회이다. 다른 핀은 영향을 받지 않는다.</li><li><code>HAL_Delay</code> 동안 CPU는 폴링하며 다른 일을 하지 않는다.</li><li><code>strlen(msg)</code> = 12. 끝의 널 문자는 보내지 않는다.</li><li>PA2는 보드 기본 설정에서 D1 커넥터와 연결되지 않으므로, 주석에 측정 위치(모포 CN10-35)를 적어 두었다(3절 주의 참고).</li></ol>
+</div>
+<div class="file">main.c — MX_GPIO_Init() 일부 (CubeMX 생성)</div>
+<div class="codepair">
+<pre><code><span class="cm">/*Configure GPIO pin Output Level */</span>
+<span class="kw">HAL_GPIO_WritePin</span>(D2_GPIO_Port, D2_Pin, GPIO_PIN_RESET);
+<span class="cm">/* … 나머지 13개 핀도 RESET … */</span>
+
+<span class="cm">/*Configure GPIO pin : D2_Pin */</span>
+GPIO_InitStruct.Pin = D2_Pin;
+GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+GPIO_InitStruct.Pull = GPIO_NOPULL;
+GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
+<span class="kw">HAL_GPIO_Init</span>(D2_GPIO_Port, &amp;GPIO_InitStruct);</code></pre>
+<ol><li>출력 레벨을 먼저 정한 뒤 모드를 바꾸는 순서가 중요하다.</li><li><code>GPIO_SPEED_FREQ_MEDIUM</code>은 MODE = 01(10 MHz)이다. 1초 펄스에는 속도가 의미가 없지만 에지가 덜 가파라져 링잉이 줄어든다.</li></ol>
+</div>
+<div class="file">stm32f1xx_hal_msp.c — HAL_MspInit()</div>
+<div class="codepair">
+<pre><code><span class="kw">void</span> <span class="kw">HAL_MspInit</span>(<span class="kw">void</span>)
+{
+  <span class="kw">__HAL_RCC_AFIO_CLK_ENABLE</span>();
+  <span class="kw">__HAL_RCC_PWR_CLK_ENABLE</span>();
+
+  <span class="cm">/* System interrupt init*/</span>
+
+  <span class="cm">/** NOJTAG: JTAG-DP Disabled and SW-DP Enabled
+  */</span>
+  <span class="kw">__HAL_AFIO_REMAP_SWJ_NOJTAG</span>();
+}</code></pre>
+<ol><li>CubeMX에서 SYS → Debug를 Serial Wire로 두면 생성된다.</li><li>이 줄이 없으면 PB3(D3)과 PB4(D5)는 JTAG 기능에 묶여 펄스가 나오지 않는다.</li></ol>
+</div>
+<div class="box"><div class="label">기대 출력</div><pre><code>Hello, AD2
+Hello, AD2</code></pre><p>시리얼 모니터(115200)에는 약 14초마다 한 줄이 찍힌다. AD2 Logic 창에서는 DIO 0 → DIO 13 순서로 1초 펄스가 하나씩 지나가고, DIO 13의 펄스가 끝난 직후 DIO 14에서 약 1 ms 길이의 UART 버스트가 보인다.</p></div>
+</section>
+
+<section id="s8">
+<h2>8. 실험</h2>
+<h3>실험 A. AD2로 순서와 UART 동시 관찰</h3><p>3절 표대로 DIO 0~13을 헤더 핀에, DIO 14를 PA2에, GND를 보드 GND에 연결한다. WaveForms의 Logic 도구에서 채널 15개를 추가하고 이름을 헤더 라벨로 붙인다. 펄스 순서를 볼 때는 시간축을 2 s/div 정도로 길게 잡고, DIO 0의 상승 에지로 트리거한다. UART를 볼 때는 Add → UART로 DIO 14를 RX 신호로 지정하고 115200 bps, 8 데이터 비트, 패리티 없음, 정지 1비트로 설정한 뒤 DIO 14 하강 에지(시작 비트)로 트리거하고 샘플링을 1 MHz 이상(비트당 100샘플 이상)으로 올린다. 디코더 표시를 ASCII로 바꿔 <code>Hello, AD2</code>가 읽히는지 확인한다.</p>
+<h3>실험 B. 1 ms 펄스</h3><p><code>HAL_Delay(1000)</code>을 <code>HAL_Delay(1)</code>로 바꾼다. AD2 커서로 각 펄스 폭이 1 ms와 2 ms 사이에서 흔들리는 것을 측정하고, 한 바퀴 시간을 계산값(14 × 1~2 ms + 1.04 ms)과 비교한다. 이제 한 화면에서 순서 펄스와 UART를 함께 볼 수 있다.</p>
+<h3>실험 C. JTAG 핀 해방 확인</h3><p>CubeMX에서 SYS Debug를 JTAG(5 pins)로 바꿔 재생성하면 <code>__HAL_AFIO_REMAP_SWJ_NOJTAG()</code>가 사라진다. DIO 1(D3/PB3)과 DIO 3(D5/PB4)에 펄스가 나오지 않는지 확인하고, 디버거에서 <code>AFIO-&gt;MAPR</code>의 <code>SWJ_CFG</code> 값을 비교한다. 확인 후 Serial Wire로 되돌린다.</p>
+<h3>실험 D. 배선 오류 찾기</h3><p>DIO 4와 DIO 5의 집게를 일부러 서로 바꿔 꽂는다. 펄스가 나타나는 순서만으로 어느 채널이 바뀌었는지 찾아낸다. 이어서 Logic 창에서 채널 하나를 비워 두고, 펄스가 빈 슬롯으로 보이는 것도 확인한다. (출력끼리 직접 단락시키는 실험은 하지 않는다. 한쪽 High, 한쪽 Low인 순간 두 드라이버가 충돌한다.)</p>
+</section>
+
+<section id="s9">
+<h2>9. 트러블슈팅</h2>
+<div class="tablewrap"><table>
+<tr><th>증상</th><th>원인</th><th>점검/조치</th></tr>
+<tr><td>D3·D5에만 펄스가 없다</td><td>PB3/PB4가 JTAG 기능에 묶여 있다 (SWJ 설정이 Full SWJ)</td><td>CubeMX SYS Debug = Serial Wire, <code>HAL_MspInit</code>에 <code>__HAL_AFIO_REMAP_SWJ_NOJTAG()</code> 확인</td></tr>
+<tr><td>D1에서 UART 신호가 안 보인다</td><td>기본 설정에서 PA2는 ST-LINK 쪽에만 연결되고 D1 커넥터에는 연결되지 않는다</td><td>모포 커넥터 CN10-35(PA2) 핀에서 측정 (UM1724 핀 표로 위치 확인)</td></tr>
+<tr><td>UART 디코더가 깨진 문자를 보인다</td><td>보레이트·극성·비트 순서 설정 오류, 샘플링 속도 부족</td><td>115200, 8N1, 유휴 High(반전 없음), LSB 먼저. 샘플링 1 MHz 이상</td></tr>
+<tr><td>두 채널에 같은 펄스가 동시에 보인다</td><td>프로브 두 개가 같은 핀에 물렸거나 인접 핀과 단락</td><td>펄스 순서표와 대조해 겹친 채널의 배선을 확인</td></tr>
+<tr><td>채널 전체가 잡음처럼 흔들린다</td><td>AD2와 보드의 GND 미연결</td><td>AD2 GND(↓)를 보드 GND 핀에 연결</td></tr>
+<tr><td>시리얼 모니터에 아무것도 안 나온다</td><td>COM 포트 번호 차이(<code>monitor_port = COM9</code>는 작성자 PC 기준), 보레이트 불일치</td><td>장치 관리자에서 ST-LINK VCP 포트 확인, 115200 설정</td></tr>
+</table></div>
+</section>
+
+<section id="s10">
+<h2>10. 확인 문제</h2>
+<details><summary><b>문제 1.</b> <code>HAL_Delay(1)</code>로 바꾸면 한 바퀴 시간의 범위는?</summary>
+<div class="ans"><p><code>HAL_Delay(1)</code>은 1 ~ 2 ms를 기다린다. 따라서 14 × (1~2 ms) + 1.04 ms = 약 15.0 ~ 29.0 ms이다. 지연이 짧아지면 HAL_Delay의 +1틱 보정이 상대적으로 크게 보인다.</p></div></details>
+<details><summary><b>문제 2.</b> 문자 'A'(0x41)를 115200 8N1로 보낼 때 PA2의 비트열(시작~정지)과 프레임 시간은?</summary>
+<div class="ans"><p>0x41 = 0100 0001b, LSB부터 1, 0, 0, 0, 0, 0, 1, 0이다. 선로에는 0(시작), 1, 0, 0, 0, 0, 0, 1, 0, 1(정지) 순으로 나간다. 프레임 시간은 10 × 8.68 µs = 86.8 µs이다.</p></div></details>
+<details><summary><b>문제 3.</b> <code>MX_GPIO_Init()</code>이 <code>HAL_GPIO_Init()</code>보다 <code>HAL_GPIO_WritePin(RESET)</code>을 먼저 부르는 이유는?</summary>
+<div class="ans"><p>핀이 출력으로 바뀌는 순간 ODR 값이 그대로 출력되기 때문이다. 먼저 <code>BSRR</code>의 BRy로 ODR을 0으로 만들어 두면 모드 전환 순간에 High 글리치가 생기지 않는다. 로직 분석기로 배선을 검증할 때 초기 글리치는 잘못된 펄스로 오해될 수 있다.</p></div></details>
+<details><summary><b>문제 4.</b> D2를 켜는 <code>HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET)</code>과 끄는 호출은 각각 어떤 값을 어느 레지스터에 쓰는가?</summary>
+<div class="ans"><p>켜기: <code>GPIOA_BSRR</code> = 0x0000 0400 (BS10). 끄기: <code>GPIOA_BSRR</code> = 0x0400 0000 (BR10 = 비트 26). 둘 다 쓰기 1회이며 GPIOA의 다른 핀(PA5 LD2, PA2 TX 등)에는 영향이 없다.</p></div></details>
+</section>
+
+<section>
+  <h2>정리</h2>
+  <div class="tablewrap"><table><tr><th>예제</th><th>계층</th><th>방식</th><th>핵심</th></tr>
+<tr><td class="m"><a href="../01_BlinkArduino/01_BlinkArduino%20예제설명.html">01_BlinkArduino</a></td><td>Arduino</td><td>출력</td><td>pinMode / digitalWrite / delay</td></tr>
+<tr><td class="m"><a href="../02_BlinkHAL/02_BlinkHAL%20예제설명.html">02_BlinkHAL</a></td><td>HAL</td><td>출력</td><td>HAL_GPIO_TogglePin, CubeMX 구조</td></tr>
+<tr><td class="m"><a href="../03_BlinkLL/03_BlinkLL%20예제설명.html">03_BlinkLL</a></td><td>LL</td><td>출력</td><td>LL_GPIO_TogglePin, JTAG 해제</td></tr>
+<tr><td class="m"><a href="../04_BlinkReg/04_BlinkReg%20예제설명.html">04_BlinkReg</a></td><td>레지스터</td><td>출력</td><td>RCC·CRL·BSRR, SysTick 딜레이</td></tr>
+<tr><td class="m"><a href="../05_ReadPin/05_ReadPin%20예제설명.html">05_ReadPin</a></td><td>HAL</td><td>입력(폴링)</td><td>HAL_GPIO_ReadPin</td></tr>
+<tr><td class="m"><a href="../06_ExtInt/06_ExtInt%20예제설명.html">06_ExtInt</a></td><td>HAL+EXTI</td><td>입력(인터럽트)</td><td>EXTI 콜백</td></tr>
+<tr><td class="m"><a href="../07_ReadPinReg/07_ReadPinReg%20예제설명.html">07_ReadPinReg</a></td><td>레지스터</td><td>입력(폴링)</td><td>GPIOC-&gt;IDR 직접 읽기</td></tr>
+<tr><td class="m"><a href="../08_ExternalInt/08_ExternalInt%20예제설명.html">08_ExternalInt</a></td><td>HAL+EXTI</td><td>입력(인터럽트 2개)</td><td>EXTI9_5·EXTI15_10 공용 콜백</td></tr>
+<tr><td class="m"><a href="../09_BitBandingReg/09_BitBandingReg%20예제설명.html">09_BitBandingReg</a></td><td>레지스터</td><td>비트 접근</td><td>Cortex-M3 비트 밴딩</td></tr>
+<tr><td class="m"><b>10_AD2Test (이 예제설명)</b></td><td>HAL</td><td>출력 14핀 + UART</td><td>헤더 핀 순차 점등, AD2 관찰</td></tr>
+</table></div>
+  <div class="nextprev"><a href="../09_BitBandingReg/09_BitBandingReg%20예제설명.html">← 09_BitBandingReg</a><a href="../../02_USART/01_USART_printf/01_USART_printf%20예제설명.html">02_USART / 01_USART_printf →</a></div>
+  <footer>근거: 10_AD2Test 소스(main.c, main.h, stm32f1xx_hal_msp.c, stm32f1xx_it.c, AD2Test.ioc). 계층: HAL. 레지스터·비트 이름은 RM0008(STM32F101xx~F107xx 레퍼런스 매뉴얼) 기준이며, 헤더·커넥터 구분과 USART2 연결은 UM1724(STM32 Nucleo-64 사용자 매뉴얼) 기준이다. 클럭은 SYSCLK 64 MHz(HSI/2 × PLL16), APB1 ÷2, APB2 ÷1 구성이다. 코드는 해당 폴더의 소스에서 발췌한 것이며 일부 줄이 생략되어 있다.</footer>
+</section>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var P=[["D2","PA10","A",10],["D3","PB3","B",3],["D4","PB5","B",5],["D5","PB4","B",4],["D6","PB10","B",10],["D7","PA8","A",8],["D8","PA9","A",9],["D9","PC7","C",7],["D10","PB6","B",6],["D11","PA7","A",7],["D12","PA6","A",6],["D13","PA5","A",5],["A4","PC1","C",1],["A5","PC0","C",0]];
+  var MSG="Hello, AD2\r\n", BIT_US=1e6/115200;
+  var S, timer=null;
+  function h8(v){var s=('00000000'+(v>>>0).toString(16).toUpperCase()).slice(-8);return '0x'+s.slice(0,4)+' '+s.slice(4)}
+  function h4(v){return '0x'+('0000'+v.toString(16).toUpperCase()).slice(-4)}
+  function reset(){S={i:0,ph:0,t:0,loops:0,on:-1,bsrr:null};$('uart').textContent='';}
+  /* ph: 0 = 다음은 SET, 1 = 다음은 RESET(지연 후), 2 = 다음은 UART 송신 */
+  function dly(){return +$('dly').value}
+  function build(){
+    var h='';
+    for(var k=0;k<P.length;k++){h+='<div class="oc" id="pc'+k+'"><div class="k">'+P[k][0]+'</div><div class="v">'+P[k][1]+'</div><div class="f" id="pf'+k+'">0</div></div>'}
+    $('pins').innerHTML=h;
+    var o='';for(var c=0;c<MSG.length;c++){var ch=MSG[c],nm=ch==='\r'?'\\r':ch==='\n'?'\\n':ch===' '?'공백':ch;o+='<option value="'+c+'">'+(c+1)+': \''+nm+'\' (0x'+ch.charCodeAt(0).toString(16).toUpperCase()+')</option>'}
+    $('ch').innerHTML=o;
+  }
+  function fmtT(ms){return ms>=1000?(ms/1000).toFixed(3)+' s':ms.toFixed(2)+' ms'}
+  function step(){
+    var d=dly();
+    if(S.ph===0){
+      var p=P[S.i], m=1<<p[3]; S.on=S.i; S.bsrr='GPIO'+p[2]+'_BSRR = '+h8(m); S.ph=1;
+      $('calc').textContent='HAL_GPIO_WritePin('+p[0]+' = '+p[1]+', SET)\n  → GPIO'+p[2]+'_BSRR = '+h4(m)+' (BS'+p[3]+')  → '+p[0]+' High\n다음: HAL_Delay('+d+') : '+d+' ~ '+(d+1)+' ms 대기';
+    }else if(S.ph===1){
+      var q=P[S.i], m2=(1<<q[3])*65536; S.t+=d+0.5; S.on=-1; S.bsrr='GPIO'+q[2]+'_BSRR = '+h8(m2);
+      $('calc').textContent='HAL_Delay('+d+') 종료 (약 '+(d+0.5)+' ms 경과)\nHAL_GPIO_WritePin('+q[0]+', RESET) → GPIO'+q[2]+'_BSRR = '+h8(m2)+' (BR'+q[3]+')';
+      S.i++; S.ph=(S.i>=P.length)?2:0;
+    }else{
+      var tx=MSG.length*10*BIT_US/1000; S.t+=tx;
+      var u=$('uart'); u.textContent=(u.textContent?u.textContent+'\n':'')+'Hello, AD2'; var l=u.textContent.split('\n'); if(l.length>5)u.textContent=l.slice(-5).join('\n');
+      S.loops++;
+      $('calc').textContent='HAL_UART_Transmit(&huart2, "Hello, AD2\\r\\n", 12, HAL_MAX_DELAY)\n  12 B × 10 bit × 8.68 µs = '+tx.toFixed(3)+' ms\n이번 바퀴 합계 ≈ '+fmtT(S.t)+'  (범위 '+fmtT(14*d+tx)+' ~ '+fmtT(14*(d+1)+tx)+')';
+      S.lastLoop=S.t; S.i=0; S.ph=0; S.t=0;
+    }
+    render();
+  }
+  function render(){
+    for(var k=0;k<P.length;k++){
+      var el=$('pc'+k), on=(S.on===k);
+      el.className='oc'+(on?' cur'+(k===11?' ld':(k>=12?' an':'')):'');
+      $('pf'+k).textContent=on?'1 (High)':'0';
+    }
+    var nx=S.ph===0?'SET '+P[S.i][0]:S.ph===1?'Delay → RESET '+P[S.i][0]:'UART 송신';
+    $('vNext').textContent=nx; $('vBsrr').textContent=S.bsrr||'–';
+    $('vTime').textContent=fmtT(S.t); $('vLoop').textContent=S.loops;
+    $('l_dly').textContent=dly();
+  }
+  function frame(){
+    var c=+$('ch').value, v=MSG.charCodeAt(c);
+    var bits=[0]; for(var k=0;k<8;k++)bits.push((v>>k)&1); bits.push(1);
+    var bin=('00000000'+v.toString(2)).slice(-8);
+    $('l_ch').textContent=(c+1)+'번째';
+    $('vHex').textContent='0x'+('0'+v.toString(16).toUpperCase()).slice(-2)+' / '+bin.slice(0,4)+' '+bin.slice(4)+'b';
+    $('vBits').textContent=bits[0]+' · '+bits.slice(1,9).join('')+' · '+bits[9];
+    $('vFt').textContent='10 × '+BIT_US.toFixed(2)+' µs = '+(10*BIT_US).toFixed(1)+' µs';
+    var X0=70,BW=50,HI=40,LO=90, pts=[[20,HI],[X0,HI]];
+    for(k=0;k<bits.length;k++){var y=bits[k]?HI:LO,xa=X0+k*BW;pts.push([xa,y],[xa+BW,y])}
+    pts.push([X0+10*BW,HI],[625,HI]);
+    var lab=['S','b0','b1','b2','b3','b4','b5','b6','b7','P'];
+    var s='<svg viewBox="0 0 640 150" role="img" aria-label="선택한 바이트의 UART 프레임"><polyline class="s3" points="'+pts.map(function(p){return p[0]+','+p[1]}).join(' ')+'"/>';
+    for(k=0;k<10;k++){var xx=X0+k*BW;s+='<line class="gd" x1="'+xx+'" y1="30" x2="'+xx+'" y2="100"/><text x="'+(xx+BW/2-8)+'" y="116">'+lab[k]+'</text><text class="tt" x="'+(xx+BW/2-4)+'" y="134">'+bits[k]+'</text>'}
+    s+='<line class="gd" x1="'+(X0+10*BW)+'" y1="30" x2="'+(X0+10*BW)+'" y2="100"/><text x="22" y="34">idle 1</text><text x="'+X0+'" y="24">'+BIT_US.toFixed(2)+' µs/비트</text></svg>';
+    $('frame').innerHTML=s;
+  }
+  function stopAuto(){if(timer){clearInterval(timer);timer=null;$('bAuto').textContent='자동 재생'}}
+  $('bStep').onclick=function(){stopAuto();step()};
+  $('bLoop').onclick=function(){stopAuto();var n=0;do{step();n++}while(!(S.ph===0&&S.i===0)&&n<100)};
+  $('bAuto').onclick=function(){if(timer){stopAuto();return}timer=setInterval(step,350);$('bAuto').textContent='정지'};
+  $('bReset').onclick=function(){stopAuto();reset();$('calc').textContent='초기화: 모든 핀 0 (MX_GPIO_Init의 RESET), 루프 처음.';render()};
+  $('dly').oninput=render;
+  $('ch').onchange=frame;
+  build(); reset(); render(); frame();
+})();
+</script>
+</body></html>

@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>교안의 활용법</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* 교안의 활용법. 개념설명(01_GPIO 개념설명 등)과 같은 토큰·클래스를 쓴다.
+   색 규칙: 신호 경로 = 파랑(--c0), 선택·제어 비트 = 주황(--c1), 플래그·이벤트 = 청록(--c2), 하드웨어 소자 = 보라(--c3). */
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --surface2:#E7ECF0; --fg:#14222C; --muted:#52636F; --line:#CBD5DC;
+  --c0:#1D4ED8; --c0-soft:#DCE6FB; --c1:#C2410C; --c1-soft:#FDE6DA; --c2:#0F766E; --c2-soft:#D5F0EC; --c3:#7E22CE; --c3-soft:#EEDFFB;
+  --warn:#9A3412; --warn-bg:#FFF1E6; --ok:#166534; --ok-bg:#E4F5EA;
+  --font-body:"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.75;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));counter-reset:fig}
+.wrap{max-width:860px;margin:0 auto}
+header{padding-block:40px 8px}
+.kicker{font-family:var(--font-mono);font-size:13px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.kicker a{color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.25;margin:8px 0 12px;text-wrap:balance;font-weight:700}
+.lead{color:var(--muted);margin:0;max-width:66ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0}
+nav.toc a{display:block;padding:6px 12px;border:1px solid var(--line);border-radius:6px;color:var(--fg);text-decoration:none;font-size:14px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--c0);outline:2px solid var(--c0);outline-offset:1px}
+section{margin-top:56px}
+h2{font-size:24px;line-height:1.35;margin:0 0 12px;text-wrap:balance;font-weight:700}
+h3{font-size:18px;margin:28px 0 8px;font-weight:700}
+p{margin:0 0 14px;max-width:68ch}
+ul,ol{margin:0 0 14px;padding-left:22px;max-width:68ch}
+li{margin-bottom:4px}
+a{color:var(--c0)}
+code{font-family:var(--font-mono);font-size:.9em;background:var(--surface2);padding:1px 6px;border-radius:4px;overflow-wrap:anywhere}
+.k0{color:var(--c0);font-weight:700} .k1{color:var(--c1);font-weight:700} .k2{color:var(--c2);font-weight:700} .k3{color:var(--c3);font-weight:700}
+.box{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:16px 18px;margin:16px 0}
+.box.warn{background:var(--warn-bg);border-color:var(--warn)} .box.ok{background:var(--ok-bg);border-color:var(--ok)}
+.box > :last-child{margin-bottom:0}
+.label{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.eqv{display:inline-block;font-family:var(--font-mono);font-size:11.5px;padding:0 6px;border-radius:4px;background:var(--c3-soft);color:var(--c3);vertical-align:1px}
+.tablewrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:15px;background:var(--surface)}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--surface2);font-weight:700;white-space:nowrap}
+td.m,th.m{font-family:var(--font-mono);font-size:13.5px}
+td.on{color:var(--ok);font-weight:700} td.off{color:var(--muted)}
+.eq{font-family:var(--font-mono);font-size:14.5px;background:var(--surface2);border-left:4px solid var(--c0);padding:10px 14px;margin:14px 0;overflow-x:auto;white-space:pre-wrap}
+.flow{list-style:none;padding:0;margin:16px 0;display:grid;max-width:none}
+.flow li{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:0;padding:0 0 14px;position:relative}
+.flow li:not(:last-child)::before{content:"";position:absolute;left:16px;top:34px;bottom:0;width:2px;background:var(--line)}
+.flow .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:14px;font-weight:600;background:var(--surface2);border:2px solid var(--c0);color:var(--c0)}
+.flow .tx{min-width:0} .flow .tx b{display:block} .flow .tx span{color:var(--muted);font-size:14.5px}
+
+/* 원본 그림(PDF에서 잘라 낸 PNG): 다크모드에서도 흰 바탕 카드에 넣는다 */
+figure{margin:18px 0;counter-increment:fig}
+figure.src .img{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px}
+figure.src img{display:block;width:100%;height:auto}
+figure.src.narrow .img{max-width:560px;margin:0 auto}
+figcaption{font-size:14px;color:var(--muted);margin:6px 2px 0}
+figcaption::before{content:"그림 " counter(fig) ". ";font-weight:700;color:var(--fg)}
+.cite{display:block;font-family:var(--font-mono);font-size:12.5px;margin-top:2px}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.figs figure{margin:0}
+
+/* 등가 모델 SVG */
+.diag svg{display:block;width:100%;height:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.diag .bx{fill:var(--surface);stroke:var(--fg);stroke-width:1.4}
+.diag .hw{fill:var(--c3-soft);stroke:var(--c3)} .diag .sel{fill:var(--c1-soft);stroke:var(--c1)} .diag .flg{fill:var(--c2-soft);stroke:var(--c2)}
+.diag .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.diag .tc{font-family:var(--font-body);font-size:13px;fill:var(--fg);text-anchor:middle}
+.diag .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.diag .sc{font-family:var(--font-mono);font-size:11px;fill:var(--muted);text-anchor:middle}
+.diag .o{font-family:var(--font-mono);font-size:11px;fill:var(--c1)}
+.diag .w{stroke:var(--c0);stroke-width:1.8;fill:none}
+.diag .wc{stroke:var(--c1);stroke-width:1.5;fill:none}
+.diag .wm{stroke:var(--muted);stroke-width:1.3;fill:none}
+.diag .dash{stroke:var(--muted);stroke-width:1.2;fill:none;stroke-dasharray:5 4}
+.diag .ah{fill:var(--c0)} .diag .ahc{fill:var(--c1)} .diag .ahm{fill:var(--muted)}
+.diag .sig{stroke:var(--c0);stroke-width:2;fill:none} .diag .sig2{stroke:var(--c2);stroke-width:2;fill:none} .diag .sig3{stroke:var(--c3);stroke-width:2;fill:none}
+.diag .isr{fill:var(--c1-soft);stroke:var(--c1)}
+
+/* 시뮬레이터 */
+.sim{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:18px;margin:16px 0}
+.subhead{font-weight:700;margin:0 0 6px}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px 16px;margin:10px 0}
+.ctl label{display:block;font-size:14px;color:var(--muted)}
+.ctl select,.ctl input{font-family:inherit;font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl select:focus-visible,.ctl input:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+.regs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.stat{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.stat .k{font-size:12px;color:var(--muted);font-family:var(--font-mono)}
+.stat .v{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.35;overflow-wrap:anywhere}
+.note{font-size:14px;color:var(--muted);margin:8px 0 0}
+.verdict{font-weight:700} .verdict.good{color:var(--ok)} .verdict.bad{color:var(--warn)}
+
+details{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0}
+summary{cursor:pointer;padding:12px 16px;font-weight:500;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--c0)} details[open] summary::before{content:"▾ "}
+summary:focus-visible{outline:3px solid var(--fg);outline-offset:-3px;border-radius:8px}
+details .ans{padding:0 16px 14px} details .ans p{margin-bottom:8px}
+.nextprev{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+.nextprev a{border:1px solid var(--line);border-radius:8px;padding:8px 14px;text-decoration:none;color:var(--c0);background:var(--surface)}
+footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+footer ul{max-width:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">STM32F103RB · 교안 · 활용법</div>
+  <h1>교안의 활용법</h1>
+  <p class="lead">이 저장소의 교안은 두 종류이다. 그룹 폴더의 <b>개념설명</b>은 주변장치의 개념을 설명하고, 예제 폴더의 <b>예제설명</b>은 코드를 설명한다. 이 설명서는 교안 전체를 어떤 순서로, 어떻게 보면 좋은지 정리한 설명서이다. 어디서 시작하는지, 어떤 문서가 있는지, 그룹 하나를 공부하는 순서, 개념설명을 읽는 법과 모든 교안에 공통인 약속을 한 곳에 모았다. 각 교안에는 그 교안만의 내용을 쓰고, 공통 내용은 반복하지 않는다.</p>
+  <nav class="toc" aria-label="목차">
+    <a href="#s1">1. 문서 지도</a><a href="#s2">2. 시작 전: 받기와 최신화</a><a href="#s3">3. 전체 교안 한눈에</a><a href="#s4">4. 한 그룹 공부 순서</a><a href="#s5">5. 개념설명 읽는 법</a><a href="#s6">6. 근거 문서와 표기 약속</a><a href="#s7">7. 그림 출처</a><a href="#s8">8. 교안 여는 법</a>
+  </nav>
+</header>
+
+<div class="box ok">
+  <div class="label">한 줄 요약</div>
+  <p>저장소를 받고 최신으로 유지한 다음(실습자료_최신화), 그룹마다 <b>개념설명</b>으로 개념과 신호의 흐름을 잡고, <b>예제</b>를 실행하며 확인한다. 막히면 개념설명의 한계·정오표 장, 그다음 원본 PDF(<code>Docs/</code>)를 본다.</p>
+</div>
+
+<section id="s1">
+<h2>1. 문서 지도: 어디서 무엇을 보는가</h2>
+<div class="tablewrap"><table>
+<tr><th>문서</th><th>내용</th><th>언제 보나</th></tr>
+<tr><td><a href="README.md">저장소 루트 README</a></td><td>저장소 전체 안내: 개발 환경, 폴더 구조, 문서 활용법, 그룹별 개념설명과 예제 목록, 참고 문서(<code>Docs/</code>), 회로 시뮬레이션(Proteus, Wokwi)</td><td>저장소에 처음 들어왔을 때, 예제 목록이나 시뮬레이션 제약을 찾을 때</td></tr>
+<tr><td><a href="Examples/실습자료_최신화.pdf">실습자료_최신화.pdf</a></td><td>VS Code로 저장소를 클론하고, 수업 전에 Pull로 최신 자료를 받는 절차. 자주 만나는 상황표와 20초 체크리스트</td><td>처음 한 번, 그리고 매 수업 시작 전</td></tr>
+<tr><td><a href="Git_개념과_기본사용법.pdf">Git_개념과_기본사용법.pdf</a></td><td>Git과 GitHub를 쓰는 이유, Git의 세 작업 공간, 커밋과 GitHub에 올리기, Clone·Pull·Fetch의 차이, 브랜치, 자주 쓰는 명령어, 수업에서 지킬 기본 습관</td><td>위 절차의 용어가 낯설 때, 내 변경을 기록하고 싶을 때</td></tr>
+<tr><td><a href="Examples/README.md">Examples/README.md</a></td><td>예제 전체 지도, 학습 순서, 명명 규칙, 추상화 계층, 공통 핀</td><td>예제를 어떤 순서로 할지 정할 때</td></tr>
+<tr><td><b>개념설명</b> (그룹 폴더의 <code>&lt;그룹명&gt; 개념설명.html</code>)</td><td>그 주변장치가 칩 안에서 어떻게 동작하는지를 원본 블록도와 신호 경로로 이해한다. 모든 그룹이 같은 10장 틀이다</td><td>그룹을 시작할 때, 개념이 막힐 때</td></tr>
+<tr><td>그룹 <code>README.md</code></td><td>그룹의 예제 목록, 공통 배선·핀, 배우는 것</td><td>그룹에서 어떤 예제가 있고 무엇이 필요한지 볼 때</td></tr>
+<tr><td><b>예제설명</b> (예제 폴더의 <code>&lt;예제명&gt; 예제설명.html</code>)</td><td>그 예제의 코드를 레지스터·비트 단위로 해석하고, 시뮬레이터·실험·확인 문제로 확인한다. 아직 없는 예제도 있다</td><td>예제를 실행하고 코드를 읽을 때</td></tr>
+<tr><td>예제 <code>README.md</code>, <code>main.c</code> 상단 주석</td><td>요약, 사용 레지스터·비트, ISR과 HAL 콜백의 역할 구분</td><td>예제설명이 없거나 세부를 확인할 때</td></tr>
+<tr><td><code>*.pdsprj</code>, (<code>01_GPIO/02_BlinkHAL</code>) <code>wokwi.toml</code>·<code>diagram.json</code></td><td>보드 없이 시뮬레이션하는 파일</td><td>실제 보드가 없을 때. 제약은 루트 README의 "회로 시뮬레이션"에 있다</td></tr>
+<tr><td><a href="Docs/README.md">Docs/README.md</a></td><td>원본 PDF 문서(데이터시트, 참조 매뉴얼 등)와 읽는 순서</td><td>교안이 인용한 쪽을 직접 확인할 때</td></tr>
+</table></div>
+</section>
+
+<section id="s2">
+<h2>2. 시작 전: 저장소 받기와 최신화</h2>
+<ol>
+  <li><b>처음 한 번</b>: <a href="Examples/실습자료_최신화.pdf">실습자료_최신화.pdf</a>의 1절을 따라 VS Code에서 저장소를 클론한다.</li>
+  <li><b>매 수업 시작 전</b>: 같은 문서의 2절과 5절 체크리스트로 Pull을 실행해 최신 자료를 받는다. 오류나 충돌이 나오면 파일을 지우지 말고 담당자에게 문의한다(4절 상황표).</li>
+  <li><b>용어가 낯설면</b> <a href="Git_개념과_기본사용법.pdf">Git_개념과_기본사용법.pdf</a>를 본다. Clone, Pull, 커밋, 브랜치의 뜻과 수업에서 지킬 습관이 있다.</li>
+  <li><b>저장소 전체가 궁금하면</b> <a href="README.md">루트 README</a>를 본다.</li>
+</ol>
+<p>학생은 자료를 내려받기만 한다. 수업에서 지시하지 않았다면 Push나 Sync Changes는 누르지 않는다.</p>
+</section>
+
+<section id="s3">
+<h2>3. 전체 교안 한눈에</h2>
+<p>그룹은 번호 순서대로 한다. 앞 그룹의 개념(GPIO, 인터럽트, 클럭 게이트 등)이 뒤 그룹의 개념설명에서 다시 쓰인다.</p>
+<div class="tablewrap"><table>
+<tr><th>그룹</th><th>주제 (누르면 개념설명)</th></tr>
+<tr><td class="m">01_GPIO</td><td><a href="Examples/01_GPIO/01_GPIO%20개념설명.html">출력·입력·외부 인터럽트</a></td></tr>
+<tr><td class="m">02_USART</td><td><a href="Examples/02_USART/02_USART%20개념설명.html">시리얼 통신</a></td></tr>
+<tr><td class="m">03_ADC</td><td><a href="Examples/03_ADC/03_ADC%20개념설명.html">아날로그 입력</a></td></tr>
+<tr><td class="m">04_I2C_Communication</td><td><a href="Examples/04_I2C_Communication/04_I2C_Communication%20개념설명.html">I2C</a></td></tr>
+<tr><td class="m">05_SPI_Communication</td><td><a href="Examples/05_SPI_Communication/05_SPI_Communication%20개념설명.html">SPI</a></td></tr>
+<tr><td class="m">06_Timers_RTC</td><td><a href="Examples/06_Timers_RTC/06_Timers_RTC%20개념설명.html">타이머·RTC</a></td></tr>
+<tr><td class="m">07_DMA</td><td><a href="Examples/07_DMA/07_DMA%20개념설명.html">DMA</a></td></tr>
+<tr><td class="m">08_Clock_System</td><td><a href="Examples/08_Clock_System/08_Clock_System%20개념설명.html">코어·클럭 시스템</a></td></tr>
+<tr><td class="m">09_WatchDog_Sleep</td><td><a href="Examples/09_WatchDog_Sleep/09_WatchDog_Sleep%20개념설명.html">워치독·저전력</a></td></tr>
+<tr><td class="m">10_Flash_CRC</td><td><a href="Examples/10_Flash_CRC/10_Flash_CRC%20개념설명.html">내부 Flash·CRC</a></td></tr>
+<tr><td class="m">11_CAN_Communication</td><td><a href="Examples/11_CAN_Communication/11_CAN_Communication%20개념설명.html">CAN</a></td></tr>
+<tr><td class="m">12_Advanced_Topics</td><td>심화(선택). 기본 진도가 아니며 개념설명이 없다</td></tr>
+</table></div>
+</section>
+
+<section id="s4">
+<h2>4. 그룹 하나를 공부하는 순서 (권장)</h2>
+<ol>
+  <li><b>그룹 <code>README.md</code></b>: 예제 목록과 필요한 배선을 확인한다.</li>
+  <li><b>개념설명 1~3장</b>: 문제 정의, 일반 개념, 내부 구현 블록도를 먼저 읽는다. 개념과 신호의 흐름을 먼저 잡는다.</li>
+  <li><b>예제설명과 코드</b>: 예제를 번호 순서대로 빌드하고 실행한다. 예제설명이 없는 예제는 예제 README와 <code>main.c</code> 주석을 본다.</li>
+  <li><b>개념설명 4~7장</b>: 클럭·시간 계산, 제어 요소, 이벤트, 동작 시나리오를 실습한 예제와 연결해 다시 읽는다.</li>
+  <li><b>개념설명 9장 확인 문제</b>로 점검한다. 정답이 문제 바로 아래에 접혀 있으므로 먼저 풀어 본 뒤 연다.</li>
+  <li><b>막히면</b> 개념설명 8장(설계상 한계와 정오표)을 보고, 그래도 모르면 <code>Docs/</code>의 원본 PDF로 간다.</li>
+</ol>
+<p>개념설명 10장의 표는 "각 예제가 개념설명의 어느 장을 쓰는지"를 보여 준다. 예제를 하다가 개념이 막히면 이 표에서 해당 장으로 돌아간다.</p>
+</section>
+
+<section id="s5">
+<h2>5. 개념설명 읽는 법: 10장 틀</h2>
+<p>개념설명은 모든 그룹이 같은 10장 틀이다. 입력에서 클럭, 처리, 플래그와 이벤트, 출력 순서로 신호를 따라간다.</p>
+<div class="tablewrap"><table>
+<tr><th>장</th><th>제목</th><th>내용</th><th>이럴 때 본다</th></tr>
+<tr><td class="m">1</td><td>문제 정의</td><td>이 주변장치가 없으면 CPU가 무엇을 직접 해야 하는가</td><td>왜 이 주변장치가 필요한지 알고 싶을 때</td></tr>
+<tr><td class="m">2</td><td>일반 개념</td><td>칩과 무관한 기본 원리. 디지털논리와 연결한다</td><td>기본 개념이 낯설 때</td></tr>
+<tr><td class="m">3</td><td>내부 구현 블록도</td><td>입력 → 클럭 → 처리 → 플래그·이벤트 → 출력 순서로 원본 블록도 위에서 신호를 따라간다</td><td>신호가 핀에서 CPU까지 어떤 경로로 흐르는지 볼 때</td></tr>
+<tr><td class="m">4</td><td>클럭 경로와 시간 계산</td><td>버스 소속, 분주, 결과 주파수와 시간 분해능을 계산 예로 보인다</td><td>주파수·시간을 계산할 때(계산기 포함)</td></tr>
+<tr><td class="m">5</td><td>제어 요소의 역할</td><td>블록도 위의 스위치·선택기에 레지스터 비트를 대응시킨다</td><td>레지스터 비트가 블록도의 어느 스위치인지 볼 때</td></tr>
+<tr><td class="m">6</td><td>이벤트 생성 기전</td><td>플래그 → 인터럽트 요청 → DMA 요청 → 다른 주변장치 트리거</td><td>인터럽트와 DMA 연결을 볼 때</td></tr>
+<tr><td class="m">7</td><td>동작 시나리오 추적</td><td>한 번의 동작을 시간 순서로 타이밍도와 함께 따라간다</td><td>실제 동작 순서를 눈으로 따라갈 때</td></tr>
+<tr><td class="m">8</td><td>설계상 한계와 이유</td><td>왜 이렇게 만들었는지, 무엇을 감수했는지, 정오표의 결함</td><td>예상과 다르게 동작할 때</td></tr>
+<tr><td class="m">9</td><td>이해 확인 문제</td><td>계산형·추론형 문제</td><td>이해를 점검할 때</td></tr>
+<tr><td class="m">10</td><td>하부 예제 연결</td><td>각 예제가 이 교안의 어느 경로를 쓰는지, 마지막 "정리" 상자</td><td>예제와 개념을 연결할 때, 핵심만 복습할 때</td></tr>
+</table></div>
+<p>마지막 "정리" 상자는 반드시 알아야 할 핵심 5가지를 중요한 순서로 적고, 그 아래 "한 걸음 더"에 나머지를 해당 장 표시와 함께 둔다. 시간이 없으면 정리 상자부터 읽는다.</p>
+</section>
+
+<section id="s6">
+<h2>6. 근거 문서와 표기 약속</h2>
+<p>기준 칩은 STM32F103RB 하나이다. 개념설명의 사실은 아래 문서(저장소 <code>Docs/</code> 폴더)에서만 가져왔다. 교안마다 어느 장과 표를 썼는지는 각 교안 맨 앞의 "이 교안이 쓰는 근거" 상자에 적었다.</p>
+<div class="tablewrap"><table>
+<tr><th>문서</th><th>종류</th><th>이 저장소에서 쓰는 용도</th></tr>
+<tr><td class="m"><a href="Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a></td><td>참조 매뉴얼(Reference Manual)</td><td>주변장치의 블록도, 기능 설명, 레지스터와 비트. 모든 개념설명의 중심 근거이다</td></tr>
+<tr><td class="m"><a href="Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a></td><td>STM32F103x8/xB 데이터시트</td><td>이 칩의 블록도, 메모리 맵, 핀, 전기적 특성(전압·전류·타이밍·전력)</td></tr>
+<tr><td class="m"><a href="Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a></td><td>Cortex-M3 프로그래밍 매뉴얼(Programming Manual)</td><td>코어 쪽 내용: 예외와 NVIC, 비트 밴딩, SysTick, 폴트</td></tr>
+<tr><td class="m"><a href="Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a></td><td>정오표(Errata sheet)</td><td>칩이 매뉴얼과 다르게 동작하는 알려진 결함과 회피 방법</td></tr>
+<tr><td class="m"><a href="Docs/PM0075-stm32f10xxx-flash-memory.pdf">PM0075 Rev 2</a></td><td>Flash 메모리 프로그래밍 매뉴얼(Doc ID 17863)</td><td>Flash 읽기·쓰기·소거 절차. 08_Clock_System과 10_Flash_CRC에서만 쓴다</td></tr>
+</table></div>
+<p>위 문서들 사이에도 서로 어긋나는 곳과 원본의 오기가 있다(그림 라벨, 절 번호, 비트 이름 등). 발견한 것은 해당 그림의 캡션이나 각 교안 8장에 표시했다. 교안에 쓰인 표기 약속은 다음과 같다.</p>
+<ul>
+  <li><b>인용</b>: 인용마다 문서, 쪽, Figure·Table 번호를 붙였다. 링크를 누르면 해당 PDF의 그 쪽이 열린다(<code>#page=N</code>).</li>
+  <li><b><span class="eqv">등가 모델</span> 표시</b>: 문서에 내부 구현이 나오지 않아 디지털논리 소자(카운터, 비교기, 시프트 레지스터, 동기화기, 엣지 검출기, 상태기계 등)로 바꿔 그린 부분이나 문서의 숫자로 직접 유도한 계산에 붙인다. 동작을 설명하기 위한 그림이며 실제 회로도가 아니다. 문서에 있는 사실과 구분하기 위한 표시이다.</li>
+  <li><b>"문서에 없다"</b>: 위 문서가 말하지 않는 내용은 사실처럼 쓰지 않고 이렇게 밝힌다. 약어의 풀네임도 문서가 풀어 쓰지 않으면 지어내지 않는다.</li>
+  <li><b>레지스터 비트</b>는 블록도 위의 스위치·선택기·플래그로만 등장시킨다. 비트표를 통째로 옮기지 않는다. 신호가 하드웨어 안에서 어떻게 흐르는지가 설명의 중심이다.</li>
+  <li><b>약어</b>는 본문에 처음 나올 때 풀네임과 우리말을 적고, 앞쪽의 "약어 모음"에도 모아 두었다.</li>
+  <li><b>코드와 라이브러리 함수, 보드 배선, 추상화 계층(HAL·LL·레지스터) 비교</b>는 개념설명에 없다. 이것은 각 예제의 예제설명과 README, <code>main.c</code> 주석에서 다룬다. 센서·메모리 같은 외부 장치의 레지스터 의미와 배선도 예제 쪽에서 다룬다.</li>
+</ul>
+</section>
+
+<section id="s7">
+<h2>7. 그림 출처</h2>
+<p>그림은 STMicroelectronics의 위 문서에서 가져왔다. 원본이 있는 그림은 SVG로 다시 그리지 않고 PDF의 해당 쪽을 잘라 실었으며, 캡션에 문서, Rev, 쪽, Figure·Table 번호를 적었다. <span class="eqv">등가 모델</span> 그림과 타이밍도는 각 교안에서 새로 그렸다. 일부 그림을 부분만 잘랐거나 표를 줄여 옮긴 경우는 그 교안의 맨 아래에 따로 적었다.</p>
+</section>
+
+<section id="s8">
+<h2>8. 교안 여는 법</h2>
+<ul>
+  <li><b>브라우저로 연다.</b> 교안은 HTML이다. 파일을 더블클릭하면 계산기와 시뮬레이터가 동작하고, 정답은 접혀 있다. PDF로 바꾸면 이 기능이 사라지므로 교안은 HTML 그대로 둔다.</li>
+  <li><b>폴더 구조를 그대로 둔다.</b> 그림은 같은 그룹 폴더의 <code>img/</code>에 있고, 원본 PDF 링크는 <code>Docs/</code>를 가리키는 상대 경로이다.</li>
+  <li><b>안내서 두 개는 PDF이다.</b> <a href="Examples/실습자료_최신화.pdf">실습자료_최신화</a>와 <a href="Git_개념과_기본사용법.pdf">Git_개념과_기본사용법</a>은 동적 요소가 없는 안내서라 PDF로 올렸다.</li>
+</ul>
+<div class="nextprev"><span></span><a href="Examples/01_GPIO/01_GPIO%20개념설명.html">첫 개념설명: 01_GPIO →</a></div>
+</section>
+
+<footer>
+  <p>교안의 활용법 · STM32F103RB 기준</p>
+</footer>
+</div>
+</body>
+</html>

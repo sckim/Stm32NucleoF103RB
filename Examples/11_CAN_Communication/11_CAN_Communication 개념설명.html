@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>11_CAN_Communication 개념설명</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* 개념설명(주변장치 개요). 01_GPIO 개념설명과 같은 토큰·클래스를 쓴다.
+   색 규칙: 신호 경로 = 파랑(--c0), 선택·제어 비트 = 주황(--c1), 플래그·이벤트 = 청록(--c2), 하드웨어 소자 = 보라(--c3). */
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --surface2:#E7ECF0; --fg:#14222C; --muted:#52636F; --line:#CBD5DC;
+  --c0:#1D4ED8; --c0-soft:#DCE6FB; --c1:#C2410C; --c1-soft:#FDE6DA; --c2:#0F766E; --c2-soft:#D5F0EC; --c3:#7E22CE; --c3-soft:#EEDFFB;
+  --warn:#9A3412; --warn-bg:#FFF1E6; --ok:#166534; --ok-bg:#E4F5EA;
+  --font-body:"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.75;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));counter-reset:fig}
+.wrap{max-width:860px;margin:0 auto}
+header{padding-block:40px 8px}
+.kicker{font-family:var(--font-mono);font-size:13px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.kicker a{color:var(--muted)}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.25;margin:8px 0 12px;text-wrap:balance;font-weight:700}
+.lead{color:var(--muted);margin:0;max-width:66ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0}
+nav.toc a{display:block;padding:6px 12px;border:1px solid var(--line);border-radius:6px;color:var(--fg);text-decoration:none;font-size:14px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--c0);outline:2px solid var(--c0);outline-offset:1px}
+section{margin-top:56px}
+h2{font-size:24px;line-height:1.35;margin:0 0 12px;text-wrap:balance;font-weight:700}
+h3{font-size:18px;margin:28px 0 8px;font-weight:700}
+p{margin:0 0 14px;max-width:68ch}
+ul,ol{margin:0 0 14px;padding-left:22px;max-width:68ch}
+li{margin-bottom:4px}
+a{color:var(--c0)}
+code{font-family:var(--font-mono);font-size:.9em;background:var(--surface2);padding:1px 6px;border-radius:4px;overflow-wrap:anywhere}
+.k0{color:var(--c0);font-weight:700} .k1{color:var(--c1);font-weight:700} .k2{color:var(--c2);font-weight:700} .k3{color:var(--c3);font-weight:700}
+.box{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:16px 18px;margin:16px 0}
+.box.warn{background:var(--warn-bg);border-color:var(--warn)} .box.ok{background:var(--ok-bg);border-color:var(--ok)}
+.box > :last-child{margin-bottom:0}
+.label{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.eqv{display:inline-block;font-family:var(--font-mono);font-size:11.5px;padding:0 6px;border-radius:4px;background:var(--c3-soft);color:var(--c3);vertical-align:1px}
+.tablewrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:15px;background:var(--surface)}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--surface2);font-weight:700;white-space:nowrap}
+td.m,th.m{font-family:var(--font-mono);font-size:13.5px}
+td.on{color:var(--ok);font-weight:700} td.off{color:var(--muted)}
+.eq{font-family:var(--font-mono);font-size:14.5px;background:var(--surface2);border-left:4px solid var(--c0);padding:10px 14px;margin:14px 0;overflow-x:auto;white-space:pre-wrap}
+.flow{list-style:none;padding:0;margin:16px 0;display:grid;max-width:none}
+.flow li{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:0;padding:0 0 14px;position:relative}
+.flow li:not(:last-child)::before{content:"";position:absolute;left:16px;top:34px;bottom:0;width:2px;background:var(--line)}
+.flow .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:14px;font-weight:600;background:var(--surface2);border:2px solid var(--c0);color:var(--c0)}
+.flow .tx{min-width:0} .flow .tx b{display:block} .flow .tx span{color:var(--muted);font-size:14.5px}
+
+/* 원본 그림(PDF에서 잘라 낸 PNG): 다크모드에서도 흰 바탕 카드에 넣는다 */
+figure{margin:18px 0;counter-increment:fig}
+figure.src .img{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px}
+figure.src img{display:block;width:100%;height:auto}
+figure.src.narrow .img{max-width:560px;margin:0 auto}
+figcaption{font-size:14px;color:var(--muted);margin:6px 2px 0}
+figcaption::before{content:"그림 " counter(fig) ". ";font-weight:700;color:var(--fg)}
+.cite{display:block;font-family:var(--font-mono);font-size:12.5px;margin-top:2px}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.figs figure{margin:0}
+
+/* 등가 모델 SVG */
+.diag svg{display:block;width:100%;height:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.diag .bx{fill:var(--surface);stroke:var(--fg);stroke-width:1.4}
+.diag .hw{fill:var(--c3-soft);stroke:var(--c3)} .diag .sel{fill:var(--c1-soft);stroke:var(--c1)} .diag .flg{fill:var(--c2-soft);stroke:var(--c2)}
+.diag .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.diag .tc{font-family:var(--font-body);font-size:13px;fill:var(--fg);text-anchor:middle}
+.diag .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.diag .sc{font-family:var(--font-mono);font-size:11px;fill:var(--muted);text-anchor:middle}
+.diag .o{font-family:var(--font-mono);font-size:11px;fill:var(--c1)}
+.diag .w{stroke:var(--c0);stroke-width:1.8;fill:none}
+.diag .wc{stroke:var(--c1);stroke-width:1.5;fill:none}
+.diag .wm{stroke:var(--muted);stroke-width:1.3;fill:none}
+.diag .dash{stroke:var(--muted);stroke-width:1.2;fill:none;stroke-dasharray:5 4}
+.diag .ah{fill:var(--c0)} .diag .ahc{fill:var(--c1)} .diag .ahm{fill:var(--muted)}
+.diag .sig{stroke:var(--c0);stroke-width:2;fill:none} .diag .sig2{stroke:var(--c2);stroke-width:2;fill:none} .diag .sig3{stroke:var(--c3);stroke-width:2;fill:none}
+.diag .isr{fill:var(--c1-soft);stroke:var(--c1)}
+
+/* 시뮬레이터 */
+.sim{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:18px;margin:16px 0}
+.subhead{font-weight:700;margin:0 0 6px}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px 16px;margin:10px 0}
+.ctl label{display:block;font-size:14px;color:var(--muted)}
+.ctl select,.ctl input{font-family:inherit;font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl select:focus-visible,.ctl input:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+.regs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.stat{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.stat .k{font-size:12px;color:var(--muted);font-family:var(--font-mono)}
+.stat .v{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.35;overflow-wrap:anywhere}
+.note{font-size:14px;color:var(--muted);margin:8px 0 0}
+.verdict{font-weight:700} .verdict.good{color:var(--ok)} .verdict.bad{color:var(--warn)}
+
+details{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0}
+summary{cursor:pointer;padding:12px 16px;font-weight:500;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--c0)} details[open] summary::before{content:"▾ "}
+summary:focus-visible{outline:3px solid var(--fg);outline-offset:-3px;border-radius:8px}
+details .ans{padding:0 16px 14px} details .ans p{margin-bottom:8px}
+.nextprev{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+.nextprev a{border:1px solid var(--line);border-radius:8px;padding:8px 14px;text-decoration:none;color:var(--c0);background:var(--surface)}
+footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+footer ul{max-width:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">STM32F103RB · 11_CAN_Communication · 개념설명</div>
+  <h1>bxCAN: 주소 없는 버스에서 ID가 우선순위가 되기까지</h1>
+  <p class="lead">CAN(Controller Area Network, 제어기 영역 네트워크)은 여러 제어기가 선 한 쌍을 함께 쓰며 메시지를 방송하는 직렬 버스이다. STM32F103RB의 bxCAN(Basic Extended CAN)은 디지털논리에서 배운 와이어드 AND 버스, 비트 단위 비교기, 분주기와 시간 양자(tq) 카운터, 레지스터 묶음(메일박스)과 우선순위 선택기, 3칸 FIFO(First-In First-Out, 선입선출 버퍼), 마스크 비교기, 문턱값 비교기가 달린 오류 카운터를 묶어 이 일을 하드웨어로 처리한다. 이 개념설명은 CPU가 송신 메일박스에 넣은 메시지가 CAN_TX 핀의 비트열이 되고, CAN_RX 핀으로 들어온 비트열이 필터를 지나 수신 FIFO에 쌓이기까지의 경로를 원본 블록도 위에서 따라간다.</p>
+  <nav class="toc" aria-label="목차">
+    <a href="#s1">1. 문제 정의</a><a href="#s2">2. 일반 개념</a><a href="#s3">3. 블록도</a><a href="#s4">4. 클럭과 시간</a><a href="#s5">5. 제어 요소</a><a href="#s6">6. 이벤트 생성</a><a href="#s7">7. 동작 시나리오</a><a href="#s8">8. 설계상 한계</a><a href="#s9">9. 확인 문제</a><a href="#s10">10. 하부 예제</a>
+  </nav>
+</header>
+
+<div class="box">
+  <div class="label">이 개념설명이 쓰는 근거</div>
+  <p>근거 문서와 인용·표기 규칙, <span class="eqv">등가 모델</span> 표시의 뜻은 <a href="../../교안의_활용법.html">교안의 활용법</a>에 있다. 문서의 숫자로 직접 유도한 계산에도 <span class="eqv">등가 모델</span> 표시를 달았다. RM0008은 CAN 프로토콜 자체(비트 스터핑 규칙, CRC 다항식, 오류 카운터 증감 규칙 등)를 "CAN 표준(ISO 11898)을 보라"며 설명하지 않는다. 그래서 문서에 없는 CAN 일반 상식은 2장의 <b>일반 개념</b> 상자에만 최소한으로 적고 출처를 달지 않았다. 와이어드 AND 버스와 중재의 기본 발상은 <a href="../04_I2C_Communication/04_I2C_Communication%20개념설명.html#s2">04_I2C 개념설명 2장</a>에서, NVIC와 클럭 게이트는 <a href="../01_GPIO/01_GPIO%20개념설명.html">01_GPIO 개념설명</a>에서 다뤘다.</p>
+  <ul>
+    <li><a href="../../Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a>(참조 매뉴얼): 24장 Controller area network (bxCAN)</li>
+    <li><a href="../../Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a>(데이터시트): CAN 개요, 핀 정의, 메모리 맵</li>
+    <li><a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a>(Cortex-M3 프로그래밍 매뉴얼): NVIC(Nested Vectored Interrupt Controller, 중첩 벡터 인터럽트 컨트롤러)</li>
+    <li><a href="../../Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a>(정오표)</li>
+  </ul>
+</div>
+
+<details class="gloss"><summary>약어 모음</summary><div class="ans"><div class="tablewrap"><table>
+<tr><th>약어</th><th>풀네임</th><th>뜻</th></tr>
+<tr><td class="m">CAN · bxCAN</td><td>Controller Area Network · Basic Extended CAN</td><td>제어기 영역 네트워크 · ST의 CAN 제어기 주변장치 이름</td></tr>
+<tr><td class="m">CAN_TX / CAN_RX</td><td>CAN transmit / receive line</td><td>제어기와 트랜시버 사이의 송신 / 수신 디지털 선(칩의 핀)</td></tr>
+<tr><td class="m">CANH / CANL</td><td>CAN High / CAN Low</td><td>트랜시버와 버스 사이의 차동 선 한 쌍(일반 개념)</td></tr>
+<tr><td class="m">ID · STID · EXID</td><td>Identifier · Standard ID · Extended ID</td><td>메시지 식별자 · 11비트 표준 ID · 29비트 확장 ID의 하위 18비트</td></tr>
+<tr><td class="m">SOF · EOF</td><td>Start Of Frame · End Of Frame</td><td>프레임 시작 비트 · 프레임 끝 7비트</td></tr>
+<tr><td class="m">RTR · IDE · SRR</td><td>Remote Transmission Request · Identifier Extension · Substitute Remote Request</td><td>원격 프레임 표시 · 확장 ID 표시 · 확장 프레임에서 RTR 자리를 대신하는 비트</td></tr>
+<tr><td class="m">DLC</td><td>Data Length Code</td><td>데이터 바이트 수(0~8)</td></tr>
+<tr><td class="m">CRC · ACK</td><td>Cyclic Redundancy Code · Acknowledge</td><td>순환 중복 검사 부호 · 수신 확인 비트</td></tr>
+<tr><td class="m">tq · BRP</td><td>time quantum · Baud Rate Prescaler</td><td>비트 시간의 최소 단위 · tq를 만드는 분주비</td></tr>
+<tr><td class="m">SYNC_SEG · BS1 · BS2</td><td>Synchronization segment · Bit Segment 1 · Bit Segment 2</td><td>동기 구간(1 tq) · 샘플 지점 앞 구간 · 샘플 지점 뒤 구간</td></tr>
+<tr><td class="m">TS1 · TS2 · SJW</td><td>Time Segment 1 / 2 · (Re)Synchronization Jump Width</td><td>BS1·BS2 길이 필드(값+1 tq) · 재동기 때 늘리거나 줄일 수 있는 최대 tq</td></tr>
+<tr><td class="m">MCR · MSR · BTR</td><td>Master Control / Master Status / Bit Timing Register</td><td>동작 설정 · 상태 · 비트 타이밍 레지스터</td></tr>
+<tr><td class="m">TSR · RF0R / RF1R · IER · ESR</td><td>Transmit Status · Receive FIFO 0/1 · Interrupt Enable · Error Status Register</td><td>송신 상태 · 수신 FIFO 상태 · 인터럽트 허용 · 오류 상태 레지스터</td></tr>
+<tr><td class="m">INRQ / INAK · SLEEP / SLAK</td><td>Initialization Request / Acknowledge · Sleep request / Sleep Acknowledge</td><td>초기화 모드 요청·확인 · 슬립 모드 요청·확인</td></tr>
+<tr><td class="m">LBKM · SILM</td><td>Loop Back Mode · Silent Mode</td><td>송신을 내부에서 수신으로 되돌림 · 버스에 우성 비트를 내지 않음</td></tr>
+<tr><td class="m">TXFP · RFLM · NART</td><td>Transmit FIFO Priority · Receive FIFO Locked Mode · No Automatic ReTransmission</td><td>송신 순서 규칙 · FIFO가 찼을 때 새 메시지를 버릴지 · 자동 재전송 끔</td></tr>
+<tr><td class="m">ABOM · AWUM · TTCM</td><td>Automatic Bus-Off Management · Automatic WakeUp Mode · Time Triggered Communication Mode</td><td>버스 오프 자동 복귀 · 버스 활동으로 자동 기상 · 시간 트리거 통신(F103에서 미지원)</td></tr>
+<tr><td class="m">TXRQ · ABRQ · TME</td><td>Transmit Request · Abort Request · Transmit Mailbox Empty</td><td>송신 요청 · 송신 취소 · 송신 메일박스 비었음</td></tr>
+<tr><td class="m">RQCP · TXOK · ALST · TERR</td><td>Request Completed · Transmission OK · Arbitration Lost · Transmission Error</td><td>요청 처리 끝 · 송신 성공 · 중재 패배 · 송신 오류</td></tr>
+<tr><td class="m">FMP · FULL · FOVR · RFOM</td><td>FIFO Message Pending · FIFO full · FIFO Overrun · Release FIFO Output Mailbox</td><td>FIFO 안 메시지 수 · 3칸 다 참 · 넘침 · 출력 메일박스 비우기</td></tr>
+<tr><td class="m">FMI</td><td>Filter Match Index</td><td>메시지를 통과시킨 필터 번호</td></tr>
+<tr><td class="m">FINIT · FBM · FSC · FFA · FACT</td><td>Filter Init · Filter Bank Mode · Filter Scale Configuration · Filter FIFO Assignment · Filter Active</td><td>필터 설정 모드 · 마스크/리스트 · 16/32비트 · FIFO 0/1 배정 · 필터 켜기</td></tr>
+<tr><td class="m">TEC · REC · LEC</td><td>Transmit / Receive Error Counter · Last Error Code</td><td>송신 / 수신 오류 카운터 · 마지막 오류 종류</td></tr>
+<tr><td class="m">EWGF · EPVF · BOFF</td><td>Error Warning Flag · Error Passive Flag · Bus-Off flag</td><td>오류 경고 · 오류 수동 · 버스 오프</td></tr>
+<tr><td class="m">SCE</td><td>Status Change Error</td><td>상태 변화·오류 인터럽트 벡터 이름</td></tr>
+<tr><td class="m">PCLK1 · APB</td><td>APB1 peripheral clock · Advanced Peripheral Bus</td><td>주변장치 버스 1의 클럭 · 주변장치용 버스</td></tr>
+<tr><td class="m">NVIC · IRQ · ISR</td><td>Nested Vectored Interrupt Controller · Interrupt Request · Interrupt Service Routine</td><td>인터럽트 제어기 · 인터럽트 요청(번호) · 인터럽트 처리 함수</td></tr>
+<tr><td class="m">SRAM · USB</td><td>Static RAM · Universal Serial Bus</td><td>정적 메모리 · 범용 직렬 버스(CAN과 전용 SRAM을 공유)</td></tr>
+<tr><td class="m">FIFO</td><td>First-In First-Out</td><td>먼저 들어온 것이 먼저 나가는 버퍼</td></tr>
+<tr><td class="m">MCU · CPU</td><td>Microcontroller Unit · Central Processing Unit</td><td>마이크로컨트롤러 칩 · 그 안의 프로세서 코어</td></tr>
+<tr><td class="m">DMA</td><td>Direct Memory Access</td><td>CPU를 거치지 않는 메모리 전송(bxCAN에는 문서상 없음)</td></tr>
+<tr><td class="m">…IE (TMEIE, FMPIE0, ERRIE 등)</td><td>… Interrupt Enable</td><td>IER의 허용 비트. 해당 플래그를 인터럽트로 내보낼지 고른다</td></tr>
+<tr><td class="m">ERRI · WKUI · SLAKI</td><td>Error Interrupt · Wakeup Interrupt · Sleep Acknowledge Interrupt</td><td>MSR의 인터럽트 원인 플래그</td></tr>
+<tr><td class="m">CODE · LOW</td><td>mailbox code · lowest priority flag</td><td>다음 빈 송신 메일박스 번호 · 가장 낮은 우선순위 메일박스 표시</td></tr>
+<tr><td class="m">FMR · FM1R · FS1R · FFA1R · FA1R</td><td>Filter Master / Mode / Scale / FIFO Assignment / Activation Register</td><td>필터 설정 레지스터들</td></tr>
+<tr><td class="m">DBF · CANEN</td><td>Debug Freeze · CAN clock Enable</td><td>디버그 정지 시 CAN도 멈춤 · RCC의 CAN 클럭 게이트</td></tr>
+<tr><td class="m">TIME · TGT</td><td>time stamp · Transmit Global Time</td><td>시간표시 필드(F103에서는 정오표 때문에 사용 불가)</td></tr>
+<tr><td class="m">LQFP64</td><td>Low-profile Quad Flat Package, 64 pins</td><td>STM32F103RB의 64핀 패키지</td></tr>
+<tr><td class="m">AF</td><td>Alternate Function</td><td>핀을 GPIO 대신 주변장치가 구동하는 기능</td></tr>
+<tr><td class="m">rc_w1 · rs</td><td>read / clear by writing 1 · read / set</td><td>1을 쓰면 지워지는 비트 · 소프트웨어가 1로 세우는 비트</td></tr>
+</table></div></div></details>
+
+<!-- ============================================================ 1 -->
+<section id="s1">
+<h2>1. 문제 정의: bxCAN이 없으면 CPU가 무엇을 직접 해야 하는가</h2>
+<p>자동차나 공장 설비에는 제어기가 수십 개 있다. 이들을 일대일로 다 잇는 대신 선 한 쌍을 함께 쓰게 하려면 세 가지가 필요하다. 첫째, 누구나 아무 때나 말을 걸 수 있어야 한다(마스터가 따로 없음). 둘째, 둘 이상이 동시에 말을 시작해도 중요한 메시지가 <b>깨지지 않고</b> 먼저 나가야 한다. 셋째, 고장 난 한 노드가 버스 전체를 망가뜨리지 못해야 한다. CAN 제어기가 없다면 CPU가 GPIO 핀 하나로 이 모든 것을 비트 단위로 처리해야 한다.</p>
+<div class="tablewrap"><table>
+<tr><th>풀어야 할 문제</th><th>bxCAN이 없다면 CPU가 하는 일</th><th>bxCAN이 대신하는 소자</th></tr>
+<tr><td>정확한 비트 시간과 박자 맞추기</td><td>비트마다 정해진 지점에서 핀을 읽고, 상대 클럭과 어긋나면 기다리는 시간을 조금씩 고친다</td><td>분주기(BRP) + 시간 양자 카운터(SYNC_SEG/BS1/BS2) + 재동기 논리(SJW)</td></tr>
+<tr><td>동시 송신 정리(중재)</td><td>ID 비트를 하나 낼 때마다 버스를 다시 읽어, 내가 1을 냈는데 0이 보이면 즉시 송신을 멈춘다</td><td>송신 비트와 버스 비트의 비교기 → ALST 플래그</td></tr>
+<tr><td>프레임 조립과 검사</td><td>ID·DLC·데이터를 비트열로 펴고 CRC를 계산하고, 받는 쪽은 다시 계산해 비교한다</td><td>CAN 2.0B 액티브 코어(프레임 시프트 레지스터, CRC, 오류 검출)</td></tr>
+<tr><td>필요한 메시지만 받기</td><td>버스의 모든 프레임마다 인터럽트를 받아 ID를 소프트웨어로 비교한다</td><td>수용 필터 14뱅크(마스크 비교기, 리스트 비교기)</td></tr>
+<tr><td>CPU가 바쁜 동안 보관</td><td>프레임이 끝나기 전에 꺼내 가야 한다</td><td>송신 메일박스 3개, 수신 FIFO 2개 × 3칸</td></tr>
+<tr><td>고장 노드 격리</td><td>오류 횟수를 세어 스스로 송신을 줄이거나 멈춘다</td><td>TEC·REC 카운터와 문턱값 비교기(경고 96, 수동 127, 버스 오프 255)</td></tr>
+</table></div>
+<p>500 kbit/s라면 한 비트가 2 µs이고, 64 MHz CPU로는 128 클럭이다. 비트뱅잉으로 중재까지 하려면 비트마다 CPU가 정확한 지점에서 핀을 읽고 판단해야 하므로 다른 일을 할 수 없다. bxCAN을 쓰면 CPU는 <b>메시지 하나당 한 번</b> 메일박스를 채우거나 FIFO 출력 메일박스를 읽기만 하면 된다. RM0008 24.1은 bxCAN이 "a high number of incoming messages efficiently with a minimum CPU load"를 위해 설계되었다고 적는다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=653">p.653</a>).</p>
+</section>
+
+<!-- ============================================================ 2 -->
+<section id="s2">
+<h2>2. 일반 개념</h2>
+<h3>노드, 제어기, 트랜시버</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig222_p655.png"><img src="img/RM0008_Fig222_p655.png" alt="CAN 네트워크 구성" width="1157" height="464" loading="lazy"></a></div>
+<figcaption>CAN 노드 하나는 MCU(Microcontroller Unit, 마이크로컨트롤러) 안의 CAN 제어기(bxCAN)와 칩 밖의 CAN 트랜시버로 이루어진다. 제어기와 트랜시버 사이는 디지털 선 두 가닥(CAN Tx, CAN Rx)이고, 트랜시버와 버스 사이는 CAN High·CAN Low 두 가닥이다. 모든 노드가 같은 버스에 매달린다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=655">RM0008 Rev 21, p.655</a>, Figure 222. CAN network topology</span></figcaption></figure>
+<p>그림에서 보듯 MCU는 버스에 직접 붙지 않는다. 칩의 CAN_TX 핀은 트랜시버에 "이번 비트를 무엇으로 낼지"를 알려 주고, CAN_RX 핀은 트랜시버가 읽은 버스 상태를 돌려받는다. 송신 중에도 CAN_RX로 버스를 계속 읽는다는 점이 중요하다. 내가 낸 비트와 버스에 실제로 나타난 비트를 비교할 수 있어야 중재와 오류 검출이 된다.</p>
+
+<h3>우성과 열성: 선 하나가 AND 게이트가 된다</h3>
+<p>CAN 버스의 두 상태는 <b>우성(dominant)</b>과 <b>열성(recessive)</b>이다. 누군가 우성을 내면 버스는 우성이 되고, 모두가 열성일 때만 열성이 된다. 우성 = 0, 열성 = 1로 놓으면 버스 값은 모든 노드 출력의 AND이다. I2C의 오픈드레인 선과 같은 와이어드 AND이다(<a href="../04_I2C_Communication/04_I2C_Communication%20개념설명.html#s2">04_I2C 2장</a>).</p>
+<p>RM0008도 이 대응을 쓴다. 필터 레지스터 비트 설명은 "0: Dominant bit is expected, 1: Recessive bit is expected"이고(<a href="../../Docs/RM0008_Reference_manual.pdf#page=694">p.694</a>), 초기화 모드에서 "the status of the CAN bus output CANTX is recessive (high)"라고 적는다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=657">p.657</a>). 즉 칩의 CAN_TX 핀에서 0(Low)이 우성, 1(High)이 열성이다.</p>
+<figure class="diag"><svg viewBox="0 0 680 220" role="img" aria-label="CAN 버스의 와이어드 AND 등가 모델">
+<rect class="bx sel" x="10" y="22" width="120" height="34" rx="4"/><text class="tc" x="70" y="44">노드 1 TX = 1</text>
+<rect class="bx sel" x="10" y="72" width="120" height="34" rx="4"/><text class="tc" x="70" y="94">노드 2 TX = 0</text>
+<rect class="bx sel" x="10" y="122" width="120" height="34" rx="4"/><text class="tc" x="70" y="144">노드 3 TX = 1</text>
+<polyline class="w" points="130,39 200,39 200,72 240,72"/>
+<line class="w" x1="130" y1="89" x2="240" y2="89"/>
+<polyline class="w" points="130,139 200,139 200,106 240,106"/>
+<path class="bx hw" d="M240,60 h30 a29,29 0 0 1 0,58 h-30 z"/><text class="tc" x="262" y="94">AND</text>
+<line class="w" x1="299" y1="89" x2="340" y2="89"/>
+<rect class="bx hw" x="340" y="66" width="150" height="46" rx="4"/><text class="tc" x="415" y="86">버스 = 0 (우성)</text><text class="sc" x="415" y="102">모든 노드의 RX로</text>
+<line class="w" x1="490" y1="89" x2="530" y2="89"/><polygon class="ah" points="536,89 528,84 528,94"/>
+<text class="t" x="542" y="86">각 노드 RX</text><text class="s" x="542" y="102">(송신 중에도 읽음)</text>
+<line class="wm" x1="415" y1="112" x2="415" y2="150"/>
+<rect class="bx flg" x="250" y="150" width="330" height="56" rx="4"/><text class="tc" x="415" y="172">비교기: 내가 낸 비트 ≠ 버스 비트?</text><text class="sc" x="415" y="190">중재 구간이면 중재 패배, 그 밖이면 비트 오류</text>
+</svg><figcaption><span class="eqv">등가 모델</span> 노드 1과 3은 열성(1)을 냈지만 노드 2가 우성(0)을 냈으므로 버스는 0이다. 실제 버스는 트랜시버가 만드는 차동 전압이고 AND 게이트가 있는 것은 아니다. 하지만 논리적으로는 "0이 늘 이긴다"는 AND와 같다. 각 노드는 자기 출력과 버스 값을 비교해, 1을 냈는데 0이 보이면 "누군가 더 우선인 메시지를 보낸다"고 판단한다. RM0008은 이 비교 결과를 송신 메일박스의 ALST(Arbitration lost) 플래그와 LEC의 Bit recessive / Bit dominant Error 코드로 보여 준다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=677">p.677</a>, <a href="../../Docs/RM0008_Reference_manual.pdf#page=682">p.682</a>).</figcaption></figure>
+
+<h3>ID가 곧 우선순위: 깨지지 않는 중재</h3>
+<p>CAN 메시지에는 받는 노드의 주소가 없다. 대신 <b>내용을 나타내는 ID</b>가 있고 모든 노드가 모든 메시지를 듣는다. RM0008 24.7.4는 "the identifier of a message is not associated with the address of a node but related to the content of the message"라고 적는다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=664">p.664</a>).</p>
+<p>둘 이상이 동시에 SOF(Start Of Frame)를 내면 ID를 최상위 비트부터 한 비트씩 낸다(비트 순서는 일반 개념이며 Figure 235의 필드 순서와 맞는다). 서로 같은 비트를 내는 동안은 아무 일도 없다. 처음으로 다른 비트에서 1(열성)을 낸 쪽은 버스에서 0을 보고 송신을 멈추고 수신자로 바뀐다(일반 개념. RM0008은 결과만 ALST로 보여 준다). 0을 낸 쪽은 아무것도 모른 채 계속 보낸다. 그래서 <b>ID 값이 작을수록 이긴다</b>. 이긴 메시지는 한 비트도 손상되지 않았으므로 다시 보낼 필요가 없다. RM0008은 송신 우선순위를 설명하며 "The message with the lowest identifier value has the highest priority according to the arbitration of the CAN protocol"이라고 적는다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=661">p.661</a>). 진 쪽은 버스가 다시 비면 자동으로 재도전한다(5장 NART). 두 노드의 중재는 7장 시나리오 ②에서 직접 실험한다.</p>
+
+<h3>프레임의 모양</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig235_p672.png"><img src="img/RM0008_Fig235_p672.png" alt="CAN 프레임 종류" width="1157" height="1280" loading="lazy"></a></div>
+<figcaption>위에서부터 표준 ID 데이터 프레임(44 + 8N비트), 확장 ID 데이터 프레임(64 + 8N비트), 원격 프레임(44비트), 오류 프레임, 프레임 간 간격(Inter-Frame Space: 간헐 3비트 + 버스 유휴), 과부하 프레임이다. N은 데이터 바이트 수(0~8)이다. 원격 프레임은 데이터 없이 "그 ID의 데이터를 보내 달라"고 요청한다. 오류 플래그는 오류 능동 노드면 우성 6비트, 아니면 열성 6비트이다(그림 주석).<br>
+<b>문서 표기 오류</b>: 표준 데이터 프레임과 원격 프레임의 중재 필드(Arbitration Field) 길이가 "32"로 적혀 있다. 그러나 같은 그림의 합계 44 + 8N = SOF 1 + 중재 ? + 제어 6 + 데이터 8N + CRC 16 + ACK 2 + EOF 7에서 중재 필드는 12비트(ID 11 + RTR 1)여야 한다. 확장 프레임의 중재 필드도 "32"가 두 번 적혀 있는데, 합계 64 + 8N에 맞는 것은 두 부분을 합친 32비트이다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=672">RM0008 Rev 21, p.672</a>, Figure 235. CAN frames</span></figcaption></figure>
+<p>그림에서 SOF는 우성 1비트이고 EOF는 열성 7비트이다. ACK 필드(2비트) 안의 ACK 슬롯은 <b>수신자들이</b> 채운다. 송신자는 이 자리에 열성을 내고, 프레임을 올바르게 받은 노드가 하나라도 있으면 우성으로 덮어쓴다(일반 개념). RM0008은 침묵 모드를 설명하며 bxCAN이 보내야 하는 우성 비트로 "ACK bit, overload flag, active error flag"를 들고, 루프백 모드에서는 "no dominant bit sampled in the acknowledge slot"인 승인 오류를 무시한다고 적는다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=658">p.658~659</a>). 버스에 나 혼자뿐이면 ACK가 오지 않아 송신이 계속 실패한다는 뜻이다(Q10).</p>
+
+<h3>오류 감시와 고장 격리</h3>
+<p>모든 노드는 송신 오류 카운터 TEC(Transmit Error Counter)와 수신 오류 카운터 REC(Receive Error Counter)를 가진다. 오류가 나면 크게 늘고 성공하면 조금 준다. 카운터가 커지면 노드는 스스로 목소리를 낮춘다(오류 능동 → 오류 수동). TEC가 255를 넘으면 버스에서 아예 빠진다(버스 오프). 이렇게 하면 고장 난 노드가 오류 프레임을 계속 내서 버스를 마비시키는 일을 막는다. F103에서의 문턱값과 복귀 조건은 6장 ③에서 RM0008 그림으로 본다.</p>
+
+<div class="box">
+  <div class="label">일반 개념 (네 문서에는 없거나 일부만 있는 CAN 상식)</div>
+  <ul>
+    <li><b>차동 전압과 종단</b>: 트랜시버는 우성일 때 CANH와 CANL 사이에 전압차를 만들고, 열성일 때는 두 선을 같은 전위로 놓아 둔다. 버스 양 끝에는 종단 저항을 둔다. 실제 버스에 연결하려면 칩 밖에 CAN 트랜시버가 반드시 필요하다. 전압값과 저항값은 이 네 문서에 없다.</li>
+    <li><b>비트 스터핑</b>: 같은 값이 5비트 이어지면 송신자가 반대 값 1비트를 끼워 넣고 수신자가 빼낸다. 재동기용 엣지를 보장하기 위해서이다. RM0008에는 규칙이 없고, LEC의 "Stuff Error" 코드로만 존재가 드러난다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=682">p.682</a>). Figure 235의 비트 수는 스터핑 비트를 뺀 값이다.</li>
+    <li><b>CRC</b>: CRC 필드 16비트는 15비트 CRC와 구분자 1비트이다. 다항식은 RM0008에 없다.</li>
+    <li><b>재동기 엣지 방향</b>: 일반적인 CAN 설명에서는 열성→우성 엣지로 박자를 다시 맞춘다. RM0008 24.7.7은 유효 엣지를 "from dominant to recessive bus level"로 적어 방향이 반대이다(4장). 이 개념설명은 문서 문장을 그대로 옮기되, 방향 차이는 확인되지 않은 문서 오류 후보로 남긴다.</li>
+  </ul>
+</div>
+</section>
+
+<!-- ============================================================ 3 -->
+<section id="s3">
+<h2>3. 내부 구현 블록도</h2>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig223_p656.png"><img src="img/RM0008_Fig223_p656.png" alt="bxCAN 블록도 (연결형 라인의 이중 CAN)" width="1314" height="1397" loading="lazy"></a></div>
+<figcaption>RM0008 Rev 21에는 F103 같은 단일 CAN 칩용 블록도가 따로 없고, 이 그림은 연결형 라인(F105/F107)의 이중 CAN 블록도이다. STM32F103RB에는 위쪽 <b>CAN1 (Master) with 512 bytes SRAM</b> 부분만 있다고 읽어야 한다. CAN2(Slave)와 Slave 메일박스·FIFO는 없고, 필터는 0~27이 아니라 0~13의 14뱅크이며, 그림 아래 주석의 CAN2SB 설정은 해당되지 않는다(24.2, 24.3.4, CAN_FM1R 등의 "Bits 27:14 are available in connectivity line devices only" 주석). 왼쪽 회색 칸들이 제어·상태·설정 레지스터, 가운데가 CAN 2.0B 액티브 코어, 오른쪽이 송신 메일박스·송신 스케줄러, 수용 필터, 수신 FIFO 2개이다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=656">RM0008 Rev 21, p.656</a>, Figure 223. Dual CAN block diagram (connectivity devices)</span></figcaption></figure>
+<p>F103에서 bxCAN 블록이 칩 안 어디에 있는지는 DS5319 Figure 1(<a href="../../Docs/Datasheet_stm32f103.pdf#page=11">p.11</a>)에서 확인할 수 있다. APB1 버스에 bxCAN과 USB 2.0 FS가 나란히 있고, 그 사이에 "SRAM 512B"가 있으며, 핀 이름이 USBDP/CAN_TX, USBDM/CAN_RX로 함께 적혀 있다. 이 공유가 8장의 가장 큰 제약이 된다.</p>
+
+<p>신호를 송신 경로와 수신 경로로 나눠 따라간다.</p>
+<ol class="flow">
+  <li><span class="n">1</span><div class="tx"><b>송신 메일박스 3개에 메시지를 넣는다</b><span>빈 메일박스(TME = 1)를 골라 ID, DLC, 데이터를 쓰고 TXRQ = 1로 송신을 요청한다. 요청 뒤에는 메일박스에 쓸 수 없다(24.7.1, <a href="../../Docs/RM0008_Reference_manual.pdf#page=660">p.660</a>).</span></div></li>
+  <li><span class="n">2</span><div class="tx"><b>송신 스케줄러가 우선순위가 가장 높은 메일박스를 고른다</b><span>기본은 ID가 가장 작은 것, ID가 같으면 번호가 작은 메일박스이다. TXFP = 1이면 요청한 순서(FIFO)로 바뀐다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=661">p.661</a>).</span></div></li>
+  <li><span class="n">3</span><div class="tx"><b>CAN 코어가 버스가 비면 프레임을 비트열로 내보낸다 → CAN_TX 핀</b><span>코어는 "handles the transmission and the reception of CAN messages fully autonomously"이다(24.3.1, <a href="../../Docs/RM0008_Reference_manual.pdf#page=655">p.655</a>). 중재에서 지면 ALST, 오류면 TERR, 성공하면 RQCP·TXOK가 TSR에 선다.</span></div></li>
+  <li><span class="n">4</span><div class="tx"><b>CAN_RX 핀 → 비트 타이밍 로직 → 코어 수신</b><span>비트 타이밍 로직이 tq 단위로 샘플 지점을 정하고 엣지에서 재동기한다(4장). 코어는 프레임을 끝까지 받고 오류가 없으면 "유효 메시지"로 본다(24.7.3).</span></div></li>
+  <li><span class="n">5</span><div class="tx"><b>수용 필터 → FIFO 0 또는 FIFO 1 → 출력 메일박스</b><span>ID가 어떤 필터와 맞으면 그 필터에 배정된 FIFO에 저장되고 FMI(통과시킨 필터 번호)가 함께 기록된다. 맞는 필터가 없으면 "discarded by hardware without disturbing the software"이다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=667">p.667</a>). CPU는 FIFO의 가장 오래된 메시지 하나만 출력 메일박스로 본다.</span></div></li>
+</ol>
+
+<figure class="src"><div class="img"><a href="img/RM0008_Fig237_p684.png"><img src="img/RM0008_Fig237_p684.png" alt="송수신 메일박스 레지스터" width="1157" height="382" loading="lazy"></a></div>
+<figcaption>메일박스는 레지스터 4개(ID, 길이·시간표시, 데이터 하위 4바이트, 데이터 상위 4바이트)의 묶음이다. 송신은 3개가 따로 보이고, 수신은 FIFO마다 출력 메일박스 하나만 보이며 그 뒤에 3단 FIFO가 숨어 있다("access being offered only to the oldest received message"). 그림의 CAN_RL0R·CAN_RH0R은 본문과 Table 180의 이름 CAN_RDL0R·CAN_RDH0R과 다르게 적혀 있는 문서 표기 차이이다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=684">RM0008 Rev 21, p.684</a>, Figure 237. RX and TX mailboxes</span></figcaption></figure>
+
+<figure class="diag"><svg viewBox="0 0 680 340" role="img" aria-label="bxCAN 송수신 데이터 경로의 디지털논리 등가">
+<text class="t" x="10" y="18" font-weight="700">송신</text>
+<rect class="bx hw" x="10" y="28" width="100" height="30" rx="4"/><text class="tc" x="60" y="48">메일박스 0</text>
+<rect class="bx hw" x="10" y="64" width="100" height="30" rx="4"/><text class="tc" x="60" y="84">메일박스 1</text>
+<rect class="bx hw" x="10" y="100" width="100" height="30" rx="4"/><text class="tc" x="60" y="120">메일박스 2</text>
+<line class="w" x1="110" y1="43" x2="130" y2="70"/><line class="w" x1="110" y1="79" x2="130" y2="79"/><line class="w" x1="110" y1="115" x2="130" y2="88"/>
+<rect class="bx sel" x="130" y="46" width="132" height="66" rx="4"/><text class="tc" x="196" y="68">우선순위 선택기</text><text class="sc" x="196" y="86">최소 ID 우선</text><text class="sc" x="196" y="102">TXFP=1: 요청 순</text>
+<line class="w" x1="262" y1="79" x2="284" y2="79"/>
+<rect class="bx hw" x="284" y="52" width="124" height="54" rx="4"/><text class="tc" x="346" y="74">CAN 코어 송신</text><text class="sc" x="346" y="92">프레임·CRC 생성</text>
+<line class="w" x1="408" y1="79" x2="430" y2="79"/>
+<rect class="bx sel" x="430" y="52" width="100" height="54" rx="4"/><text class="tc" x="480" y="74">SILM 게이트</text><text class="sc" x="480" y="92">1이면 열성만</text>
+<line class="w" x1="530" y1="79" x2="580" y2="79"/><polygon class="ah" points="586,79 578,74 578,84"/><text class="t" x="592" y="83">CAN_TX</text>
+<rect class="bx flg" x="284" y="114" width="124" height="26" rx="4"/><text class="tc" x="346" y="132">TSR 플래그</text>
+<polyline class="dash" points="480,106 480,164 346,164 346,214"/><polygon class="ahm" points="346,220 341,212 351,212"/>
+<text class="o" x="360" y="160">LBKM=1: 내부 되먹임</text>
+<line class="dash" x1="10" y1="178" x2="280" y2="178"/>
+<text class="t" x="10" y="200" font-weight="700">수신</text>
+<text class="t" x="10" y="250">CAN_RX</text><line class="w" x1="64" y1="246" x2="84" y2="246"/>
+<rect class="bx sel" x="84" y="222" width="96" height="48" rx="4"/><text class="tc" x="132" y="242">RX 선택</text><text class="sc" x="132" y="258">LBKM=1: 핀 무시</text>
+<line class="w" x1="180" y1="246" x2="200" y2="246"/>
+<rect class="bx hw" x="200" y="222" width="94" height="48" rx="4"/><text class="tc" x="247" y="242">비트 타이밍</text><text class="sc" x="247" y="258">tq 카운터</text>
+<line class="w" x1="294" y1="246" x2="304" y2="246"/>
+<rect class="bx hw" x="304" y="222" width="90" height="48" rx="4"/><text class="tc" x="349" y="242">코어 수신</text><text class="sc" x="349" y="258">오류 검출</text>
+<line class="w" x1="394" y1="246" x2="410" y2="246"/>
+<rect class="bx sel" x="410" y="208" width="104" height="76" rx="4"/><text class="tc" x="462" y="232">수용 필터</text><text class="sc" x="462" y="250">뱅크 0~13</text><text class="sc" x="462" y="266">비교기 배열</text>
+<line class="w" x1="514" y1="232" x2="540" y2="214"/><line class="w" x1="514" y1="262" x2="540" y2="280"/>
+<rect class="bx hw" x="540" y="194" width="130" height="38" rx="4"/><text class="tc" x="605" y="218">FIFO 0 (3칸)</text>
+<rect class="bx hw" x="540" y="262" width="130" height="38" rx="4"/><text class="tc" x="605" y="286">FIFO 1 (3칸)</text>
+<rect class="bx flg" x="540" y="306" width="130" height="26" rx="4"/><text class="tc" x="605" y="324">FMP·FULL·FOVR</text>
+<line class="wm" x1="462" y1="284" x2="462" y2="306"/><text class="s" x="404" y="324">불일치 → 버림</text>
+</svg><figcaption><span class="eqv">등가 모델</span> Figure 223의 CAN1 부분을 디지털논리 소자로 다시 그렸다. 송신 쪽은 레지스터 묶음 3개와 우선순위 선택기(최솟값 비교기 또는 요청 순서 큐), 수신 쪽은 비교기 배열(필터)과 3칸 FIFO 두 개이다. 시험 모드 스위치(SILM, LBKM)의 위치는 RM0008 Figure 225~227을 따랐다(5장). 코어 내부의 시프트 레지스터·CRC 회로 구성은 문서에 없다.</figcaption></figure>
+
+<div class="tablewrap"><table>
+<tr><th>Figure 223의 블록</th><th>디지털논리 등가</th><th>근거</th></tr>
+<tr><td>Tx Mailboxes 0~2</td><td>레지스터 4개짜리 묶음 3개. TME = 1일 때만 쓰기 가능</td><td>RM0008 24.7.5, 24.9.3</td></tr>
+<tr><td>Transmission Scheduler</td><td>ID 최솟값 선택기(동률이면 낮은 번호) 또는 요청 순서 FIFO <span class="eqv">등가 모델</span></td><td>RM0008 24.7.1</td></tr>
+<tr><td>CAN 2.0B Active Core</td><td>프레임 시프트 레지스터, CRC, 비트 비교기, 오류 카운터(내부 구성은 문서에 없음)</td><td>RM0008 24.3.1, 24.7.6</td></tr>
+<tr><td>Bit Timing (레지스터 칸)</td><td>분주기(BRP+1) + tq 카운터(1 + TS1+1 + TS2+1) + 재동기 논리</td><td>RM0008 24.7.7, Figure 234</td></tr>
+<tr><td>Acceptance Filters</td><td>뱅크마다 32비트 레지스터 2개: (ID XOR 필터) AND 마스크 = 0 비교기, 또는 동등 비교기 2개 <span class="eqv">등가 모델</span></td><td>RM0008 24.7.4, Figure 230</td></tr>
+<tr><td>Receive FIFO 0 / 1</td><td>3단 FIFO + 메시지 수 카운터(FMP) + 넘침 플래그</td><td>RM0008 24.7.3, Figure 229</td></tr>
+<tr><td>Interrupt Enable / 상태 칸</td><td>플래그 AND 허용 비트, 벡터 4개로 모으는 OR 트리</td><td>RM0008 24.8, Figure 236</td></tr>
+<tr><td>Memory Access Controller, 512 bytes SRAM</td><td>메일박스·FIFO 내용이 놓이는 전용 SRAM(USB와 공유)</td><td>RM0008 24.2 Note, p.654</td></tr>
+</table></div>
+
+<h3>핀, 클럭, 주소</h3>
+<div class="tablewrap"><table>
+<tr><th>항목</th><th>STM32F103RB(LQFP64)</th><th>근거</th></tr>
+<tr><td>기본 핀</td><td class="m">CAN_RX = PA11, CAN_TX = PA12 (CAN_REMAP = 00)</td><td>RM0008 Table 34, 9.4.2 (<a href="../../Docs/RM0008_Reference_manual.pdf#page=176">p.176</a>, <a href="../../Docs/RM0008_Reference_manual.pdf#page=185">p.185</a>)</td></tr>
+<tr><td>리맵 핀</td><td class="m">CAN_RX = PB8, CAN_TX = PB9 (CAN_REMAP = 10)</td><td>같은 곳. 01은 "Not used"</td></tr>
+<tr><td>PD0/PD1 리맵(11)</td><td>64핀 패키지에서는 쓸 수 없다. "For port D, remapping is not possible in devices delivered in 36-, 48- and 64-pin packages"</td><td>RM0008 9.3.3 (<a href="../../Docs/RM0008_Reference_manual.pdf#page=176">p.176</a>)</td></tr>
+<tr><td>핀 설정</td><td>CAN_TX: 대체 기능 푸시풀 출력 · CAN_RX: 플로팅 입력 또는 풀업 입력</td><td>RM0008 Table 28 (<a href="../../Docs/RM0008_Reference_manual.pdf#page=168">p.168</a>)</td></tr>
+<tr><td>같은 핀의 다른 기능</td><td class="m">PA11: USART1_CTS / USBDM / TIM1_CH4 · PA12: USART1_RTS / USBDP / TIM1_ETR</td><td>DS5319 Table 5 (<a href="../../Docs/Datasheet_stm32f103.pdf#page=31">p.31</a>)</td></tr>
+<tr><td>클럭</td><td>APB1(PCLK1, 최대 36 MHz). 클럭 게이트는 RCC_APB1ENR의 CANEN(비트 25)</td><td>RM0008 7.2 (<a href="../../Docs/RM0008_Reference_manual.pdf#page=93">p.93</a>), 7.3.8 (<a href="../../Docs/RM0008_Reference_manual.pdf#page=115">p.115</a>)</td></tr>
+<tr><td>레지스터 주소</td><td class="m">bxCAN1: 0x4000 6400 ~ 0x4000 67FF · 공유 USB/CAN SRAM 512 B: 0x4000 6000 ~ 0x4000 63FF</td><td>RM0008 Table 3 (<a href="../../Docs/RM0008_Reference_manual.pdf#page=52">p.52</a>), DS5319 Figure 11 (<a href="../../Docs/Datasheet_stm32f103.pdf#page=34">p.34</a>)</td></tr>
+<tr><td>규모</td><td>CAN 2.0A·B 액티브, 최대 1 Mbit/s, 송신 메일박스 3, 수신 FIFO 2 × 3단, 필터 뱅크 14</td><td>DS5319 2.3.19 (<a href="../../Docs/Datasheet_stm32f103.pdf#page=19">p.19</a>), RM0008 24.2</td></tr>
+</table></div>
+</section>
+
+<!-- ============================================================ 4 -->
+<section id="s4">
+<h2>4. 클럭 경로와 시간 계산</h2>
+<p>CAN에는 클럭 선이 없다. 모든 노드가 같은 비트 시간을 약속하고, 각자 자기 클럭으로 그 시간을 잰다. bxCAN은 APB1 클럭을 BRP로 나누어 <b>시간 양자 tq</b>를 만들고, 한 비트를 tq 몇 개로 쪼개 세 구간으로 나눈다.</p>
+<figure class="diag"><svg viewBox="0 0 680 190" role="img" aria-label="bxCAN 비트 타이밍 클럭 경로">
+<rect class="bx" x="8" y="30" width="96" height="44" rx="4"/><text class="tc" x="56" y="50">PCLK1</text><text class="sc" x="56" y="66">최대 36 MHz</text>
+<line class="w" x1="104" y1="52" x2="130" y2="52"/>
+<rect class="bx sel" x="130" y="24" width="124" height="56" rx="4"/><text class="tc" x="192" y="46">÷ (BRP+1)</text><text class="sc" x="192" y="64">BRP[9:0]: 1~1024</text>
+<line class="w" x1="254" y1="52" x2="280" y2="52"/>
+<rect class="bx hw" x="280" y="30" width="80" height="44" rx="4"/><text class="tc" x="320" y="50">tq</text><text class="sc" x="320" y="66">시간 양자</text>
+<line class="w" x1="360" y1="52" x2="386" y2="52"/>
+<rect class="bx hw" x="386" y="24" width="284" height="56" rx="4"/><text class="tc" x="528" y="46">비트 시간 카운터 (tq 단위)</text><text class="sc" x="528" y="64">1 + (TS1+1) + (TS2+1) tq</text>
+<rect class="bx" x="386" y="104" width="30" height="34"/><text class="sc" x="401" y="125">S</text>
+<rect class="bx hw" x="416" y="104" width="160" height="34"/><text class="tc" x="496" y="126">BS1 (1~16 tq)</text>
+<rect class="bx flg" x="576" y="104" width="94" height="34"/><text class="tc" x="623" y="126">BS2 (1~8)</text>
+<line class="wc" x1="576" y1="96" x2="576" y2="150"/><text class="o" x="500" y="164">샘플 지점</text>
+<line class="wc" x1="670" y1="96" x2="670" y2="150"/><text class="o" x="604" y="182">송신 지점</text>
+<text class="s" x="8" y="125">S = SYNC_SEG (1 tq)</text>
+</svg><figcaption><span class="eqv">등가 모델</span> 분주기 뒤에 tq를 세는 카운터가 있고, 카운터 값이 BS1 끝에 이르면 버스를 샘플링하며(샘플 지점), BS2 끝에서 다음 비트를 낸다(송신 지점). 카운터 구현은 문서에 없고 구간 정의와 식만 문서에 있다.</figcaption></figure>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig234_p671.png"><img src="img/RM0008_Fig234_p671.png" alt="비트 타이밍" width="1155" height="660" loading="lazy"></a></div>
+<figcaption>한 비트(Nominal Bit Time)는 SYNC_SEG(1 tq) + BS1 + BS2이다. BS1은 CAN 표준의 PROP_SEG와 PHASE_SEG1을 합친 것, BS2는 PHASE_SEG2이다(24.7.7). 그림 아래 식이 이 개념설명 계산의 기준이다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=671">RM0008 Rev 21, p.671</a>, Figure 234. Bit timing</span></figcaption></figure>
+<div class="eq">tq      = (BRP[9:0] + 1) × t_PCLK          t_PCLK = APB1 클럭 주기
+t_BS1   = tq × (TS1[3:0] + 1)              1 ~ 16 tq
+t_BS2   = tq × (TS2[2:0] + 1)              1 ~ 8 tq
+비트 시간 = 1 × tq + t_BS1 + t_BS2           → 3 ~ 25 tq
+보레이트  = 1 / 비트 시간                      (RM0008 Figure 234, p.671; CAN_BTR p.683~684)
+샘플 지점 = (1 + TS1 + 1) / (1 + TS1 + 1 + TS2 + 1)     ← Figure 234의 구간 위치에서 유도 <span class="eqv">등가 모델</span></div>
+<p>레지스터에 쓰는 값(필드)과 실제 tq 수는 1씩 다르다. 예제들은 "Prescaler 4, BS1 13 tq, BS2 2 tq"처럼 tq 수로 말하는데, 이는 필드 BRP = 3, TS1 = 12, TS2 = 1이다. BTR은 초기화 모드에서만 쓸 수 있다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=683">p.683</a>). RM0008 24.7.7 본문은 같은 내용을 "only possible while the device is in Standby mode"라고 적는데, 24.9.1과 CAN_BTR 설명이 모두 initialization mode라고 하므로 Standby는 표기 오류로 보인다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=671">p.671</a>, <a href="../../Docs/RM0008_Reference_manual.pdf#page=674">p.674</a>).</p>
+
+<h3>계산 예</h3>
+<div class="tablewrap"><table>
+<tr><th>PCLK1</th><th>목표</th><th>분주 (BRP 필드)</th><th>tq</th><th>BS1 / BS2 (TS1 / TS2 필드)</th><th>tq 수</th><th>샘플 지점</th></tr>
+<tr><td>32 MHz</td><td>500 kbit/s</td><td class="m">÷4 (3)</td><td class="m">125 ns</td><td class="m">13 / 2 (12 / 1)</td><td class="m">16</td><td class="m">87.5 %</td></tr>
+<tr><td>32 MHz</td><td>125 kbit/s</td><td class="m">÷16 (15)</td><td class="m">500 ns</td><td class="m">13 / 2 (12 / 1)</td><td class="m">16</td><td class="m">87.5 %</td></tr>
+<tr><td>36 MHz</td><td>500 kbit/s</td><td class="m">÷4 (3)</td><td class="m">111.1 ns</td><td class="m">15 / 2 (14 / 1)</td><td class="m">18</td><td class="m">88.9 %</td></tr>
+<tr><td>36 MHz</td><td>1 Mbit/s</td><td class="m">÷3 (2)</td><td class="m">83.3 ns</td><td class="m">9 / 2 (8 / 1)</td><td class="m">12</td><td class="m">83.3 %</td></tr>
+<tr><td>8 MHz</td><td>500 kbit/s</td><td class="m">÷1 (0)</td><td class="m">125 ns</td><td class="m">13 / 2 (12 / 1)</td><td class="m">16</td><td class="m">87.5 %</td></tr>
+</table></div>
+<p>첫 줄이 하부 예제 두 개의 설정이다. 32 MHz / 4 = 8 MHz이므로 tq = 125 ns이고, 1 + 13 + 2 = 16 tq = 2 µs이므로 500 kbit/s이다. 샘플 지점은 14/16 = 87.5 %이다. 같은 보레이트라도 BRP와 tq 수의 조합이 여러 개 있고, 샘플 지점이 그 조합에 따라 달라진다. RM0008에는 권장 샘플 지점 값이나 SJW와 BS2 사이의 제약이 적혀 있지 않다. 버스의 모든 노드가 비슷한 샘플 지점을 쓰도록 맞추는 것은 시스템 설계의 몫이다.</p>
+
+<h3>재동기: 어긋난 박자를 비트마다 고친다</h3>
+<p>양쪽 클럭이 조금 다르면 엣지가 SYNC_SEG가 아닌 곳에서 나타난다. RM0008 24.7.7은 이렇게 적는다. 엣지가 BS1에서 보이면 "BS1 is extended by up to SJW so that the sample point is delayed", BS2에서 보이면 "BS2 is shortened by up to SJW so that the transmit point is moved earlier"(<a href="../../Docs/RM0008_Reference_manual.pdf#page=671">p.671</a>). SJW는 1~4 tq이다(t_RJW = tq × (SJW[1:0] + 1), <a href="../../Docs/RM0008_Reference_manual.pdf#page=683">p.683</a>). 문서는 유효 엣지를 "the first transition in a bit time from dominant to recessive bus level provided the controller itself does not send a recessive bit"로 정의한다(방향에 관해서는 2장 일반 개념 상자 참고).</p>
+<figure class="diag"><svg viewBox="0 0 680 230" role="img" aria-label="재동기에 따른 BS1 늘이기와 BS2 줄이기">
+<text class="s" x="8" y="20">tq 눈금 (SYNC 1 + BS1 6 + BS2 3 = 10 tq, SJW = 1 tq인 예)</text>
+<g class="dash"><line x1="150" y1="28" x2="150" y2="218"/><line x1="190" y1="28" x2="190" y2="218"/><line x1="230" y1="28" x2="230" y2="218"/><line x1="270" y1="28" x2="270" y2="218"/><line x1="310" y1="28" x2="310" y2="218"/><line x1="350" y1="28" x2="350" y2="218"/><line x1="390" y1="28" x2="390" y2="218"/><line x1="430" y1="28" x2="430" y2="218"/><line x1="470" y1="28" x2="470" y2="218"/><line x1="510" y1="28" x2="510" y2="218"/><line x1="550" y1="28" x2="550" y2="218"/><line x1="590" y1="28" x2="590" y2="218"/></g>
+<text class="t" x="8" y="62">① 엣지가 SYNC 안</text>
+<rect class="bx" x="150" y="44" width="40" height="28"/><text class="sc" x="170" y="62">S</text>
+<rect class="bx hw" x="190" y="44" width="240" height="28"/><text class="tc" x="310" y="63">BS1 = 6</text>
+<rect class="bx flg" x="430" y="44" width="120" height="28"/><text class="tc" x="490" y="63">BS2 = 3</text>
+<line class="wc" x1="430" y1="38" x2="430" y2="80"/>
+<text class="t" x="8" y="122">② 엣지가 늦음(BS1)</text>
+<rect class="bx" x="150" y="104" width="40" height="28"/><text class="sc" x="170" y="122">S</text>
+<rect class="bx hw" x="190" y="104" width="280" height="28"/><text class="tc" x="330" y="123">BS1 = 6 + 1</text>
+<rect class="bx flg" x="470" y="104" width="120" height="28"/><text class="tc" x="530" y="123">BS2 = 3</text>
+<line class="wc" x1="470" y1="98" x2="470" y2="140"/><polygon class="ahc" points="210,98 204,90 216,90"/><text class="o" x="220" y="96">엣지</text>
+<text class="t" x="8" y="182">③ 엣지가 이름(BS2)</text>
+<rect class="bx" x="150" y="164" width="40" height="28"/><text class="sc" x="170" y="182">S</text>
+<rect class="bx hw" x="190" y="164" width="240" height="28"/><text class="tc" x="310" y="183">BS1 = 6</text>
+<rect class="bx flg" x="430" y="164" width="80" height="28"/><text class="tc" x="470" y="183">3 − 1</text>
+<rect class="bx" x="510" y="164" width="40" height="28"/><text class="sc" x="530" y="182">S</text>
+<line class="wc" x1="430" y1="158" x2="430" y2="200"/><polygon class="ahc" points="510,158 504,150 516,150"/><text class="o" x="520" y="156">다음 비트 엣지</text>
+<text class="s" x="150" y="214">주황 세로선 = 샘플 지점</text>
+</svg><figcaption><span class="eqv">등가 모델</span> ② 엣지가 1 tq 늦게 보이면 BS1을 SJW(여기서는 1 tq)만큼 늘려 샘플 지점을 뒤로 민다. ③ 다음 비트의 엣지가 BS2 안에서 일찍 보이면 BS2를 SJW만큼 줄여 다음 비트를 일찍 시작한다. 어긋남이 SJW보다 크면 한 번에 다 고치지 못하고 다음 엣지에서 나머지를 고친다. tq 카운터의 종료값을 ±SJW 안에서 바꾸는 카운터로 볼 수 있다.</figcaption></figure>
+
+<h3>프레임 하나의 시간</h3>
+<div class="eq">표준 ID 데이터 프레임 = 44 + 8N 비트,  확장 ID = 64 + 8N 비트  (N = DLC, Figure 235)
+프레임 사이 최소 간격 = 간헐(Intermission) 3비트
+500 kbit/s, 표준, N = 8: (108 + 3) × 2 µs = 222 µs  → 버스를 이 메시지로 꽉 채워도 초당 약 4 500개
+※ 스터핑 비트는 포함하지 않았다. 실제 프레임은 이보다 길 수 있다.</div>
+
+<div class="sim" id="tcalc">
+  <div class="subhead">계산기: BTR 필드, 샘플 지점, 프레임 시간</div>
+  <div class="ctl">
+    <div><label for="tclk">PCLK1 (MHz, 1~36)</label><input id="tclk" type="number" min="1" max="36" step="1" value="32"></div>
+    <div><label for="trate">목표 보레이트 (kbit/s, 최대 1000)</label><input id="trate" type="number" min="1" max="1000" step="1" value="500"></div>
+    <div><label for="tsp">원하는 샘플 지점 (%)</label><input id="tsp" type="number" min="50" max="95" step="0.5" value="87.5"></div>
+    <div><label for="tsjw">SJW</label><select id="tsjw"><option value="1" selected>1 tq (필드 0)</option><option value="2">2 tq (필드 1)</option><option value="3">3 tq (필드 2)</option><option value="4">4 tq (필드 3)</option></select></div>
+    <div><label for="tdlc">DLC (데이터 바이트 수)</label><select id="tdlc"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option selected>8</option></select></div>
+    <div><label for="ttyp">ID 형식</label><select id="ttyp"><option value="std" selected>표준 11비트 (44 + 8N)</option><option value="ext">확장 29비트 (64 + 8N)</option></select></div>
+  </div>
+  <div class="regs">
+    <div class="stat"><div class="k">분주 (BRP 필드)</div><div class="v" id="t_brp">-</div></div>
+    <div class="stat"><div class="k">tq</div><div class="v" id="t_tq">-</div></div>
+    <div class="stat"><div class="k">BS1 / BS2 (TS1 / TS2 필드)</div><div class="v" id="t_seg">-</div></div>
+    <div class="stat"><div class="k">비트 시간 · 실제 보레이트</div><div class="v" id="t_bit">-</div></div>
+    <div class="stat"><div class="k">샘플 지점</div><div class="v" id="t_sp">-</div></div>
+    <div class="stat"><div class="k">CAN_BTR (정상 모드)</div><div class="v" id="t_btr">-</div></div>
+    <div class="stat"><div class="k">프레임 + 간헐 3비트</div><div class="v" id="t_fr">-</div></div>
+    <div class="stat"><div class="k">최대 프레임 수 / 초</div><div class="v" id="t_fps">-</div></div>
+  </div>
+  <div class="tablewrap"><table id="t_tab"></table></div>
+  <p class="note" id="t_note"></p>
+</div>
+</section>
+
+<!-- ============================================================ 5 -->
+<section id="s5">
+<h2>5. 제어 요소의 역할: 블록도의 스위치와 레지스터 비트</h2>
+<h3>① 동작 모드 상태기계: 슬립 · 초기화 · 정상</h3>
+<figure class="src narrow"><div class="img"><a href="img/RM0008_Fig224_p658.png"><img src="img/RM0008_Fig224_p658.png" alt="bxCAN 동작 모드" width="1157" height="567" loading="lazy"></a></div>
+<figcaption>상태 3개의 상태기계이다. 화살표 조건의 점(.)은 AND, 윗줄은 NOT이다. ACK는 "하드웨어가 INAK 또는 SLAK를 세워 요청을 확인하는 대기 상태", SYNC는 "CANRX에서 열성 비트 11개가 연속으로 보여 버스가 쉬고 있음을 확인하는 대기 상태"이다(그림 각주 1, 2를 옮김). 리셋 직후는 Sleep이다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=658">RM0008 Rev 21, p.658</a>, Figure 224. bxCAN operating modes</span></figcaption></figure>
+<ul>
+  <li><b>리셋 → Sleep</b>: MCR의 SLEEP 비트가 리셋값 1이다. 이때 CANTX에는 내부 풀업이 켜져 있다(24.4, <a href="../../Docs/RM0008_Reference_manual.pdf#page=656">p.656</a>). MSR 리셋값 0x0000 0C02는 SLAK = 1을 뜻한다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=676">p.676</a>).</li>
+  <li><b>Sleep → Initialization</b>: 조건이 SLEEP̄ · INRQ · ACK이다. 그래서 INRQ = 1만 쓰고 SLEEP을 지우지 않으면 초기화 모드에 들어가지 않는다. 24.4.3은 "it must also clear the SLEEP bit"라고 적는다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=657">p.657</a>). 들어가면 INAK = 1로 확인된다.</li>
+  <li><b>Initialization → Normal</b>: INRQ를 지우면 버스에서 열성 11비트를 본 뒤(SYNC) INAK가 0이 된다. 버스가 계속 바쁘면 정상 모드 진입이 늦어진다.</li>
+  <li><b>왜 요청·확인 두 단계인가</b>: 모드 전환은 지금 진행 중인 프레임이 끝나야 일어난다("waits until the current CAN activity ... is completed", <a href="../../Docs/RM0008_Reference_manual.pdf#page=676">p.676</a>). 소프트웨어는 요청 비트를 쓰고, 하드웨어가 안전한 순간에 전환한 뒤 확인 비트로 알린다. 요청 플립플롭과 확인 플립플롭을 따로 둔 핸드셰이크이며, 소프트웨어는 확인 비트를 본 뒤에야 다음 단계로 넘어가야 한다.</li>
+</ul>
+
+<h3>② 시험 모드: 루프백과 침묵</h3>
+<div class="figs">
+<figure class="src"><div class="img"><a href="img/RM0008_Fig225_p659.png"><img src="img/RM0008_Fig225_p659.png" alt="침묵 모드" width="1157" height="357" loading="lazy"></a></div>
+<figcaption>침묵(SILM = 1): CANTX는 1(열성)로 고정되고, 코어의 Tx는 내부에서 Rx로 이어진다. 버스는 듣기만 한다. <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=659">RM0008 Rev 21, p.659</a>, Figure 225</span></figcaption></figure>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig226_p659.png"><img src="img/RM0008_Fig226_p659.png" alt="루프백 모드" width="1157" height="357" loading="lazy"></a></div>
+<figcaption>루프백(LBKM = 1): 코어의 Tx가 Rx로 되돌아오고 CANRX 핀은 끊긴다. 송신 비트열은 CANTX 핀에도 나간다. <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=659">RM0008 Rev 21, p.659</a>, Figure 226</span></figcaption></figure>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig227_p660.png"><img src="img/RM0008_Fig227_p660.png" alt="루프백과 침묵 결합" width="1157" height="357" loading="lazy"></a></div>
+<figcaption>결합(LBKM = SILM = 1): 내부 되먹임만 남고 CANTX는 열성, CANRX는 끊긴다. 동작 중인 버스를 건드리지 않는 자가 시험("Hot Selftest")이다. <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=660">RM0008 Rev 21, p.660</a>, Figure 227</span></figcaption></figure>
+</div>
+<p>세 그림은 두 개의 2:1 선택기로 읽을 수 있다. 하나는 코어 Rx 입력을 "핀 / 내부 Tx" 중에서 고르고(LBKM), 다른 하나는 CANTX 핀을 "코어 Tx / 상수 1" 중에서 고른다(SILM). 루프백에서는 승인 오류를 무시하므로 상대 노드 없이도 송신이 성공한다(24.5.2). 이 비트들은 BTR에 있어 초기화 모드에서만 바꿀 수 있다(24.5, <a href="../../Docs/RM0008_Reference_manual.pdf#page=658">p.658</a>).</p>
+
+<h3>③ 동작 방식 스위치 (MCR, BTR)</h3>
+<div class="tablewrap"><table>
+<tr><th>블록도 위의 요소</th><th>고르는 비트</th><th>동작</th></tr>
+<tr><td>모드 상태기계 입력</td><td class="m">MCR.INRQ / SLEEP</td><td>초기화 / 슬립 요청. 확인은 MSR.INAK / SLAK</td></tr>
+<tr><td>송신 스케줄러의 비교 기준</td><td class="m">MCR.TXFP</td><td>0 = ID가 작은 것 먼저, 1 = 요청 순서(<a href="../../Docs/RM0008_Reference_manual.pdf#page=675">p.675</a>)</td></tr>
+<tr><td>실패 시 재시도 루프</td><td class="m">MCR.NART</td><td>0 = 성공할 때까지 자동 재전송, 1 = 한 번만 시도하고 결과를 TXOK·ALST·TERR로 보고</td></tr>
+<tr><td>FIFO가 찼을 때 쓰기 허용</td><td class="m">MCR.RFLM</td><td>0 = 마지막 저장 메시지를 새 메시지로 덮어씀, 1 = 새 메시지를 버림(7장 ③)</td></tr>
+<tr><td>슬립 자동 해제</td><td class="m">MCR.AWUM</td><td>1이면 버스에서 SOF를 보면 하드웨어가 SLEEP을 지운다</td></tr>
+<tr><td>버스 오프 자동 복귀</td><td class="m">MCR.ABOM</td><td>1이면 열성 11비트 128회를 본 뒤 자동 복귀, 0이면 소프트웨어가 INRQ를 세웠다 지워야 복귀 순서를 시작한다</td></tr>
+<tr><td>시간 트리거 모드</td><td class="m">MCR.TTCM</td><td><b>F103에서는 0으로 둔다.</b> ES096 2.11.1: 이 모드는 지원되지 않고 시간표시 값도 쓸 수 없다(<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=23">p.23</a>)</td></tr>
+<tr><td>디버그 정지</td><td class="m">MCR.DBF</td><td>1이면 코어가 디버그로 멈출 때 송수신도 얼어붙는다. MCR 리셋값이 0x0001 0002이므로 기본값이 1이다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=674">p.674</a>)</td></tr>
+<tr><td>분주기, 카운터 종료값</td><td class="m">BTR.BRP / TS1 / TS2 / SJW</td><td>4장. 초기화 모드에서만 쓰기 가능</td></tr>
+<tr><td>Rx 입력 선택기 / Tx 출력 게이트</td><td class="m">BTR.LBKM / SILM</td><td>위 ②</td></tr>
+</table></div>
+
+<h3>④ 송신 메일박스의 상태기계</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig228_p662.png"><img src="img/RM0008_Fig228_p662.png" alt="송신 메일박스 상태" width="1157" height="771" loading="lazy"></a></div>
+<figcaption>메일박스 하나의 상태기계이다. EMPTY에서 TXRQ = 1 → PENDING → 우선순위가 가장 높아지면 SCHEDULED → 버스가 비면 TRANSMIT이다. 성공하면 RQCP = 1, TXOK = 1로 EMPTY가 된다. 실패하면 NART = 0일 때 SCHEDULED로 돌아가 재시도하고, NART = 1이면 RQCP = 1, TXOK = 0으로 EMPTY가 된다. ABRQ = 1은 PENDING·SCHEDULED에서 즉시 취소한다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=662">RM0008 Rev 21, p.662</a>, Figure 228. Transmit mailbox states</span></figcaption></figure>
+<p>TSR의 CODE[1:0]는 다음에 쓸 빈 메일박스 번호를 알려 주고, LOW0~2는 셋 이상 대기 중일 때 가장 낮은 우선순위 메일박스를 표시한다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=677">p.677~678</a>). 디지털논리로 보면 CODE는 "빈 칸 중 하나를 고르는 우선순위 인코더"이다.</p>
+
+<h3>⑤ 수용 필터: 비교기 배열</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig230_p665.png"><img src="img/RM0008_Fig230_p665.png" alt="필터 뱅크 스케일과 모드" width="1157" height="1000" loading="lazy"></a></div>
+<figcaption>필터 뱅크 하나는 32비트 레지스터 두 개(CAN_FxR1, CAN_FxR2)이다. FSCx(스케일)와 FBMx(모드) 두 비트로 네 가지 중 하나가 된다. 32비트 마스크 1개, 32비트 리스트 2개, 16비트 마스크 2개, 16비트 리스트 4개이다. Mapping 줄은 수신 ID의 어느 비트가 레지스터의 어느 비트와 비교되는지를 보여 준다. 32비트에서는 STID[10:0] · EXID[17:0] · IDE · RTR · 0, 16비트에서는 STID[10:0] · RTR · IDE · EXID[17:15]이다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=665">RM0008 Rev 21, p.665</a>, Figure 230. Filter bank scale configuration - register organization</span></figcaption></figure>
+<p>마스크 레지스터의 1은 "반드시 일치", 0은 "무시"이다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=694">p.694</a>). 리스트 모드에서는 마스크 레지스터도 ID로 쓰여 ID를 두 배로 등록하며, 모든 비트가 같아야 통과한다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=664">p.664~665</a>). 문서 표기 차이: 24.7.4 본문은 필터 레지스터를 "CAN_FxR0 and CAN_FxR1"로, 설정 레지스터를 "CAN_FAR", "CAN_FMR"로 적지만 그림과 레지스터 절의 이름은 CAN_FxR1/FxR2, CAN_FA1R, CAN_FM1R이다.</p>
+<figure class="diag"><svg viewBox="0 0 680 200" role="img" aria-label="필터 마스크 모드와 리스트 모드의 비교기 등가">
+<text class="t" x="10" y="20" font-weight="700">마스크 모드 (FBM = 0)</text>
+<rect class="bx" x="10" y="32" width="120" height="30" rx="4"/><text class="tc" x="70" y="52">수신 ID 워드</text>
+<rect class="bx sel" x="10" y="70" width="120" height="30" rx="4"/><text class="tc" x="70" y="90">FxR1 = ID</text>
+<line class="w" x1="130" y1="47" x2="160" y2="60"/><line class="w" x1="130" y1="85" x2="160" y2="72"/>
+<rect class="bx hw" x="160" y="48" width="64" height="36" rx="4"/><text class="tc" x="192" y="71">XOR</text>
+<line class="w" x1="224" y1="66" x2="250" y2="66"/>
+<rect class="bx sel" x="150" y="104" width="120" height="30" rx="4"/><text class="tc" x="210" y="124">FxR2 = 마스크</text>
+<polyline class="wc" points="270,119 282,119 282,80"/>
+<rect class="bx hw" x="250" y="48" width="64" height="36" rx="4"/><text class="tc" x="282" y="71">AND</text>
+<line class="w" x1="314" y1="66" x2="340" y2="66"/>
+<rect class="bx hw" x="340" y="44" width="110" height="44" rx="4"/><text class="tc" x="395" y="64">모든 비트 = 0?</text><text class="sc" x="395" y="80">32입력 NOR</text>
+<line class="w" x1="450" y1="66" x2="480" y2="66"/>
+<rect class="bx flg" x="480" y="48" width="190" height="36" rx="4"/><text class="tc" x="575" y="71">일치 → FFA의 FIFO로</text>
+<line class="dash" x1="10" y1="146" x2="670" y2="146"/>
+<text class="t" x="10" y="170" font-weight="700">리스트 모드 (FBM = 1)</text>
+<rect class="bx hw" x="190" y="156" width="210" height="34" rx="4"/><text class="tc" x="295" y="178">(ID = FxR1) OR (ID = FxR2)</text>
+<line class="w" x1="400" y1="173" x2="480" y2="173"/>
+<rect class="bx flg" x="480" y="156" width="190" height="34" rx="4"/><text class="tc" x="575" y="178">일치 → FFA의 FIFO로</text>
+</svg><figcaption><span class="eqv">등가 모델</span> 마스크 모드는 "다른 비트(XOR)를 마스크로 걸러(AND) 하나도 남지 않으면(NOR) 통과"하는 비교기이다. 리스트 모드는 동등 비교기 두 개의 OR이다. 16비트 스케일에서는 같은 구조가 절반 폭으로 두 개(마스크) 또는 네 개(리스트) 있다. 하드웨어가 14뱅크를 병렬로 비교하는지 차례로 비교하는지는 문서에 없다.</figcaption></figure>
+
+<div class="sim" id="fsim">
+  <div class="subhead">필터 시험기: 32비트 스케일 필터 한 뱅크</div>
+  <div class="ctl">
+    <div><label for="frx_t">수신 프레임 ID 형식</label><select id="frx_t"><option value="0" selected>표준 (IDE = 0)</option><option value="1">확장 (IDE = 1)</option></select></div>
+    <div><label for="frx">수신 ID (16진수)</label><input id="frx" type="text" value="3A5" maxlength="9"></div>
+    <div><label for="frx_r">수신 프레임 종류</label><select id="frx_r"><option value="0" selected>데이터 (RTR = 0)</option><option value="1">원격 (RTR = 1)</option></select></div>
+    <div><label for="fmode">필터 모드</label><select id="fmode"><option value="mask" selected>마스크 (FBM = 0)</option><option value="list">리스트 (FBM = 1)</option></select></div>
+    <div><label for="ff_t">필터 ID 형식</label><select id="ff_t"><option value="0" selected>표준</option><option value="1">확장</option></select></div>
+    <div><label for="ff1">필터 ID (FxR1, 16진수)</label><input id="ff1" type="text" value="300" maxlength="9"></div>
+    <div><label for="ff2">마스크의 ID 비트 / 리스트 두 번째 ID (FxR2, 16진수)</label><input id="ff2" type="text" value="700" maxlength="9"></div>
+    <div><label for="ffl">마스크에서 IDE·RTR 비트</label><select id="ffl"><option value="3" selected>둘 다 일치 요구</option><option value="2">IDE만 일치 요구</option><option value="0">둘 다 무시</option></select></div>
+  </div>
+  <div class="regs">
+    <div class="stat"><div class="k">수신 워드</div><div class="v" id="f_rx">-</div></div>
+    <div class="stat"><div class="k">FxR1</div><div class="v" id="f_r1">-</div></div>
+    <div class="stat"><div class="k">FxR2</div><div class="v" id="f_r2">-</div></div>
+    <div class="stat"><div class="k">판정</div><div class="v" id="f_res">-</div></div>
+  </div>
+  <p class="note" id="f_note2"></p>
+</div>
+
+<h3>⑥ 필터 번호(FMI)와 우선순위</h3>
+<div class="figs">
+<figure class="src"><div class="img"><a href="img/RM0008_Fig231_p666.png"><img src="img/RM0008_Fig231_p666.png" alt="필터 번호 매기기 예" width="1157" height="829" loading="lazy"></a></div>
+<figcaption>필터 번호는 FIFO마다 따로 0부터 매기고, 꺼진(Deactivated) 뱅크도 번호를 차지한다. 32비트 마스크 뱅크는 1개, 32비트 리스트와 16비트 마스크는 2개, 16비트 리스트는 4개를 쓴다. <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=666">RM0008 Rev 21, p.666</a>, Figure 231. Example of filter numbering</span></figcaption></figure>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig232_p667.png"><img src="img/RM0008_Fig232_p667.png" alt="필터링 동작 예" width="1157" height="824" loading="lazy"></a></div>
+<figcaption>리스트 모드 필터와 먼저 비교하고, 맞는 것이 없으면 마스크 모드 필터와 비교한다. 모두 아니면 버린다. 통과시킨 필터 번호가 FMI로 함께 저장된다. <b>문서 표기 오류</b>: 그림 제목의 "Unidentified List mode"는 Identifier List mode이고, 그림은 "Identifier #4 Match"인데 본문은 "matches with Identifier #2 thus ... FMI 2"라고 적는다. <span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=667">RM0008 Rev 21, p.667</a>, Figure 232. Filtering mechanism - Example</span></figcaption></figure>
+</div>
+<p>여러 필터에 동시에 맞으면 FMI는 규칙에 따라 정해진다. 32비트가 16비트보다, 같은 스케일이면 리스트가 마스크보다, 같은 스케일·모드면 번호가 작은 쪽이 우선이다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=667">p.667</a>). FMI를 배열 첨자로 쓰면 소프트웨어가 ID를 다시 비교하지 않아도 된다(24.7.4 Filter match index).</p>
+
+<h3>⑦ 필터 설정 스위치와 순서</h3>
+<div class="tablewrap"><table>
+<tr><th>스위치</th><th>비트</th><th>규칙</th></tr>
+<tr><td>필터 설정 모드</td><td class="m">FMR.FINIT</td><td>1이면 수신이 꺼지고("When FINIT=1, CAN reception is deactivated") 스케일·모드·FIFO 배정을 바꿀 수 있다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=657">p.657</a>, <a href="../../Docs/RM0008_Reference_manual.pdf#page=674">p.674</a>)</td></tr>
+<tr><td>뱅크별 모드 / 스케일 / FIFO</td><td class="m">FM1R.FBMx · FS1R.FSCx · FFA1R.FFAx</td><td>FINIT = 1일 때만 바꿀 수 있다. F103에서는 비트 0~13만 쓴다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=692">p.692~693</a>)</td></tr>
+<tr><td>뱅크 켜기</td><td class="m">FA1R.FACTx</td><td>필터 값(FxR1/FxR2)은 FACTx = 0이거나 FINIT = 1일 때 바꾼다. 쓰지 않는 뱅크는 꺼 둔다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=693">p.693</a>)</td></tr>
+<tr><td>필터 없음</td><td>-</td><td>켜진 필터가 하나도 없으면 어떤 메시지도 통과하지 못한다. 예제 01이 "모두 통과" 마스크 필터(마스크 = 0)를 켜는 이유이다</td></tr>
+</table></div>
+
+<h3>⑧ 플래그는 어떻게 지워지는가</h3>
+<div class="tablewrap"><table>
+<tr><th>플래그</th><th>세트 조건</th><th>지우는 방법</th><th>근거</th></tr>
+<tr><td class="m">TSR.RQCPx</td><td>마지막 요청(송신 또는 취소)이 끝남</td><td>1 쓰기(rc_w1). 지우면 같은 메일박스의 TXOK·ALST·TERR도 함께 지워진다. 다음 TXRQ로도 지워진다</td><td><a href="../../Docs/RM0008_Reference_manual.pdf#page=678">p.678</a></td></tr>
+<tr><td class="m">TSR.TMEx</td><td>메일박스에 대기 중인 요청이 없음</td><td>하드웨어 상태(TXRQ = 1이면 0)</td><td>p.677~678</td></tr>
+<tr><td class="m">RFxR.FMP[1:0]</td><td>FIFO에 저장할 때마다 +1</td><td>RFOM = 1(출력 메일박스 비우기)마다 −1</td><td><a href="../../Docs/RM0008_Reference_manual.pdf#page=679">p.679~680</a></td></tr>
+<tr><td class="m">RFxR.FULL · FOVR</td><td>3개 저장 · 꽉 찬 FIFO에 유효 메시지 도착</td><td>1 쓰기(rc_w1)</td><td>p.679</td></tr>
+<tr><td class="m">MSR.ERRI · WKUI · SLAKI</td><td>오류 인터럽트 조건 · 슬립 중 SOF · 슬립 진입</td><td>1 쓰기(rc_w1). SLAKI는 SLAK가 지워질 때 하드웨어도 지운다</td><td><a href="../../Docs/RM0008_Reference_manual.pdf#page=676">p.676~677</a></td></tr>
+<tr><td class="m">ESR.EWGF · EPVF · BOFF</td><td>카운터가 문턱값에 이름(6장 ③)</td><td>상태 그대로를 보여 주는 읽기 전용 플래그</td><td><a href="../../Docs/RM0008_Reference_manual.pdf#page=683">p.683</a></td></tr>
+<tr><td class="m">ESR.LEC[2:0]</td><td>마지막 오류 종류</td><td>오류 없이 전송되면 하드웨어가 0으로. 소프트웨어가 111을 써 두고 갱신 여부를 볼 수 있다</td><td>p.682</td></tr>
+</table></div>
+<p>FMP는 <b>상태</b>이다. 출력 메일박스를 읽고 RFOM으로 놓아 주지 않으면 FMP ≠ 00이 계속되어 FIFO 인터럽트가 다시 걸린다. USART의 RXNE와 달리 데이터를 읽는 것만으로는 지워지지 않는다는 점이 다르다.</p>
+</section>
+
+<!-- ============================================================ 6 -->
+<section id="s6">
+<h2>6. 이벤트 생성 기전: 플래그 → 인터럽트 → (DMA 없음)</h2>
+<h3>① 플래그 열다섯 개, 벡터 네 개</h3>
+<figure class="src"><div class="img"><a href="img/RM0008_Fig236_p673.png"><img src="img/RM0008_Fig236_p673.png" alt="이벤트 플래그와 인터럽트 생성" width="1157" height="1104" loading="lazy"></a></div>
+<figcaption>왼쪽 점선 상자는 상태 레지스터의 플래그, 가운데 열은 IER의 허용 비트이다. 플래그 AND 허용(&amp;)을 OR(+)로 모아 인터럽트 선 네 개를 만든다. 송신은 RQCP0~2를 먼저 OR한 뒤 TMEIE 하나로 거른다. 오류 쪽은 단계가 하나 더 있다. EWGF·EPVF·BOFF·LEC(1~6)을 각 허용 비트로 거른 OR가 MSR.ERRI를 세우고, 그것이 다시 ERRIE와 AND되어 "STATUS CHANGE ERROR" 선으로 간다. 왼쪽 아래 "1≤LEC≤6"은 LEC 값이 1~6일 때 1이 되는 비교기이다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=673">RM0008 Rev 21, p.673</a>, Figure 236. Event flags and interrupt generation</span></figcaption></figure>
+<div class="tablewrap"><table>
+<tr><th>Figure 236의 출력</th><th>벡터 이름 (Table 63)</th><th>위치</th><th>주소</th><th>공유</th></tr>
+<tr><td>TRANSMIT INTERRUPT</td><td class="m">USB_HP_CAN_TX</td><td class="m">19</td><td class="m">0x0000 008C</td><td>USB 고우선 인터럽트와 공유</td></tr>
+<tr><td>FIFO 0 INTERRUPT</td><td class="m">USB_LP_CAN_RX0</td><td class="m">20</td><td class="m">0x0000 0090</td><td>USB 저우선 인터럽트와 공유</td></tr>
+<tr><td>FIFO 1 INTERRUPT</td><td class="m">CAN_RX1</td><td class="m">21</td><td class="m">0x0000 0094</td><td>CAN 전용</td></tr>
+<tr><td>STATUS CHANGE ERROR INTERRUPT</td><td class="m">CAN_SCE</td><td class="m">22</td><td class="m">0x0000 0098</td><td>CAN 전용</td></tr>
+</table></div>
+<p>근거: RM0008 24.8 "Four interrupt vectors are dedicated to bxCAN"(<a href="../../Docs/RM0008_Reference_manual.pdf#page=672">p.672</a>)과 Table 63(<a href="../../Docs/RM0008_Reference_manual.pdf#page=205">p.205</a>)이다. 주소는 0x40 + 4 × 위치로 맞아떨어진다. 벡터 이름 자체가 "USB High Priority or CAN TX"이듯, 앞의 두 벡터는 USB와 함께 쓴다. CAN과 USB는 어차피 동시에 쓸 수 없으므로(8장) 실제로 충돌하지는 않지만, 이 벡터의 처리 루틴은 두 장치 중 어느 쪽 사건인지 가정하고 작성된다. 각 벡터의 허용과 우선순위는 NVIC에서 정한다(PM0056 4.3, <a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf#page=118">p.118</a>).</p>
+
+<h3>② DMA 요청은 없다</h3>
+<p>RM0008 24장에는 DMA(Direct Memory Access, 직접 메모리 접근) 요청에 관한 비트나 설명이 없고, DMA1 요청 표(Table 78, <a href="../../Docs/RM0008_Reference_manual.pdf#page=282">p.282</a>)에도 CAN이 없다. 문서상 bxCAN의 메일박스는 CPU가 읽고 쓴다. 대신 하드웨어 FIFO 3칸과 필터가 CPU가 깨어나야 하는 횟수를 줄인다. RM0008 24.3은 "A receive FIFO scheme allows the CPU to be dedicated to application tasks for a long time period without losing messages"라고 적는다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=654">p.654</a>).</p>
+
+<h3>③ 오류 관리: 카운터와 문턱값</h3>
+<figure class="src narrow"><div class="img"><a href="img/RM0008_Fig233_p669.png"><img src="img/RM0008_Fig233_p669.png" alt="CAN 오류 상태도" width="1157" height="622" loading="lazy"></a></div>
+<figcaption>오류 능동(ERROR ACTIVE)에서 TEC 또는 REC가 127을 넘으면 오류 수동(ERROR PASSIVE), 둘 다 128 미만으로 내려오면 다시 능동이다. TEC가 255를 넘으면 버스 오프(BUS OFF)이고, 열성 11비트가 128번 보이면 능동으로 돌아온다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=669">RM0008 Rev 21, p.669</a>, Figure 233. CAN error state diagram</span></figcaption></figure>
+<figure class="diag"><svg viewBox="0 0 680 180" role="img" aria-label="오류 카운터와 문턱값 비교기 등가">
+<rect class="bx hw" x="10" y="26" width="140" height="46" rx="4"/><text class="tc" x="80" y="46">TEC (9비트)</text><text class="sc" x="80" y="62">ESR에는 하위 8비트</text>
+<rect class="bx hw" x="10" y="100" width="140" height="46" rx="4"/><text class="tc" x="80" y="120">REC (8비트)</text><text class="sc" x="80" y="136">+1/+8, −1, 120으로</text>
+<polyline class="w" points="150,49 200,49 200,62 230,62"/>
+<polyline class="w" points="150,123 200,123 200,110 230,110"/>
+<rect class="bx sel" x="230" y="20" width="200" height="34" rx="4"/><text class="tc" x="330" y="42">TEC ≥ 96 또는 REC ≥ 96</text>
+<rect class="bx sel" x="230" y="70" width="200" height="34" rx="4"/><text class="tc" x="330" y="92">TEC &gt; 127 또는 REC &gt; 127</text>
+<rect class="bx sel" x="230" y="120" width="200" height="34" rx="4"/><text class="tc" x="330" y="142">TEC &gt; 255</text>
+<line class="w" x1="430" y1="37" x2="470" y2="37"/><line class="w" x1="430" y1="87" x2="470" y2="87"/><line class="w" x1="430" y1="137" x2="470" y2="137"/>
+<rect class="bx flg" x="470" y="20" width="200" height="34" rx="4"/><text class="tc" x="570" y="42">EWGF (경고)</text>
+<rect class="bx flg" x="470" y="70" width="200" height="34" rx="4"/><text class="tc" x="570" y="92">EPVF (오류 수동)</text>
+<rect class="bx flg" x="470" y="120" width="200" height="34" rx="4"/><text class="tc" x="570" y="142">BOFF (버스 오프)</text>
+<text class="s" x="230" y="172">각 플래그 → EWGIE·EPVIE·BOFIE와 AND → ERRI → ERRIE → CAN_SCE</text>
+</svg><figcaption><span class="eqv">등가 모델</span> 두 카운터 뒤에 문턱값 비교기 세 개가 있는 구조이다. 문턱값은 ESR 비트 설명에서 가져왔다. EWGF는 "Receive Error Counter or Transmit Error Counter≥96", EPVF는 "&gt;127", BOFF는 "TEC overflow, greater than 255"이다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=683">p.683</a>). REC는(<a href="../../Docs/RM0008_Reference_manual.pdf#page=682">p.682</a>) 오류마다 1 또는 8씩 늘고, 성공적인 수신마다 1씩 줄거나 128보다 크면 120으로 돌아간다. TEC는 9비트이지만 ESR로 읽을 수 있는 것은 하위 8비트뿐이다. 어떤 오류에 몇을 더하는지는 "refer to the CAN standard"라며 문서에 없다(24.7.6, <a href="../../Docs/RM0008_Reference_manual.pdf#page=670">p.670</a>).</figcaption></figure>
+<div class="tablewrap"><table>
+<tr><th>LEC</th><th>뜻</th><th>LEC</th><th>뜻</th></tr>
+<tr><td class="m">000</td><td>오류 없음</td><td class="m">100</td><td>Bit recessive Error: 열성을 냈는데 우성이 보임(중재 구간 밖)</td></tr>
+<tr><td class="m">001</td><td>Stuff Error: 스터핑 규칙 위반</td><td class="m">101</td><td>Bit dominant Error: 우성을 냈는데 열성이 보임</td></tr>
+<tr><td class="m">010</td><td>Form Error: 고정 형식 비트 위반</td><td class="m">110</td><td>CRC Error</td></tr>
+<tr><td class="m">011</td><td>Acknowledgment Error: ACK 슬롯에 우성이 없음</td><td class="m">111</td><td>소프트웨어가 써 둔 값(갱신 확인용)</td></tr>
+</table></div>
+<p>근거는 ESR.LEC 설명이다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=682">p.682</a>). 표의 풀이 중 "중재 구간 밖", "고정 형식 비트" 같은 해석은 CAN 일반 개념에 따른 것이고, 문서에는 코드 이름만 있다. 버스 오프에서 돌아오려면 열성 11비트 128회를 봐야 하는데, 초기화 모드에서는 CANRX를 보지 않으므로 복귀 순서를 끝낼 수 없다. 반드시 정상 모드여야 한다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=670">p.670</a> Note).</p>
+
+<h3>④ 슬립과 기상</h3>
+<p>슬립 모드에서는 bxCAN 클럭이 멈추지만 소프트웨어는 메일박스에 접근할 수 있다. 버스에서 SOF가 보이면 WKUI가 서고, WKUIE = 1이면 CAN_SCE 인터럽트가 된다. AWUM = 1이면 하드웨어가 SLEEP을 스스로 지우는데, 이때도 WKUIE = 1이면 인터럽트는 걸린다(24.4.3, <a href="../../Docs/RM0008_Reference_manual.pdf#page=658">p.658</a>).</p>
+</section>
+
+<!-- ============================================================ 7 -->
+<section id="s7">
+<h2>7. 동작 시나리오 추적</h2>
+<h3>시나리오 ① 루프백: 보낸 프레임이 내 FIFO 0으로 돌아온다</h3>
+<p>예제 01의 설정이다. PCLK1 = 32 MHz, 500 kbit/s, LBKM = 1, 필터 뱅크 0 = 32비트 마스크(마스크 0, 모두 통과) → FIFO 0, FMPIE0 = 1. 표준 ID 0x123, DLC 8 프레임 하나를 보낸다.</p>
+<figure class="diag"><svg viewBox="0 0 680 300" role="img" aria-label="루프백 송수신 타이밍">
+<text class="s" x="8" y="30">메일박스 0</text>
+<rect class="bx" x="120" y="16" width="50" height="22" rx="3"/><text class="sc" x="145" y="31">EMPTY</text>
+<rect class="bx sel" x="170" y="16" width="60" height="22" rx="3"/><text class="sc" x="200" y="31">PEND·SCH</text>
+<rect class="bx hw" x="230" y="16" width="330" height="22" rx="3"/><text class="sc" x="395" y="31">TRANSMIT</text>
+<rect class="bx" x="560" y="16" width="110" height="22" rx="3"/><text class="sc" x="615" y="31">EMPTY</text>
+<polygon class="ahc" points="170,46 164,54 176,54"/><text class="o" x="120" y="66">TXRQ=1</text>
+<text class="s" x="8" y="94">내부 Tx→Rx</text>
+<polyline class="sig" points="110,80 230,80 230,98 240,98 240,80 250,80 250,98 300,98 300,80 330,80 330,98 370,98 370,80 400,80 400,98 460,98 460,80 500,80 500,98 520,98 520,80 670,80"/>
+<text class="s" x="234" y="114">SOF</text><text class="s" x="300" y="114">ID 0x123 · DLC · 데이터 8 · CRC</text><text class="s" x="520" y="114">ACK·EOF</text>
+<text class="s" x="8" y="140">CANTX 핀</text><text class="s" x="120" y="140">같은 비트열이 핀에도 나간다(관찰 가능). CANRX 핀은 무시</text>
+<text class="s" x="8" y="172">필터 / FIFO 0</text>
+<rect class="bx flg" x="530" y="158" width="140" height="22" rx="3"/><text class="sc" x="600" y="173">통과 → FMP = 01</text>
+<text class="s" x="8" y="204">RQCP0·TXOK0</text>
+<polyline class="sig2" points="110,208 560,208 560,190 670,190"/>
+<text class="s" x="8" y="236">FIFO 0 인터럽트</text>
+<polyline class="sig2" points="110,240 562,240 562,222 610,222 610,240 670,240"/>
+<text class="s" x="8" y="274">CPU</text>
+<rect class="isr" x="566" y="260" width="104" height="24" rx="3"/><text class="sc" x="618" y="276">읽기 → RFOM</text>
+<text class="o" x="300" y="276">USB_LP_CAN_RX0 벡터</text>
+</svg><figcaption><span class="eqv">등가 모델</span> 비트열 모양은 개념도이다. 순서는 RM0008 24.7.1·24.7.3·24.5.2를 따랐다. TXRQ로 메일박스가 PENDING → SCHEDULED → TRANSMIT을 거치고, 송신 비트열이 내부에서 수신 쪽으로 되돌아온다. 루프백은 ACK 오류를 무시하므로 송신이 성공해 RQCP0·TXOK0가 서고, 같은 프레임이 필터를 통과해 FIFO 0에 저장되며 FMP = 01이 된다. FMPIE0 = 1이므로 FIFO 0 인터럽트가 USB_LP_CAN_RX0 벡터로 간다. 처리 루틴이 출력 메일박스를 읽고 RFOM0 = 1을 쓰면 FMP가 00으로 돌아가 인터럽트 조건이 사라진다. 송신 완료(RQCP0)와 수신 저장 가운데 어느 쪽이 먼저 서는지는 문서에 없다.</figcaption></figure>
+
+<h3>시나리오 ② 두 노드가 동시에 보낸다: 중재</h3>
+<div class="sim" id="arbsim">
+  <div class="subhead">중재 실험: 두 노드가 같은 순간에 SOF를 낸다 (표준 11비트 ID)</div>
+  <div class="ctl">
+    <div><label for="aid">노드 A의 ID (16진수, 0~7FF)</label><input id="aid" type="text" value="123" maxlength="5"></div>
+    <div><label for="artr">노드 A의 프레임</label><select id="artr"><option value="0" selected>데이터 (RTR = 0, 우성)</option><option value="1">원격 (RTR = 1, 열성)</option></select></div>
+    <div><label for="bid">노드 B의 ID (16진수, 0~7FF)</label><input id="bid" type="text" value="127" maxlength="5"></div>
+    <div><label for="brtr">노드 B의 프레임</label><select id="brtr"><option value="0" selected>데이터 (RTR = 0, 우성)</option><option value="1">원격 (RTR = 1, 열성)</option></select></div>
+  </div>
+  <div class="diag"><svg id="arbsvg" viewBox="0 0 680 190" role="img" aria-label="두 노드의 중재 비트 비교"></svg></div>
+  <p class="note" id="arb_note"></p>
+</div>
+<p><span class="eqv">등가 모델</span> 버스 = A AND B로 계산했다. 열성(1)을 냈는데 버스가 우성(0)이면 그 노드는 그 비트부터 송신을 멈추고 수신자가 된다(그 뒤로는 열성만 낸다). 진 노드의 메일박스에는 ALST가 서고, NART = 0이면 버스가 비는 대로 다시 시도한다. ID가 같고 프레임 종류만 다르면 RTR 비트에서 데이터 프레임(RTR = 0, 우성)이 이긴다. 이 결론은 RTR "0: Data frame, 1: Remote frame"(<a href="../../Docs/RM0008_Reference_manual.pdf#page=685">p.685</a>)과 우성 = 0에서 나온다.</p>
+
+<h3>시나리오 ③ CPU가 늦으면: FIFO 넘침과 RFLM</h3>
+<figure class="src narrow"><div class="img"><a href="img/RM0008_Fig229_p663.png"><img src="img/RM0008_Fig229_p663.png" alt="수신 FIFO 상태" width="1157" height="977" loading="lazy"></a></div>
+<figcaption>FIFO 하나의 상태기계이다. 유효 메시지가 올 때마다 EMPTY → PENDING_1 → 2 → 3으로 가고, 3칸이 찬 상태에서 또 오면 OVERRUN(FOVR = 1)이다. RFOM = 1로 출력 메일박스를 놓아 줄 때마다 한 칸 내려간다. 그림의 "FMP=0x10", "0x11"은 16진수가 아니라 2진수 10b, 11b이다(본문은 "FMP[1:0] = 10b"로 적는다). 또 그림은 OVERRUN에서 RFOM = 1이면 PENDING_3으로 가는 것처럼 그렸는데, "FMP is decreased each time the software releases the output mailbox"라는 비트 설명대로라면 FMP는 10b가 된다. FOVR는 RFOM이 아니라 소프트웨어가 1을 써서 지운다(rc_w1). 그림만 보지 말고 비트 설명과 함께 읽어야 한다.
+<span class="cite">출처: <a href="../../Docs/RM0008_Reference_manual.pdf#page=663">RM0008 Rev 21, p.663</a>, Figure 229. Receive FIFO states</span></figcaption></figure>
+<div class="tablewrap"><table>
+<tr><th>도착 순서</th><th>RFLM = 0 (잠금 없음)</th><th>RFLM = 1 (잠금)</th></tr>
+<tr><td>M1, M2, M3</td><td>FIFO = M1, M2, M3 · FULL = 1</td><td>FIFO = M1, M2, M3 · FULL = 1</td></tr>
+<tr><td>M4 (넘침)</td><td>마지막 저장 메시지 M3를 M4가 덮어씀 → M1, M2, M4 · FOVR = 1</td><td>M4를 버림 → M1, M2, M3 · FOVR = 1</td></tr>
+<tr><td>얻는 것</td><td>가장 최근 값이 남는다("the latest messages will be always available")</td><td>가장 오래된 세 개가 남는다("the three oldest messages")</td></tr>
+</table></div>
+<p>근거는 RM0008 24.7.3 Overrun(<a href="../../Docs/RM0008_Reference_manual.pdf#page=664">p.664</a>)이다. 센서 값처럼 최신 값만 의미 있는 메시지는 RFLM = 0, 순서가 중요한 분할 메시지는 RFLM = 1이 어울린다. 어느 쪽이든 메시지 하나는 잃는다. 500 kbit/s에서 데이터 없는 가장 짧은 표준 프레임은 47비트(44 + 간헐 3) = 94 µs이므로, 이론상 가장 빠르게 몰려오면 CPU는 FIFO가 처음 찬 뒤 약 94 µs 안에 한 칸을 비워야 한다 <span class="eqv">등가 모델</span>.</p>
+
+<h3>시나리오 ④ 예제 02의 필터 세 뱅크</h3>
+<div class="tablewrap"><table>
+<tr><th>뱅크</th><th>설정</th><th>FIFO와 필터 번호</th></tr>
+<tr><td class="m">0</td><td>32비트 리스트: 표준 0x100, 0x200</td><td>FIFO 0의 필터 0, 1</td></tr>
+<tr><td class="m">1</td><td>16비트 마스크 2개(같은 값): 표준 0x3xx 데이터 프레임(ID 0x300, 마스크 0x700 + RTR + IDE)</td><td>FIFO 1의 필터 0, 1</td></tr>
+<tr><td class="m">2</td><td>32비트 마스크: 확장 ID[28:16] = 0x18FF (+ IDE)</td><td>FIFO 0의 필터 2</td></tr>
+</table></div>
+<div class="tablewrap"><table>
+<tr><th>보낸 프레임</th><th class="m">STD 0x100</th><th class="m">STD 0x200</th><th class="m">STD 0x300</th><th class="m">STD 0x3A5</th><th class="m">STD 0x400</th><th class="m">EXT 0x18FF0001</th><th class="m">EXT 0x1ABCDEF0</th></tr>
+<tr><td>결과</td><td>FIFO 0, FMI 0</td><td>FIFO 0, FMI 1</td><td>FIFO 1, FMI 0</td><td>FIFO 1, FMI 0</td><td class="off">버림</td><td>FIFO 0, FMI 2</td><td class="off">버림</td></tr>
+</table></div>
+<p><span class="eqv">등가 모델</span> FMI는 Figure 231의 번호 규칙(FIFO별, 뱅크 순서)과 우선순위 규칙(같은 스케일·모드면 낮은 번호)으로 유도했다. 0x3xx는 뱅크 1의 두 필터에 모두 맞지만 번호가 작은 0이 FMI가 된다. 위 필터 시험기에서 0x3A5와 0x400을 넣어 확인할 수 있다.</p>
+</section>
+
+<!-- ============================================================ 8 -->
+<section id="s8">
+<h2>8. 설계상 한계와 이유</h2>
+<div class="tablewrap"><table>
+<tr><th>설계 선택</th><th>얻은 것</th><th>감수한 것</th><th>근거</th></tr>
+<tr><td>USB와 전용 SRAM 512 B 공유</td><td>메일박스·FIFO 저장 공간을 두 장치가 나눠 써 칩 면적 절약</td><td>"they cannot be used concurrently ... The USB and CAN can be used in the same application but not at the same time." 벡터 두 개와 PA11/PA12 핀도 USB와 겹친다</td><td>RM0008 24.2 Note (<a href="../../Docs/RM0008_Reference_manual.pdf#page=654">p.654</a>), Table 63, DS5319 Table 5</td></tr>
+<tr><td>송신 메일박스 3개</td><td>하드웨어가 우선순위를 골라 높은 ID가 낮은 ID에 막히지 않는다</td><td>4개 이상을 대기시키려면 소프트웨어 큐가 필요하다. TXFP = 1이면 ID 우선순위 대신 요청 순서</td><td>RM0008 24.7.1</td></tr>
+<tr><td>수신 FIFO 2개 × 3칸</td><td>CPU가 프레임마다 즉시 응답하지 않아도 된다</td><td>네 번째 메시지에서 넘침. RFLM에 따라 최신 또는 최초 메시지를 잃는다</td><td>RM0008 24.7.3</td></tr>
+<tr><td>필터 뱅크 14개</td><td>필요 없는 프레임을 CPU 모르게 버린다</td><td>등록할 수 있는 정확한 ID 수에 상한이 있다. 16비트 리스트로 써도 14 × 4 = 56개(표준 ID), 확장 ID는 32비트 리스트로 14 × 2 = 28개</td><td>RM0008 24.7.4, Figure 230</td></tr>
+<tr><td>DMA 없음(문서상)</td><td>단순한 구조</td><td>메일박스를 CPU가 워드 단위로 읽고 쓴다. "The peripheral registers have to be accessed by words (32 bits)"</td><td>RM0008 Table 78, 24.9 (<a href="../../Docs/RM0008_Reference_manual.pdf#page=674">p.674</a>)</td></tr>
+<tr><td>APB1 클럭으로 tq 생성</td><td>별도 클럭원이 필요 없다</td><td>PCLK1 ≤ 36 MHz와 정수 분주라서 보레이트·샘플 지점 조합이 제한된다. 최대 1 Mbit/s</td><td>RM0008 7.2, 24.7.7, DS5319 2.3.19</td></tr>
+<tr><td>BTR·필터 설정은 특정 모드에서만</td><td>통신 중 실수로 버스 전체를 흔들지 않는다("can cause the hardware to temporarily disturb the whole CAN network")</td><td>BTR을 바꾸려면 초기화 모드로 가야 하고, 그동안 통신이 멈춘다. FINIT = 1 동안은 수신도 꺼진다</td><td>RM0008 24.9.1 (<a href="../../Docs/RM0008_Reference_manual.pdf#page=674">p.674</a>)</td></tr>
+<tr><td>오류 상태 자동 관리</td><td>고장 노드가 스스로 물러나 버스를 지킨다</td><td>버스 오프에서 돌아오려면 열성 11비트 × 128회가 필요하다. ABOM = 0이면 소프트웨어가 복귀를 시작해야 한다</td><td>RM0008 24.7.6</td></tr>
+<tr><td>시험 모드(루프백·침묵)</td><td>트랜시버·상대 없이 자가 시험</td><td>루프백은 ACK 오류를 무시하므로 실제 버스의 ACK·종단·트랜시버 문제는 드러나지 않는다. 침묵 모드는 송신할 수 없다</td><td>RM0008 24.5</td></tr>
+<tr><td>시간 트리거 통신(TTCM)</td><td>-</td><td><b>정오표</b>: F103x8/xB에서 지원되지 않는다. TTCM = 0 유지, 시간표시(TIME, TGT) 사용 불가, 회피책 없음</td><td>ES096 2.11.1 (<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=23">p.23</a>)</td></tr>
+<tr><td>핀 대체 기능 공유</td><td>핀 하나를 여러 주변장치가 쓴다</td><td><b>정오표</b>: USART1이 켜져 있고 CAN 클럭이 꺼진 채 PA12가 대체 기능 출력이면 CAN_TX가 1을 내 USART1_RTS를 쓸 수 없다. 회피: CAN_REMAP을 다른 핀(10) 또는 미사용 코드(01)로</td><td>ES096 2.3.1 (<a href="../../Docs/ES096_F103x8xB_Errata.pdf#page=10">p.10</a>)</td></tr>
+<tr><td>64핀 패키지</td><td>-</td><td>PD0/PD1 리맵 불가. CAN 핀은 PA11/PA12 또는 PB8/PB9 둘 중 하나</td><td>RM0008 9.3.3 (<a href="../../Docs/RM0008_Reference_manual.pdf#page=176">p.176</a>)</td></tr>
+</table></div>
+<p>문서 표기 오류 모음: Table 34(<a href="../../Docs/RM0008_Reference_manual.pdf#page=176">p.176</a>)의 송신 줄 이름이 "CAN1_TX or CAN_RX"로 적혀 있다(CAN_TX가 맞다). TSR의 TXOK0 설명은 "mailbox 1"이라고 적고, RQCP2 설명은 옛 이름 "CAN_TMID2R"을 쓴다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=678">p.678</a>). 그 밖의 오류는 해당 그림 캡션에 적었다(Figure 229, 232, 235, 237).</p>
+</section>
+
+<!-- ============================================================ 9 -->
+<section id="s9">
+<h2>9. 이해 확인 문제</h2>
+<details><summary>Q1. PCLK1 = 32 MHz에서 250 kbit/s, 비트당 16 tq, 샘플 지점 87.5 %로 맞추려면 BRP·TS1·TS2 필드는? SJW = 1 tq일 때 BTR 값은?</summary><div class="ans">
+<p>비트 시간 4 µs ÷ 16 = tq 250 ns이므로 32 MHz를 8로 나눈다. BRP = 7이다. 샘플 지점 87.5 % = 14/16이므로 1 + BS1 = 14 → BS1 = 13 tq(TS1 = 12), BS2 = 2 tq(TS2 = 1)이다. BTR = (SJW 0 &lt;&lt; 24) | (1 &lt;&lt; 20) | (12 &lt;&lt; 16) | 7 = 0x001C 0007이다. 4장 계산기로 확인할 수 있다.</p></div></details>
+<details><summary>Q2. BTR 리셋값은 0x0123 0000이다. 리셋 직후 클럭(PCLK1 = 8 MHz)이라면 보레이트와 샘플 지점은?</summary><div class="ans">
+<p>필드를 풀면 SJW = 1(2 tq), TS2 = 2(3 tq), TS1 = 3(4 tq), BRP = 0(÷1)이다. tq = 125 ns, 비트 = 1 + 4 + 3 = 8 tq = 1 µs이므로 1 Mbit/s이고, 샘플 지점은 5/8 = 62.5 %이다(리셋값은 <a href="../../Docs/RM0008_Reference_manual.pdf#page=683">p.683</a>). 리셋값을 그대로 쓰지 않고 반드시 설정하는 이유이다.</p></div></details>
+<details><summary>Q3. 노드 A는 ID 0x6A0, 노드 B는 ID 0x6A4 데이터 프레임을 동시에 보낸다. 누가 이기고, 진 쪽은 몇 번째 ID 비트에서 물러나는가?</summary><div class="ans">
+<p>0x6A0 = 110 1010 0000, 0x6A4 = 110 1010 0100이다. ID10부터 ID3까지 같고, ID2에서 A는 0(우성), B는 1(열성)을 낸다. B는 ID2에서 버스 0을 보고 물러난다. 값이 작은 A가 이긴다. B의 메일박스에는 ALST가 서고 NART = 0이면 버스가 빈 뒤 다시 시도한다. 7장 중재 실험에 넣어 확인할 수 있다.</p></div></details>
+<details><summary>Q4. 같은 ID 0x123으로 노드 A는 데이터 프레임, 노드 B는 원격 프레임을 동시에 보낸다. 결과는?</summary><div class="ans">
+<p>ID 11비트가 모두 같으므로 중재는 RTR 비트까지 간다. 데이터 프레임은 RTR = 0(우성), 원격 프레임은 RTR = 1(열성)이므로 데이터 프레임이 이긴다. B는 원하던 데이터를 바로 그 프레임으로 받게 된다.</p></div></details>
+<details><summary>Q5. 500 kbit/s에서 표준 ID, DLC 8 데이터 프레임 하나는 몇 µs인가? 버스에 이 프레임만 계속 흐른다면 초당 최대 몇 개인가?</summary><div class="ans">
+<p>44 + 8 × 8 = 108비트 × 2 µs = 216 µs이고, 간헐 3비트를 더하면 111비트 = 222 µs이다. 1 / 222 µs ≈ 4 500개/초이다. 스터핑 비트를 빼고 계산했으므로 실제로는 이보다 조금 적다.</p></div></details>
+<details><summary>Q6. FIFO 0에 메시지 M1~M5가 연달아 오는 동안 CPU가 한 번도 RFOM을 쓰지 못했다. RFLM = 0과 RFLM = 1일 때 FIFO에 남는 것은?</summary><div class="ans">
+<p>세 칸이 M1, M2, M3로 찬 뒤 넘침이 두 번 일어난다. RFLM = 0이면 마지막 저장 메시지가 매번 덮어써지므로 M1, M2, M5가 남는다. RFLM = 1이면 새 메시지를 버리므로 M1, M2, M3가 남는다. 두 경우 모두 FOVR0 = 1이고, 몇 개를 잃었는지는 알 수 없다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=664">p.664</a>).</p></div></details>
+<details><summary>Q7. 32비트 마스크 필터에 표준 ID 0x300, 마스크 0x700을 넣고 IDE·RTR 마스크 비트는 0(무시)으로 두었다. 어떤 프레임이 통과하는가?</summary><div class="ans">
+<p>STID 상위 3비트가 011인 표준 프레임(0x300~0x3FF)은 데이터·원격 가리지 않고 통과한다. 그런데 IDE도 무시하므로, EXID[28:18](32비트 스케일에서 STID 자리)의 상위 3비트가 011인 <b>확장 프레임도</b> 통과한다. 표준 프레임만 원하면 IDE를 마스크에 넣어 0과 일치시켜야 한다. 위 필터 시험기에서 "둘 다 무시"로 바꾸고 확장 ID 0C000000을 넣어 확인할 수 있다.</p></div></details>
+<details><summary>Q8. 슬립 상태(리셋 직후)에서 INRQ = 1만 쓰고 INAK를 기다렸더니 끝없이 기다린다. 왜인가?</summary><div class="ans">
+<p>Figure 224에서 Sleep → Initialization 전이 조건은 SLEEP̄ · INRQ · ACK이다. 리셋 직후 SLEEP = 1이므로 SLEEP을 함께 지워야 한다(24.4.3). 그렇지 않으면 상태기계가 Sleep에 머물러 INAK가 서지 않는다.</p></div></details>
+<details><summary>Q9. ESR의 TEC 필드가 0xF0(240)으로 읽혔다. 이 노드의 상태는? 이어서 BOFF = 1이 되었는데 TEC 필드가 작은 값으로 보일 수 있는 이유는?</summary><div class="ans">
+<p>240 &gt; 127이므로 오류 수동이고 EWGF·EPVF가 서 있다. TEC가 255를 넘으면 버스 오프이다. TEC는 9비트 카운터인데 ESR로는 하위 8비트만 보이므로(<a href="../../Docs/RM0008_Reference_manual.pdf#page=682">p.682</a>), 256 이상이 되면 필드 값만으로는 상태를 판단할 수 없다. 상태는 BOFF·EPVF 플래그로 확인해야 한다.</p></div></details>
+<details><summary>Q10. 루프백에서 잘 되던 프로그램을 정상 모드로 바꾸고 트랜시버를 달아 버스에 노드 하나만 연결했다. 송신은 어떻게 되는가?</summary><div class="ans">
+<p>ACK 슬롯에 우성을 내 줄 수신자가 없으므로 승인 오류가 난다. LEC = 011(Acknowledgment Error)이 기록되고, NART = 0이면 하드웨어가 계속 재전송한다. 메일박스는 EMPTY로 돌아오지 않고 TEC가 늘어 EWGF·EPVF가 설 수 있다. 오류마다 TEC가 얼마씩 늘고 어디서 멈추는지는 CAN 표준의 규칙이며 RM0008에는 없다. 루프백은 ACK 오류를 무시했기 때문에 이 문제를 보여 주지 못했다(24.5.2).</p></div></details>
+<details><summary>Q11. FIFO 0 인터럽트 처리에서 출력 메일박스의 데이터를 다 읽었는데도 인터럽트가 계속 다시 걸린다. 원인은?</summary><div class="ans">
+<p>FIFO 0 인터럽트의 원천 FMP0 ≠ 00은 메시지 수를 나타내는 상태이고, 읽기로는 줄지 않는다. RFOM0 = 1을 써서 출력 메일박스를 놓아 줘야 FMP가 1 줄어든다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=680">p.680</a>). 메시지가 더 남아 있으면 그다음 메시지가 출력 메일박스에 나타나고 인터럽트가 다시 걸리는 것이 정상이다.</p></div></details>
+<details><summary>Q12. 같은 프로그램에서 USB 장치 기능과 CAN을 둘 다 쓰고 싶다. 무엇이 문제이고 어떻게 해야 하는가?</summary><div class="ans">
+<p>두 장치는 전용 SRAM 512 B를 공유해 동시에 쓸 수 없다. 핀(PA11/PA12)과 인터럽트 벡터 두 개도 겹친다. RM0008은 "can be used in the same application but not at the same time"이라고 하므로, 한쪽을 끄고 다른 쪽을 켜는 식으로 시간을 나눠 써야 한다. 핀 충돌은 CAN을 PB8/PB9로 리맵하면 피할 수 있지만 SRAM 공유는 피할 수 없다.</p></div></details>
+</section>
+
+<!-- ============================================================ 10 -->
+<section id="s10">
+<h2>10. 하부 예제 연결</h2>
+<p>각 예제가 이 개념설명의 어느 경로를 쓰는지 정리했다. 두 예제에는 아직 예제설명(HTML)이 없으므로 폴더로 연결했다.</p>
+<div class="tablewrap"><table>
+<tr><th>예제</th><th>지나가는 경로</th><th>이 개념설명의 장</th></tr>
+<tr><td><a href="01_CAN_Loopback_c/">01_CAN_Loopback_c</a></td><td>초기화 모드 진입 → BTR(500 kbit/s, 16 tq, 87.5 %) + LBKM → "모두 통과" 마스크 필터 → 메일박스 송신 → 내부 되먹임 → FIFO 0 → FMPIE0 → USB_LP_CAN_RX0 벡터 → 읽기·RFOM</td><td><a href="#s4">4</a>, <a href="#s5">5①②</a>, <a href="#s6">6①</a>, <a href="#s7">7①</a></td></tr>
+<tr><td><a href="02_CAN_Filter_c/">02_CAN_Filter_c</a></td><td>필터 3뱅크(32비트 리스트, 16비트 마스크, 32비트 마스크) → FIFO 0/1 분배, FIFO 1 → CAN_RX1 벡터, 버려지는 ID 확인</td><td><a href="#s5">5⑤⑥⑦</a>, <a href="#s7">7④</a>, Q7</td></tr>
+</table></div>
+
+<div class="box ok">
+  <div class="label">정리</div>
+  <ul>
+    <li>CAN 버스는 우성(0)이 이기는 와이어드 AND이다. 모든 노드가 송신 중에도 버스를 읽어 비교하므로, ID가 작은 메시지가 손상 없이 중재에서 이긴다.</li>
+    <li>bxCAN은 송신 메일박스 3개 + 우선순위 선택기, CAN 코어, 필터 14뱅크(마스크·리스트 비교기), 수신 FIFO 2 × 3칸, 오류 카운터와 문턱값 비교기로 이루어진다. F103RB에는 CAN1 하나만 있다.</li>
+    <li>tq = (BRP+1) / PCLK1, 비트 = (1 + TS1+1 + TS2+1) tq, 샘플 지점은 BS1 끝이다. 재동기는 BS1을 늘이거나 BS2를 줄이며 그 한도가 SJW이다.</li>
+    <li>모드는 Sleep(리셋) → Initialization → Normal의 요청·확인 상태기계이고, BTR과 시험 모드는 초기화 모드에서만 바꾼다. FMP는 RFOM으로만 줄어든다.</li>
+    <li>벡터 4개(USB와 2개 공유), DMA 없음, USB와 SRAM·핀 공유로 동시 사용 불가. 정오표: TTCM 미지원, PA12의 USART1_RTS 충돌.</li>
+  </ul>
+</div>
+<div class="nextprev"><a href="../10_Flash_CRC/10_Flash_CRC%20개념설명.html">← 10_Flash_CRC 개념설명</a><a href="01_CAN_Loopback_c/">첫 예제: 01_CAN_Loopback_c →</a></div>
+</section>
+
+<footer>
+  <p>그림 출처와 표기 규칙은 <a href="../../교안의_활용법.html">교안의 활용법</a>을 따른다. 2장 일반 개념 상자의 내용은 근거 문서 밖의 CAN 상식이다.</p>
+</footer>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  function fmt(x,d){return (Math.round(x*Math.pow(10,d))/Math.pow(10,d)).toLocaleString('ko-KR')}
+  function ftime(s){return s>=1e-3?fmt(s*1e3,3)+" ms":fmt(s*1e6,2)+" µs"}
+  function hex(v,n){return "0x"+(v>>>0).toString(16).toUpperCase().padStart(n||8,"0")}
+  function phex(t,max){t=(t||"").trim().replace(/^0x/i,""); if(!/^[0-9a-f]+$/i.test(t)) return null; var v=parseInt(t,16); return (v>max)?null:v;}
+
+  /* ---------- 4장 비트 타이밍 계산기 ---------- */
+  function calcT(){
+    var f=Math.min(36,Math.max(1,+$("tclk").value||1))*1e6, br=Math.min(1000,Math.max(1,+$("trate").value||1))*1e3;
+    var spt=Math.min(95,Math.max(50,+$("tsp").value||87.5))/100, sjw=+$("tsjw").value, dlc=+$("tdlc").value, ext=$("ttyp").value==="ext";
+    var rows=[];
+    for(var b=1;b<=1024;b++){
+      var n=Math.round(f/(br*b)); if(n<3||n>25) continue;
+      var act=f/(b*n), err=(act-br)/br*100; if(Math.abs(err)>1) continue;
+      var t1=Math.round(spt*n)-1; if(t1<1)t1=1; if(t1>16)t1=16; var t2=n-1-t1;
+      if(t2>8){t2=8;t1=n-9;} if(t2<1){t2=1;t1=n-2;} if(t1<1||t1>16) continue;
+      rows.push({b:b,n:n,t1:t1,t2:t2,act:act,err:err,sp:(1+t1)/n});
+    }
+    rows.sort(function(a,c){var d=Math.abs(a.err)-Math.abs(c.err); if(Math.abs(d)>1e-9) return d; d=Math.abs(a.sp-spt)-Math.abs(c.sp-spt); if(Math.abs(d)>1e-9) return d; return c.n-a.n;});
+    var tab=$("t_tab"), note="";
+    if(!rows.length){
+      ["t_brp","t_tq","t_seg","t_bit","t_sp","t_btr","t_fr","t_fps"].forEach(function(id){$(id).textContent="-"});
+      tab.innerHTML=""; $("t_note").textContent="이 PCLK1로는 오차 1 % 안에서 3~25 tq 조합을 만들 수 없다. 보레이트나 PCLK1을 바꿔 본다."; return;
+    }
+    var r=rows[0], tq=r.b/f, bit=r.n*tq;
+    var btr=(((sjw-1)<<24)|((r.t2-1)<<20)|((r.t1-1)<<16)|(r.b-1))>>>0;
+    $("t_brp").textContent="÷"+r.b+" ("+(r.b-1)+")";
+    $("t_tq").textContent=fmt(tq*1e9,2)+" ns";
+    $("t_seg").textContent=r.t1+" / "+r.t2+" tq ("+(r.t1-1)+" / "+(r.t2-1)+")";
+    $("t_bit").textContent=r.n+" tq = "+ftime(bit)+" · "+fmt(r.act/1e3,3)+" kbit/s";
+    var e=$("t_sp"); e.textContent=fmt(r.sp*100,1)+" %"; e.className="v verdict "+(Math.abs(r.sp-spt)<=0.02?"good":"bad");
+    $("t_btr").textContent=hex(btr);
+    var nb=(ext?64:44)+8*dlc, tot=nb+3;
+    $("t_fr").textContent=nb+" + 3 비트 = "+ftime(tot/r.act);
+    $("t_fps").textContent=fmt(r.act/tot,0)+" 개";
+    var h='<tr><th>분주 (BRP)</th><th>tq</th><th>tq 수</th><th>BS1 / BS2</th><th>샘플 지점</th><th>보레이트 오차</th></tr>';
+    rows.slice(0,8).forEach(function(q,i){
+      var c=i===0?' class="m on"':' class="m"';
+      h+='<tr><td'+c+'>÷'+q.b+' ('+(q.b-1)+')</td><td'+c+'>'+fmt(q.b/f*1e9,1)+' ns</td><td'+c+'>'+q.n+'</td><td'+c+'>'+q.t1+' / '+q.t2+'</td><td'+c+'>'+fmt(q.sp*100,1)+' %</td><td'+c+'>'+(q.err>=0?"+":"")+fmt(q.err,3)+' %</td></tr>';
+    });
+    tab.innerHTML=h;
+    note="tq 수 범위 3~25(1 + 1~16 + 1~8)에서 오차 1 % 이내 조합을 모두 찾아, 오차 → 샘플 지점 차이 → tq 수가 많은 순으로 정렬했다. 첫 줄(초록)이 위 결과이다. ";
+    note+="SJW는 재동기 한도일 뿐 비트 시간에는 들어가지 않는다. 루프백(LBKM = 1)이면 BTR에 0x4000 0000을 더한다 → "+hex((btr|0x40000000)>>>0)+". ";
+    note+="프레임 길이는 Figure 235의 비트 수이고 스터핑 비트는 넣지 않았다.";
+    $("t_note").textContent=note;
+  }
+  ["tclk","trate","tsp","tsjw","tdlc","ttyp"].forEach(function(id){$(id).addEventListener("input",calcT);$(id).addEventListener("change",calcT)});
+  calcT();
+
+  /* ---------- 5장 필터 시험기 (32비트 스케일) ---------- */
+  function word(id,ide,rtr){ /* STID<<21 | EXID<<3 | IDE<<2 | RTR<<1 */
+    return ide? ((id*8 + 4 + rtr*2)>>>0) : ((id*2097152 + rtr*2)>>>0);
+  }
+  function bin32(v){var s=(v>>>0).toString(2).padStart(32,"0"); return s.replace(/(.{8})(?=.)/g,"$1 ");}
+  function calcF(){
+    var rext=+$("frx_t").value, fext=+$("ff_t").value, mode=$("fmode").value, fl=+$("ffl").value;
+    var rmax=rext?0x1FFFFFFF:0x7FF, fmax=fext?0x1FFFFFFF:0x7FF;
+    var rx=phex($("frx").value,rmax), a=phex($("ff1").value,fmax), b=phex($("ff2").value,fmax);
+    var res=$("f_res");
+    if(rx===null||a===null||b===null){
+      $("f_rx").textContent=$("f_r1").textContent=$("f_r2").textContent="-"; res.textContent="입력 오류"; res.className="v verdict bad";
+      $("f_note2").textContent="16진수로 입력한다. 표준 ID는 0~7FF, 확장 ID는 0~1FFFFFFF이다."; return;
+    }
+    var w=word(rx,rext,+$("frx_r").value), r1=word(a,fext,0), r2, ok, note;
+    if(mode==="mask"){
+      r2=fext? ((b*8)>>>0) : ((b*2097152)>>>0);
+      if(fl&2) r2=(r2|4)>>>0; if(fl&1) r2=(r2|2)>>>0;
+      var diff=((w^r1)&r2)>>>0; ok=diff===0;
+      note="마스크 모드: (수신 XOR FxR1) AND FxR2 = "+hex(diff)+(ok?" → 모든 비트 0이므로 통과.":" → 남은 1비트가 불일치이므로 이 필터는 통과시키지 않는다.");
+      note+=" 수신 워드 2진수: "+bin32(w)+". 필터 ID 쪽 RTR은 0(데이터 프레임)으로 두었다.";
+    } else {
+      r2=word(b,fext,0); ok=(w===r1)||(w===r2);
+      note="리스트 모드: 수신 워드가 FxR1 또는 FxR2와 32비트 모두 같아야 통과한다(두 ID 모두 데이터 프레임, 위의 형식으로 등록). "+(ok?"일치하는 항목이 있다.":"일치하는 항목이 없다.");
+    }
+    $("f_rx").textContent=hex(w); $("f_r1").textContent=hex(r1); $("f_r2").textContent=hex(r2);
+    res.textContent=ok?"통과":"불일치"; res.className="v verdict "+(ok?"good":"bad");
+    $("f_note2").textContent=note+" 워드 배치는 Figure 230의 32비트 Mapping(STID[10:0]·EXID[17:0]·IDE·RTR·0)을 따른 등가 계산이다.";
+  }
+  ["frx_t","frx","frx_r","fmode","ff_t","ff1","ff2","ffl"].forEach(function(id){$(id).addEventListener("input",calcF);$(id).addEventListener("change",calcF)});
+  calcF();
+
+  /* ---------- 7장 중재 실험 ---------- */
+  function drawArb(){
+    var a=phex($("aid").value,0x7FF), b=phex($("bid").value,0x7FF), ar=+$("artr").value, brr=+$("brtr").value;
+    if(a===null||b===null){$("arbsvg").innerHTML='<text class="t" x="20" y="40">ID는 16진수 0~7FF로 입력한다.</text>'; $("arb_note").textContent=""; return;}
+    var labels=["SOF"], A=[0], B=[0];
+    for(var i=10;i>=0;i--){labels.push(String(i)); A.push((a>>i)&1); B.push((b>>i)&1);}
+    labels.push("RTR"); A.push(ar); B.push(brr);
+    var n=labels.length, x0=120, w=(668-x0)/n, lostA=-1, lostB=-1, txA=[], txB=[], bus=[];
+    for(i=0;i<n;i++){
+      var ta=lostA>=0?1:A[i], tb=lostB>=0?1:B[i], v=ta&tb;
+      txA.push(ta); txB.push(tb); bus.push(v);
+      if(lostA<0&&ta===1&&v===0) lostA=i;
+      if(lostB<0&&tb===1&&v===0) lostB=i;
+    }
+    var rows=[{y:34,l:"노드 A TX",d:txA},{y:84,l:"노드 B TX",d:txB},{y:134,l:"버스 (AND)",d:bus}], s="";
+    for(i=0;i<n;i++){
+      var x=x0+i*w;
+      if(i===lostA||i===lostB) s+='<rect x="'+x+'" y="20" width="'+w+'" height="150" class="bx sel" style="stroke:none"/>';
+      s+='<text class="sc" x="'+(x+w/2)+'" y="14">'+labels[i]+'</text>';
+      s+='<line class="dash" x1="'+x+'" y1="18" x2="'+x+'" y2="168"/>';
+    }
+    s+='<line class="dash" x1="'+(x0+n*w)+'" y1="18" x2="'+(x0+n*w)+'" y2="168"/>';
+    rows.forEach(function(r){
+      var hi=r.y-12, lo=r.y+8, pts=[], prev=null;
+      s+='<text class="s" x="6" y="'+(r.y+2)+'">'+r.l+'</text>';
+      pts.push((x0-14)+","+hi); pts.push(x0+","+hi);
+      for(var k=0;k<n;k++){var yy=r.d[k]?hi:lo, xx=x0+k*w; pts.push(xx+","+yy); pts.push((xx+w)+","+yy);}
+      s+='<polyline class="'+(r.y===134?"sig2":"sig")+'" points="'+pts.join(" ")+'"/>';
+      for(k=0;k<n;k++) s+='<text class="sc" x="'+(x0+k*w+w/2)+'" y="'+(r.y+24)+'">'+r.d[k]+'</text>';
+    });
+    s+='<text class="s" x="'+x0+'" y="184">위 = 1(열성), 아래 = 0(우성). 주황 칸 = 중재에서 진 비트</text>';
+    $("arbsvg").innerHTML=s;
+    var note;
+    if(lostA<0&&lostB<0) note="두 노드가 SOF부터 RTR까지 똑같은 비트를 냈다. 중재로 가려지지 않으므로 둘 다 계속 보내다가 데이터 등에서 서로 다른 비트가 나오면 비트 오류가 된다. 그래서 한 ID는 한 노드만 보내도록 시스템을 설계한다.";
+    else {
+      var loser=lostA>=0?"A":"B", winner=lostA>=0?"B":"A", at=lostA>=0?lostA:lostB;
+      note="노드 "+loser+"가 "+(labels[at]==="RTR"?"RTR 비트":"ID"+labels[at]+" 비트")+"에서 1(열성)을 냈는데 버스가 0(우성)이어서 물러났다. 노드 "+winner+"는 아무 손상 없이 송신을 계속한다. ";
+      note+=(labels[at]==="RTR")?"ID가 같아 RTR에서 갈렸다: 데이터 프레임(RTR = 0)이 원격 프레임을 이긴다.":"ID 값이 작은 쪽(0x"+Math.min(a,b).toString(16).toUpperCase()+")이 이겼다.";
+      note+=" 진 노드의 메일박스에는 ALST가 서고, NART = 0이면 버스가 빈 뒤 다시 시도한다.";
+    }
+    $("arb_note").textContent=note;
+  }
+  ["aid","artr","bid","brtr"].forEach(function(id){$(id).addEventListener("input",drawArb);$(id).addEventListener("change",drawArb)});
+  drawArb();
+})();
+</script>
+</body></html>

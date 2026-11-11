@@ -20,7 +20,7 @@ I2C1(SCL = PB6, SDA = PB7)로 확장 IC의 출력 핀을 다루고, 슬레이브
 - 레지스터 기반 장치 접근: `HAL_I2C_Mem_Read/Write` (START - 주소 - 레지스터 - RESTART - 읽기)
 - 장치가 응답하지 않을 때의 진단 수단으로서 버스 스캔
 
-**상위 교안**: [04_I2C_Communication 교안.html](04_I2C_Communication%20교안.html)은 I2C 하드웨어를 RM0008의 원본 블록도로 설명한다. 다루는 내용은 오픈드레인 버스와 START/STOP·주소·ACK, SCL 생성(CCR·TRISE)과 상승 시간, 이벤트(EV5~EV8)와 플래그 지우기 순서의 상태기계, 인터럽트 두 줄과 DMA, 정오표(ES096) I2C 항목, 확인 문제이며, 각 예제가 어느 경로를 쓰는지 연결한다. 그림 원본은 `img/` 폴더에 있다.
+**개념설명**: [04_I2C_Communication 개념설명.html](04_I2C_Communication%20개념설명.html)은 I2C 하드웨어를 RM0008의 원본 블록도로 설명한다. 다루는 내용은 오픈드레인 버스와 START/STOP·주소·ACK, SCL 생성(CCR·TRISE)과 상승 시간, 이벤트(EV5~EV8)와 플래그 지우기 순서의 상태기계, 인터럽트 두 줄과 DMA, 정오표(ES096) I2C 항목, 확인 문제이며, 각 예제가 어느 경로를 쓰는지 연결한다. 그림 원본은 `img/` 폴더에 있다.
 
 ## 공통 배선
 

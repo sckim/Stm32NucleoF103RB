@@ -24,9 +24,9 @@ ST-Link 가상 COM 포트(USART2: PA2=TX, PA3=RX)로 PC와 통신한다. 단순 
 - 생산자-소비자 패턴과 동기화 없는 자료구조(lock-free)
 - FIFO(링 버퍼)와 LIFO(스택)의 차이, 공유 변수를 두 문맥이 함께 수정할 때의 경쟁 상태와 임계 구역
 
-**상위 교안**: [02_USART 교안.html](02_USART%20교안.html)은 USART 하드웨어를 RM0008의 원본 블록도로 설명한다. 다루는 내용은 프레임과 오버샘플링, 보레이트 계산, 플래그·인터럽트·DMA, 설계상 한계, 확인 문제이며, 각 예제가 어느 경로를 쓰는지 연결한다. 그림 원본은 `img/` 폴더에 있다.
+**개념설명**: [02_USART 개념설명.html](02_USART%20개념설명.html)은 USART 하드웨어를 RM0008의 원본 블록도로 설명한다. 다루는 내용은 프레임과 오버샘플링, 보레이트 계산, 플래그·인터럽트·DMA, 설계상 한계, 확인 문제이며, 각 예제가 어느 경로를 쓰는지 연결한다. 그림 원본은 `img/` 폴더에 있다.
 
-교안(HTML): 각 예제 폴더의 `<예제명> 교안.html` (폴더명 끝의 `_c`는 파일명에서 뺀다. 예: `04_USART_DMA_IdleLine_c/04_USART_DMA_IdleLine 교안.html`). 03과 07은 `03_USART_RingBuffer/UART 링 버퍼 교안.html`, `07_USART_Stack/스택 교안.html`이다.
+예제설명(HTML): 각 예제 폴더의 `<예제명> 예제설명.html` (폴더명 끝의 `_c`는 파일명에서 뺀다. 예: `04_USART_DMA_IdleLine_c/04_USART_DMA_IdleLine 예제설명.html`). 03과 07은 `03_USART_RingBuffer/UART 링 버퍼 예제설명.html`, `07_USART_Stack/스택 예제설명.html`이다.
 
 ## 공통
 

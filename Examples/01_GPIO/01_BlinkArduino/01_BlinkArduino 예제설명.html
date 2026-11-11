@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>01_BlinkArduino 예제설명</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+
+/* Layout: 한 열 예제설명(최대 860px) — 문제 → 계층 비교 → 핀 맵·클럭 → 시뮬레이터 → 함수↔레지스터 → 실행 경로 → 코드 → 실험 → 트러블슈팅 → 문제 → 정리 순서.
+   계층 색을 시리즈 전체에서 고정한다: 이 예제설명의 경로 = 주황(--c1), 출력 파형 = 파랑(--c0), 하드웨어 = 보라(--c3). */
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --surface2:#E7ECF0; --fg:#14222C; --muted:#52636F; --line:#CBD5DC;
+  --c0:#1D4ED8; --c0-soft:#DCE6FB; --c1:#C2410C; --c1-soft:#FDE6DA; --c2:#0F766E; --c2-soft:#D5F0EC; --c3:#7E22CE; --c3-soft:#EEDFFB;
+  --code-bg:#0F1B24; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#9A3412; --warn-bg:#FFF1E6; --ok:#166534; --ok-bg:#E4F5EA;
+  --font-body:"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.75;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:860px;margin:0 auto}
+header{padding-block:40px 8px}
+.kicker{font-family:var(--font-mono);font-size:13px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.25;margin:8px 0 12px;text-wrap:balance;font-weight:700}
+.lead{color:var(--muted);margin:0;max-width:62ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0;padding:0;list-style:none}
+nav.toc a{display:block;padding:6px 12px;border:1px solid var(--line);border-radius:6px;color:var(--fg);text-decoration:none;font-size:14px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--c0);outline:2px solid var(--c0);outline-offset:1px}
+section{margin-top:56px}
+h2{font-size:24px;line-height:1.35;margin:0 0 12px;text-wrap:balance;font-weight:700}
+h3{font-size:18px;margin:28px 0 8px;font-weight:700}
+p{margin:0 0 14px;max-width:68ch}
+ul,ol{margin:0 0 14px;padding-left:22px;max-width:68ch}
+li{margin-bottom:4px}
+code{font-family:var(--font-mono);font-size:.9em;background:var(--surface2);padding:1px 6px;border-radius:4px}
+.k0{color:var(--c0);font-weight:700} .k1{color:var(--c1);font-weight:700} .k2{color:var(--c2);font-weight:700} .k3{color:var(--c3);font-weight:700}
+.box{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:16px 18px;margin:16px 0}
+.box.warn{background:var(--warn-bg);border-color:var(--warn)} .box.ok{background:var(--ok-bg);border-color:var(--ok)}
+.box > :last-child{margin-bottom:0}
+.label{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.tablewrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:15px;background:var(--surface)}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--surface2);font-weight:700;white-space:nowrap}
+td.m,th.m{font-family:var(--font-mono);font-size:13.5px}
+td.n{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+
+/* block diagram */
+.diag{max-width:720px;margin:18px auto}
+.diag svg{display:block;width:100%;height:auto}
+#blk .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+#blk .bx.hot{stroke:var(--warn);stroke-width:2.5;fill:var(--warn-bg)}
+#blk .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+#blk .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+#blk .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+#blk .w0{stroke:var(--c0)} #blk .w1{stroke:var(--c1)} #blk .w2{stroke:var(--c2)} #blk .w3{stroke:var(--c3)}
+#blk .d0{fill:var(--c0)} #blk .d1{fill:var(--c1)} #blk .d2{fill:var(--c2)} #blk .d3{fill:var(--c3)}
+#blk .ah{fill:var(--muted)}
+
+/* flow */
+.flow{list-style:none;padding:0;margin:16px 0;display:grid;gap:0;max-width:none}
+.flow li{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:0;padding:0 0 14px;position:relative}
+.flow li:not(:last-child)::before{content:"";position:absolute;left:16px;top:34px;bottom:0;width:2px;background:var(--line)}
+.flow .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:14px;font-weight:600;background:var(--surface2);border:2px solid var(--line)}
+.flow li.hw .n{border-color:var(--c3);color:var(--c3)} .flow li.sw .n{border-color:var(--c0);color:var(--c0)}
+.flow .tx{min-width:0} .flow .tx b{display:block}
+.flow .tx span{color:var(--muted);font-size:14.5px}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:11.5px;padding:0 6px;border-radius:4px;margin-left:6px;vertical-align:1px}
+.tag.hw{background:var(--c3-soft);color:var(--c3)} .tag.sw{background:var(--c0-soft);color:var(--c0)}
+
+/* mode cards */
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:16px 0}
+.mode{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:14px 16px;min-width:0}
+.mode.pick{border:2px solid var(--ok)}
+.mode b{display:block;margin-bottom:2px}
+.mode .reg{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);display:block;margin-bottom:8px}
+.trk{display:flex;gap:3px;margin:8px 0 6px;flex-wrap:wrap}
+.trk span{font-family:var(--font-mono);font-size:11.5px;font-weight:600;padding:2px 6px;border-radius:4px;border:1px solid var(--line)}
+.trk .g{color:var(--muted);border-style:dashed;background:none}
+.trk .r0{background:var(--c0-soft);color:var(--c0);border-color:var(--c0)} .trk .r1{background:var(--c1-soft);color:var(--c1);border-color:var(--c1)}
+.trk .r2{background:var(--c2-soft);color:var(--c2);border-color:var(--c2)} .trk .r3{background:var(--c3-soft);color:var(--c3);border-color:var(--c3)}
+.trk .x{text-decoration:line-through;opacity:.55}
+.mode p{font-size:14.5px;margin:0}
+
+/* simulator */
+.sim{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:18px;margin:16px 0}
+.subhead{font-weight:700;margin:18px 0 6px;padding-top:14px;border-top:1px dashed var(--line)}
+.subhead:first-child{margin-top:0;padding-top:0;border-top:0}
+.ranks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+@media (max-width:560px){.ranks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.rk{border:2px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);min-width:0;position:relative}
+.rk .h{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.rk .c{font-weight:700;font-size:15px;line-height:1.35}
+.rk .p{font-family:var(--font-mono);font-size:11.5px;color:var(--muted)}
+.rk .v{font-family:var(--font-mono);font-size:13px;font-variant-numeric:tabular-nums;margin-top:4px}
+.rk.nx{box-shadow:0 0 0 3px var(--fg) inset}
+.rk.nx::after{content:"다음 트리거";position:absolute;top:-11px;right:8px;font-size:11px;font-weight:700;background:var(--fg);color:var(--bg);padding:0 6px;border-radius:4px}
+.rk.r0 .c{color:var(--c0)} .rk.r1 .c{color:var(--c1)} .rk.r2 .c{color:var(--c2)} .rk.r3 .c{color:var(--c3)}
+.rk.on.r0{background:var(--c0-soft);border-color:var(--c0)} .rk.on.r1{background:var(--c1-soft);border-color:var(--c1)}
+.rk.on.r2{background:var(--c2-soft);border-color:var(--c2)} .rk.on.r3{background:var(--c3-soft);border-color:var(--c3)}
+.regs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.stat{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.stat .k{font-size:12px;color:var(--muted);font-family:var(--font-mono)}
+.stat .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3;overflow-wrap:anywhere}
+.lamp{display:inline-block;padding:0 10px;border-radius:999px;font-size:15px;border:1px solid var(--line)}
+.lamp.on{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+.outs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+@media (max-width:560px){.outs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.oc{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.oc .k{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.oc .v{font-family:var(--font-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.oc .f{font-size:12.5px}
+.oc.bad{border:2px solid var(--warn);background:var(--warn-bg)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+button,select,input{font-family:inherit}
+button{font-size:15px;font-weight:700;padding:9px 14px;border-radius:6px;border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;min-height:44px}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+button.hw{border-color:var(--c3);color:var(--c3)} button.hw:hover{background:var(--c3-soft)}
+button.sw{border-color:var(--c0);color:var(--c0)} button.sw:hover{background:var(--c0-soft)}
+button.plain:hover{background:var(--surface2)}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 16px;margin:10px 0}
+.ctl label{display:block;font-size:14px;color:var(--muted)}
+.ctl label b{font-family:var(--font-mono);color:var(--fg);font-weight:600}
+.ctl select{font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl input[type=range]{width:100%;min-height:32px}
+.calc{font-family:var(--font-mono);font-size:13.5px;line-height:1.65;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-height:5.4em;white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0 0}
+.uart{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);color:var(--code-fg);border-radius:6px;padding:10px 12px;white-space:pre;overflow-x:auto;margin:8px 0 0;min-height:2.6em}
+.log{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:8px 0 0;max-height:7.5em;overflow:auto;white-space:pre-wrap}
+
+/* code */
+pre{background:var(--code-bg);color:var(--code-fg);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:0;font-family:var(--font-mono);font-size:13.5px;line-height:1.7;tab-size:2}
+pre code{background:none;padding:0;font-size:inherit;color:inherit}
+.cm{color:var(--code-cmt)} .kw{color:var(--code-kw)} .hl{color:var(--code-hl)}
+.codepair{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;margin:14px 0;align-items:start}
+@media (max-width:760px){.codepair{grid-template-columns:minmax(0,1fr)}}
+.codepair ol{margin:0;padding-left:20px;font-size:15px} .codepair li{margin-bottom:8px}
+.file{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:18px 0 6px}
+
+/* quiz */
+details{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0;padding:0}
+summary{cursor:pointer;padding:12px 16px;font-weight:500;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--c0)} details[open] summary::before{content:"▾ "}
+summary:focus-visible{outline:3px solid var(--fg);outline-offset:-3px;border-radius:8px}
+details .ans{padding:0 16px 14px;color:var(--fg)} details .ans p{margin-bottom:8px}
+footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+
+/* 타이머 예제설명 추가 토큰 */
+.diag .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.diag .bx.hot{stroke:var(--warn);stroke-width:2.5;fill:var(--warn-bg)}
+.diag .bx.hw{stroke:var(--c3);fill:var(--c3-soft)} .diag .bx.sw{stroke:var(--c0);fill:var(--c0-soft)}
+.diag .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.diag .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.diag .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+.diag .ah{fill:var(--muted)}
+.diag .ax{stroke:var(--muted);stroke-width:1.3;fill:none}
+.diag .gd{stroke:var(--line);stroke-width:1.2;stroke-dasharray:5 4;fill:none}
+.diag .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .diag .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.diag .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .diag .s3{stroke:var(--c3);stroke-width:2.2;fill:none}
+.diag .d1{fill:var(--c1)} .diag .d0{fill:var(--c0)} .diag .d3{fill:var(--c3)}
+.diag .blk{fill:var(--c1-soft);stroke:var(--c1)}
+.diag text.m{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.diag text.t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.wave{margin:12px 0}
+.wave svg{display:block;width:100%;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px}
+.wave .ax{stroke:var(--muted);stroke-width:1.2;fill:none}
+.wave .gd{stroke:var(--line);stroke-width:1;stroke-dasharray:4 4;fill:none}
+.wave .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .wave .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.wave .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .wave .s3{stroke:var(--c3);stroke-width:2.2;fill:none}
+.wave .ev{stroke:var(--c3);stroke-width:1.6}
+.wave .bar{fill:var(--c1)} .wave .bar0{fill:var(--c0)}
+.wave text{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.wave text.tt{font-family:var(--font-body);font-size:12.5px;fill:var(--fg)}
+.bits{display:flex;margin:14px 0;font-family:var(--font-mono);font-size:13.5px;text-align:center}
+.bits div{flex:1;border:2px solid var(--c0);padding:10px 6px;background:var(--c0-soft);min-width:0}
+.bits div.lo{border-color:var(--c2);background:var(--c2-soft)}
+.bits small{display:block;color:var(--muted);font-size:12px}
+.eq{font-family:var(--font-mono);font-size:14.5px;background:var(--surface2);border-left:4px solid var(--c0);padding:10px 14px;margin:14px 0;overflow-x:auto;white-space:pre-wrap}
+.nextprev{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+.nextprev a{border:1px solid var(--line);border-radius:8px;padding:8px 14px;text-decoration:none;color:var(--c0);background:var(--surface)}
+td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
+.rowbad td{background:var(--warn-bg)}
+.cards2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:16px 0}
+.cards2 .mode{min-width:0}
+
+.wave .dot{fill:var(--c3)} .wave .blk{fill:var(--c1-soft);stroke:var(--c1)}
+.capt{font-size:14px;color:var(--muted);margin:6px 2px 14px}
+.stat .v.sm{font-size:15px}
+.sim .row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+
+
+/* Blink 시리즈 추가 (기존 토큰만 사용) */
+.bits div.sel{border-color:var(--c1);background:var(--c1-soft)}
+.bits div.dim{opacity:.6}
+.sim .note{font-size:14px;color:var(--muted);margin:6px 0 0}
+.sim .warnline{color:var(--warn);font-weight:700}
+.ctl input[type=number]{font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl .chk{display:flex;align-items:center;gap:8px;min-height:40px;color:var(--fg)}
+.ctl .chk input{width:20px;height:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">STM32 Nucleo-F103RB · GPIO · 예제설명 · <a href="../01_GPIO%20개념설명.html" style="color:inherit">↑ 01_GPIO 개념설명</a></div>
+  <h1>Arduino 계층의 Blink: pinMode · digitalWrite · delay 뒤의 레지스터</h1>
+  <p class="lead">Arduino API는 칩을 몰라도 LED를 깜빡이게 해 주지만, 그 대가로 어떤 레지스터가 언제 바뀌는지가 보이지 않는다. 이 예제설명은 STM32duino 코어가 <code>pinMode</code>를 <code>RCC_APB2ENR</code>·<code>GPIOA_CRL</code> 설정으로, <code>digitalWrite</code>를 <code>BSRR</code>/<code>BRR</code> 쓰기로 바꾸는 과정을 빌드 산출물로 확인하고, 같은 Blink를 HAL·LL·레지스터로 구현한 세 예제와 비교한다. 대상 폴더는 <code>01_BlinkArduino</code>이다.</p>
+  <nav class="toc" aria-label="목차">
+    <a href="#s1">1. 문제와 목표</a><a href="#s2">2. 계층 비교</a><a href="#s3">3. 핀 맵과 클럭</a><a href="#s4">4. 직접 만져 보기</a><a href="#s5">5. 함수 ↔ 레지스터</a><a href="#s6">6. 실행 경로</a><a href="#s7">7. 코드 읽기</a><a href="#s8">8. 실험</a><a href="#s9">9. 트러블슈팅</a><a href="#s10">10. 확인 문제</a>
+  </nav>
+</header>
+
+
+<section id="s1">
+<h2>1. 문제: 세 줄짜리 Blink 뒤에서 무슨 일이 일어나는가</h2>
+<p>Arduino 코드는 <code>pinMode</code>, <code>digitalWrite</code>, <code>delay</code> 세 함수만으로 LED를 점멸한다. 같은 코드가 AVR(Uno)에서도 STM32에서도 동작하는 것은 프레임워크가 칩마다 다른 레지스터 조작을 감추기 때문이다. 이 예제설명은 그 감춰진 부분이 STM32F103에서 정확히 어떤 레지스터 쓰기인지 확인하고, 시리즈의 나머지 세 예제(HAL, LL, 레지스터)와 비교할 기준점을 만든다. 학습 목표는 다음과 같다.</p>
+<ul><li><code>setup()</code> 1회 + <code>loop()</code> 무한 반복 구조가 코어의 <code>main()</code> 안에서 호출되는 함수임을 설명한다.</li><li><code>LED_BUILTIN</code> → D13 → <code>PA5</code>로 이어지는 핀 번호 변환을 따라간다.</li><li><code>digitalWrite(HIGH)</code>가 <code>GPIOA_BSRR</code>, <code>digitalWrite(LOW)</code>가 <code>GPIOA_BRR</code> 쓰기가 됨을 확인한다.</li><li>네 계층의 코드량·이식성·하드웨어 가시성·빌드 프레임워크(<code>platformio.ini</code>의 <code>framework</code>) 차이를 표로 비교한다.</li></ul>
+<div class="box"><div class="label">이 예제의 동작</div><p><code>setup()</code>에서 PA5를 출력으로 설정한 뒤, <code>loop()</code>가 HIGH → 500 ms 대기 → LOW → 500 ms 대기를 반복한다. LD2는 1초 주기(1 Hz, 듀티 50 %)로 점멸한다.</p></div>
+</section>
+
+<section id="s2">
+<h2>2. 핵심 개념: 같은 Blink, 네 가지 계층</h2>
+<p>시리즈의 네 예제는 모두 LD2(PA5)를 점멸한다. 차이는 사용자가 어느 높이에서 하드웨어를 부르는가이다. Arduino 계층은 핀을 보드의 번호(D13)로 부르고, 클럭·포트 설정·타이머를 전부 프레임워크가 맡는다.</p>
+<div class="diag"><svg viewBox="0 0 680 280" role="img" aria-label="Blink 네 예제의 추상화 계층과 레지스터까지의 경로">
+<rect class="bx hot" x="20" y="14" width="430" height="40" rx="6"/><text class="t" x="34" y="39">Arduino API</text><text class="s" x="190" y="39">pinMode / digitalWrite / delay</text>
+<rect class="bx" x="20" y="66" width="430" height="40" rx="6"/><text class="t" x="34" y="91">HAL</text><text class="s" x="190" y="91">HAL_GPIO_Init / TogglePin / HAL_Delay</text>
+<rect class="bx" x="20" y="118" width="430" height="40" rx="6"/><text class="t" x="34" y="143">LL (인라인 함수)</text><text class="s" x="190" y="143">LL_GPIO_* / LL_mDelay</text>
+<rect class="bx" x="20" y="170" width="430" height="40" rx="6"/><text class="t" x="34" y="195">CMSIS 레지스터 정의</text><text class="s" x="190" y="195">GPIOA-&gt;BSRR, RCC-&gt;APB2ENR, SysTick</text>
+<rect class="bx hw" x="20" y="226" width="640" height="40" rx="6"/><text class="t" x="34" y="251">하드웨어: GPIOA_CRL · GPIOA_BSRR/BRR · ODR5 → PA5 → LD2</text>
+<line class="s1" x1="490" y1="34" x2="490" y2="218"/><polygon class="ah" points="490,224 485,214 495,214"/><circle class="d1" cx="490" cy="34" r="4"/><text class="s" x="483" y="26">01</text>
+<line class="w" x1="536" y1="86" x2="536" y2="218"/><polygon class="ah" points="536,224 531,214 541,214"/><circle class="ah" cx="536" cy="86" r="4"/><text class="s" x="529" y="78">02</text>
+<line class="w" x1="582" y1="138" x2="582" y2="218"/><polygon class="ah" points="582,224 577,214 587,214"/><circle class="ah" cx="582" cy="138" r="4"/><text class="s" x="575" y="130">03</text>
+<line class="w" x1="628" y1="190" x2="628" y2="218"/><polygon class="ah" points="628,224 623,214 633,214"/><circle class="ah" cx="628" cy="190" r="4"/><text class="s" x="621" y="182">04</text>
+<line class="w" x1="450" y1="34" x2="486" y2="34"/><line class="w" x1="450" y1="86" x2="532" y2="86"/><line class="w" x1="450" y1="138" x2="578" y2="138"/><line class="w" x1="450" y1="190" x2="624" y2="190"/>
+</svg><p class="capt">그림 1. 네 예제는 같은 하드웨어(PA5의 출력 레지스터)에 도달하지만 출발하는 계층이 다르다. 굵은 주황 경로가 이 예제설명의 예제이며, 위 계층일수록 그 아래 계층을 모두 거친다.</p></div><div class="tablewrap"><table><tr><th>예제</th><th>계층 · framework</th><th>LD2 제어 호출</th><th>실제 레지스터 접근</th><th>딜레이</th><th>Flash</th></tr><tr><td class="m"><b>01_BlinkArduino</b></td><td>Arduino (STM32duino)<br><code>arduino</code></td><td><code>digitalWrite(LED_BUILTIN, HIGH/LOW)</code></td><td>HIGH: <code>GPIOA_BSRR</code> ← 0x0000 0020<br>LOW: <code>GPIOA_BRR</code> ← 0x0000 0020</td><td><code>delay(500)</code> — SysTick 인터럽트 + <code>uwTick</code></td><td>약 13.0 KB</td></tr><tr><td class="m">02_BlinkHAL</td><td>HAL<br><code>stm32cube</code></td><td><code>HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin)</code></td><td><code>ODR</code> 읽기 → <code>BSRR</code> ← ((ODR&amp;0x20)&lt;&lt;16) | (~ODR&amp;0x20)</td><td><code>HAL_Delay(1000)</code> — SysTick 인터럽트 + <code>uwTick</code></td><td>약 3.4 KB</td></tr><tr><td class="m">03_BlinkLL</td><td>LL<br><code>stm32cube</code> + <code>-D USE_FULL_LL_DRIVER</code></td><td><code>LL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin)</code></td><td>위와 같은 식 (인라인 함수로 펼쳐짐)</td><td><code>LL_mDelay(1000)</code> — <code>COUNTFLAG</code> 폴링 (인터럽트 없음)</td><td>약 1.7 KB</td></tr><tr><td class="m">04_BlinkReg</td><td>레지스터 (CMSIS)<br><code>cmsis</code></td><td><code>GPIOA-&gt;BSRR = GPIO_BSRR_BS5 / BR5</code></td><td><code>BSRR</code> ← 0x0000 0020 / 0x0020 0000</td><td><code>delay_ms(1000)</code> — SysTick 인터럽트 + <code>msTicks</code></td><td>약 0.7 KB</td></tr></table></div><p style="font-size:14.5px;color:var(--muted)">Flash 크기는 각 폴더의 <code>.pio/build</code> 산출물(<code>firmware.elf</code>)의 .text 크기이며, 빌드 시점·옵션(debug)에 따라 달라진다. 레지스터 접근 열은 빌드 산출물을 역어셈블해 확인한 내용이다.</p>
+<div class="tablewrap"><table><tr><th>비교 항목</th><th>Arduino (이 예제)</th><th>레지스터 (04_BlinkReg)</th></tr>
+<tr><td>사용자 코드량</td><td>함수 3개, 실질 5줄</td><td>클럭·핀 모드·BSRR·SysTick·ISR을 모두 작성</td></tr>
+<tr><td>이식성</td><td>높다. 같은 소스가 다른 보드에서 빌드된다 (핀 이름만 맞으면)</td><td>낮다. F1의 <code>CRL</code> 구조는 F4의 <code>MODER</code>와 다르다</td></tr>
+<tr><td>하드웨어 가시성</td><td>낮다. 레지스터가 소스에 나타나지 않는다</td><td>높다. 모든 비트를 소스에서 읽을 수 있다</td></tr>
+<tr><td>실행 오버헤드</td><td>핀 번호 → PinName → 포트/마스크 변환을 매번 수행</td><td>상수 주소에 즉시 쓰기 1회</td></tr></table></div>
+<div class="wave"><svg viewBox="0 0 640 160" role="img" aria-label="PA5 (LD2) 출력 파형">
+<line class="ax" x1="50" y1="130" x2="628" y2="130"/><line class="gd" x1="50.0" y1="28" x2="50.0" y2="130"/><text x="42.0" y="146">0 s</text><line class="gd" x1="192.5" y1="28" x2="192.5" y2="130"/><text x="184.5" y="146">1 s</text><line class="gd" x1="335.0" y1="28" x2="335.0" y2="130"/><text x="327.0" y="146">2 s</text><line class="gd" x1="477.5" y1="28" x2="477.5" y2="130"/><text x="469.5" y="146">3 s</text><line class="gd" x1="620.0" y1="28" x2="620.0" y2="130"/><text x="612.0" y="146">4 s</text><text x="6" y="44">High</text><text x="6" y="114">Low</text><polyline class="s0" points="50.0,40 121.2,40 121.2,110 192.5,110 192.5,40 263.8,40 263.8,110 335.0,110 335.0,40 406.2,40 406.2,110 477.5,110 477.5,40 548.8,40 548.8,110 620.0,110"/>
+<text class="tt" x="50" y="20">PA5 (LD2)</text></svg><p class="capt">그림 2. PA5 출력. <code>delay(500)</code> 두 번으로 High 500 ms, Low 500 ms가 반복되어 주기 1 s이다. HAL·LL·레지스터 예제는 대기 시간이 1000 ms라 주기가 2 s이다.</p></div>
+</section>
+
+<section id="s3">
+<h2>3. 하드웨어 구조: 핀 번호 변환과 클럭</h2>
+<h3>핀 번호에서 포트 비트까지</h3>
+<div class="tablewrap"><table><tr><th>단계</th><th>값</th><th>근거</th></tr>
+<tr><td>소스의 핀 이름</td><td><code>LED_BUILTIN</code></td><td><code>src/main.c</code></td></tr>
+<tr><td>Arduino 핀 번호</td><td>0xC8 (200) = <code>PIN_A8</code></td><td>빌드 산출물에서 <code>pinMode(200, 1)</code>로 컴파일됨</td></tr>
+<tr><td>디지털 핀 인덱스</td><td>13 (D13)</td><td><code>analogInputPin[8]</code> = 13</td></tr>
+<tr><td>PinName</td><td><code>PA_5</code> (0x05: 포트 A, 핀 5)</td><td><code>digitalPin[13]</code> = 0x05</td></tr>
+<tr><td>보드 배선</td><td>PA5 → LD2(녹색), High = 점등</td><td>UM1724 (Nucleo-64)</td></tr></table></div>
+<p>Nucleo-F103RB 변형(variant)에서 PA5는 아날로그 입력도 가능한 핀이어서 <code>LED_BUILTIN</code>이 아날로그 번호(<code>PIN_A8</code>)로 정의되어 있다. 코어 함수는 이 번호를 표로 바꾸어 결국 D13 = <code>PA_5</code>에 도달한다. 소스 주석의 "D13" 설명과 일치한다.</p>
+<h3>GPIOA 레지스터 (RM0008)</h3>
+<div class="tablewrap"><table><tr><th>레지스터</th><th>주소</th><th>이 예제에서의 역할</th></tr>
+<tr><td class="m">RCC_APB2ENR</td><td class="m">0x4002 1018</td><td><code>IOPAEN</code>(비트 2) = 1: GPIOA 클럭 허용</td></tr>
+<tr><td class="m">GPIOA_CRL</td><td class="m">0x4001 0800</td><td>비트 23:20 = <code>CNF5[1:0]</code>, <code>MODE5[1:0]</code></td></tr>
+<tr><td class="m">GPIOA_ODR</td><td class="m">0x4001 080C</td><td><code>ODR5</code>가 실제 출력 레벨</td></tr>
+<tr><td class="m">GPIOA_BSRR</td><td class="m">0x4001 0810</td><td><code>BS5</code>(비트 5)에 1 → ODR5 = 1</td></tr>
+<tr><td class="m">GPIOA_BRR</td><td class="m">0x4001 0814</td><td><code>BR5</code>(비트 5)에 1 → ODR5 = 0</td></tr></table></div>
+<h3>클럭: 프레임워크가 정한다</h3>
+<p>이 예제 폴더에는 클럭 설정 코드가 없다. STM32duino 코어가 보드 변형 파일(<code>variant_NUCLEO_F103RB.cpp</code>)의 <code>SystemClock_Config()</code>를 호출한다. 그 소스는 이 저장소에 없으므로, 빌드 산출물(<code>.pio/build/nucleo_f103rb/firmware.elf</code>)을 역어셈블하여 <code>HAL_RCC_OscConfig</code>/<code>HAL_RCC_ClockConfig</code>에 넘기는 구조체 값을 확인하였다.</p>
+<div class="tablewrap"><table><tr><th>항목</th><th>역어셈블로 확인한 값</th><th>결과</th></tr>
+<tr><td>발진기</td><td>HSI ON, 보정값 16, PLL ON, PLL 소스 = HSI/2</td><td>4 MHz 입력</td></tr>
+<tr><td>PLL 배수</td><td><code>RCC_PLL_MUL16</code> (0x0038 0000)</td><td>SYSCLK 64 MHz</td></tr>
+<tr><td>AHB / APB1 / APB2</td><td>÷1 / ÷2 / ÷1, Flash 대기 2</td><td>HCLK 64 MHz, PCLK1 32 MHz, PCLK2 64 MHz</td></tr>
+<tr><td>ADC 클럭</td><td>PCLK2 ÷6</td><td>약 10.7 MHz</td></tr></table></div>
+<div class="box warn"><div class="label">확인 범위</div><p>위 클럭 값은 2026-09-30 빌드 산출물 기준이다. <code>platformio.ini</code>는 STM32duino 패키지 버전을 고정하지 않으므로, 패키지가 갱신되면 변형 파일이 달라질 수 있다. 같은 보드라도 HSE 바이패스(ST-LINK MCO)를 쓰는 버전이 존재한다는 점은 추정이며 이 저장소에서는 확인하지 않았다. 확인하려면 디버거로 <code>SystemCoreClock</code>(64 000 000 기대) 또는 <code>RCC_CFGR</code>을 읽는다.</p></div>
+<div class="tablewrap"><table><tr><th>예제</th><th>시스템 클럭 구성</th><th>SYSCLK</th><th>LD2 점멸 주기</th></tr><tr><td class="m"><b>01_BlinkArduino</b></td><td>HSI 8 MHz ÷2 × PLL16 (STM32duino 변형 파일의 <code>SystemClock_Config</code>)</td><td>64 MHz</td><td>1 s (500 + 500 ms)</td></tr><tr><td class="m">02_BlinkHAL</td><td>HSI 8 MHz ÷2 × PLL16 (<code>main.c</code>의 <code>SystemClock_Config</code>)</td><td>64 MHz</td><td>약 2 s (토글 간격 약 1001 ms)</td></tr><tr><td class="m">03_BlinkLL</td><td>HSE 바이패스 8 MHz × PLL8 (ST-LINK MCO 입력)</td><td>64 MHz</td><td>약 2 s (토글 간격 약 1001 ms)</td></tr><tr><td class="m">04_BlinkReg</td><td>설정 안 함 → 리셋 기본값 HSI</td><td>8 MHz</td><td>2 s (1000 + 1000 ms)</td></tr></table></div>
+</section>
+
+<section id="s4">
+<h2>4. 직접 만져 보기: loop()와 1 ms 틱</h2>
+<p>아래 시뮬레이터는 <code>loop()</code>의 네 줄을 1 ms SysTick 틱 단위로 실행한다. <code>delay()</code>는 시작 시각을 기억한 뒤 경과 틱이 목표 이상이 될 때까지 기다린다.</p>
+<ol><li>초기 상태에서 <b>SysTick 1 ms</b>를 누르며 <code>uwTick</code>과 경과 시간이 늘어나는 것을 본다.</li><li><b>SysTick 100 ms</b>를 다섯 번 누르면 <code>delay(500)</code>이 끝나고 <code>digitalWrite(LOW)</code>가 <code>BRR</code>에 쓰는 순간을 볼 수 있다.</li><li>HIGH/LOW 시간을 바꾸어 주기·주파수·듀티가 어떻게 바뀌는지 확인한다 (예: 100 / 900 → 1 Hz, 듀티 10 %).</li><li><b>loop() 한 바퀴</b>는 남은 대기를 한 번에 진행하여 다음 <code>digitalWrite(HIGH)</code>까지 간다.</li></ol>
+<div class="sim" id="simbox">
+  <div class="subhead">입력 (delay 인자)</div>
+  <div class="ctl"><div><label for="hi">HIGH 유지 <code>delay</code> = <b id="l_hi"></b> ms</label><input id="hi" type="range" min="10" max="2000" step="10" value="500"></div><div><label for="lo">LOW 유지 <code>delay</code> = <b id="l_lo"></b> ms</label><input id="lo" type="range" min="10" max="2000" step="10" value="500"></div></div>
+  <div class="subhead">계산</div>
+  <div class="regs"><div class="stat"><div class="k">주기</div><div class="v" id="vT">–</div></div><div class="stat"><div class="k">주파수</div><div class="v" id="vF">–</div></div><div class="stat"><div class="k">듀티 (High 비율)</div><div class="v" id="vD">–</div></div></div>
+  <div class="subhead">실행 상태</div>
+  <div class="regs"><div class="stat"><div class="k">uwTick (ms)</div><div class="v" id="vTick">–</div></div><div class="stat"><div class="k">현재 줄</div><div class="v sm" id="vLine">–</div></div><div class="stat"><div class="k">delay 경과 / 목표</div><div class="v" id="vEl">–</div></div><div class="stat"><div class="k">ODR5 → LD2</div><div class="v"><span class="lamp" id="vLed">0</span></div></div><div class="stat"><div class="k">마지막 레지스터 쓰기</div><div class="v sm" id="vReg">–</div></div></div>
+  <div class="btns"><button class="hw" id="b1" type="button">SysTick 1 ms</button><button class="hw" id="b100" type="button">SysTick 100 ms</button><button class="sw" id="bLoop" type="button">loop() 한 바퀴</button><button class="plain" id="bReset" type="button">초기화</button></div>
+  <div class="calc" id="calc" aria-live="polite">버튼을 눌러 실행 과정을 확인한다.</div>
+  <div class="label" style="margin-top:12px">레지스터 쓰기 기록</div>
+  <div class="log" id="log"></div>
+</div>
+<p style="font-size:14.5px;color:var(--muted)">시뮬레이터 모델: 1 ms마다 SysTick ISR이 <code>uwTick</code>을 1 증가시키고, <code>delay(ms)</code>는 <code>(uwTick − start) &lt; ms</code>인 동안 기다린다. <code>digitalWrite</code>의 실행 시간(수 µs)은 무시한다. 실제 <code>delay()</code>는 시작 시점이 틱 사이 어디인지에 따라 ms−1 ~ ms 사이로 끝난다.</p>
+</section>
+
+<section id="s5">
+<h2>5. Arduino 함수와 레지스터의 대응</h2>
+<p>아래 표는 STM32duino 코어 내부 경로를 빌드 산출물의 심볼과 역어셈블로 확인한 것이다. 코어 소스는 이 저장소에 포함되지 않으므로 함수 이름은 링크된 심볼 이름을 따른다.</p>
+<div class="tablewrap"><table><tr><th>Arduino 호출</th><th>코어 내부 경로</th><th>레지스터/비트</th></tr>
+<tr><td><code>pinMode(LED_BUILTIN, OUTPUT)</code></td><td><code>pin_function()</code> → <code>set_GPIO_Port_Clock()</code></td><td><code>RCC_APB2ENR.IOPAEN</code> = 1</td></tr>
+<tr><td></td><td><code>LL_GPIO_SetPinSpeed(HIGH)</code> → <code>LL_GPIO_SetPinMode(OUTPUT)</code> → <code>LL_GPIO_SetPinOutputType(PUSHPULL)</code></td><td><code>GPIOA_CRL[23:20]</code>: 먼저 MODE5 = 11, 이어서 4비트 전체를 <b>0001</b>로 덮어쓴 뒤 CNF5[0] = 0</td></tr>
+<tr><td><code>digitalWrite(pin, HIGH)</code></td><td><code>digitalWriteFast()</code> → <code>LL_GPIO_SetOutputPin</code></td><td><code>GPIOA_BSRR</code> ← 0x0000 0020 (<code>BS5</code>)</td></tr>
+<tr><td><code>digitalWrite(pin, LOW)</code></td><td><code>digitalWriteFast()</code> → <code>LL_GPIO_ResetOutputPin</code></td><td><code>GPIOA_BRR</code> ← 0x0000 0020 (<code>BR5</code>)</td></tr>
+<tr><td><code>delay(ms)</code></td><td><code>getCurrentMillis()</code>(= <code>HAL_GetTick</code>) 반복 비교, 사이에 <code>yield()</code></td><td>레지스터 접근 없음. <code>uwTick</code> 변수 비교</td></tr>
+<tr><td>(자동) SysTick</td><td><code>SysTick_Handler</code> → <code>HAL_IncTick()</code></td><td><code>STK_LOAD</code> = 63 999, <code>STK_CTRL</code> = 0x7</td></tr></table></div>
+<div class="tablewrap"><table><tr><th>레지스터</th><th>setup() 후 값 (PA5 관련)</th><th>해석</th></tr>
+<tr><td class="m">RCC_APB2ENR</td><td class="m">IOPAEN = 1</td><td>GPIOA 클럭 공급</td></tr>
+<tr><td class="m">GPIOA_CRL[23:20]</td><td class="m">0001</td><td>CNF5 = 00 범용 푸시풀, MODE5 = 01 출력 10 MHz. 다른 핀이 리셋값이면 CRL = 0x4414 4444</td></tr>
+<tr><td class="m">STK_LOAD</td><td class="m">63 999 (0xF9FF)</td><td>64 MHz / 1000 − 1 → 1 ms 주기</td></tr>
+<tr><td class="m">STK_CTRL</td><td class="m">0x0000 0007</td><td>CLKSOURCE = 1(HCLK), TICKINT = 1, ENABLE = 1</td></tr></table></div>
+<div class="box"><div class="label">관찰</div><p>코어는 출력 속도를 HIGH(MODE = 11)로 먼저 쓰지만, 이어지는 <code>LL_GPIO_SetPinMode</code>가 CNF와 MODE 4비트를 함께 덮어써서 최종값은 MODE5 = 01(10 MHz)이다. 결과적으로 04_BlinkReg가 직접 쓰는 값(<code>0x1 &lt;&lt; 20</code>)과 같다. HAL/LL 예제는 Low 속도(MODE5 = 10, 2 MHz)를 쓴다. LED 점멸에는 차이가 없다.</p></div>
+</section>
+
+<section id="s6">
+<h2>6. 실행 경로: 리셋부터 핀 출력까지</h2>
+<ol class="flow"><li class="hw"><div class="n">1</div><div class="tx"><b>리셋 → 벡터 테이블<span class="tag hw">하드웨어</span></b><span>초기 스택 포인터와 <code>Reset_Handler</code> 주소를 읽는다.</span></div></li><li class="sw"><div class="n">2</div><div class="tx"><b><code>Reset_Handler</code> → <code>SystemInit()</code><span class="tag sw">소프트웨어</span></b><span>startup 코드. .data 복사와 .bss 초기화 후 코어의 <code>main()</code>으로 간다.</span></div></li><li class="sw"><div class="n">3</div><div class="tx"><b>코어 초기화<span class="tag sw">소프트웨어</span></b><span><code>HAL_Init()</code>(SysTick 1 ms 설정), 변형 파일의 <code>SystemClock_Config()</code>(64 MHz), 틱 재설정이 사용자 코드보다 먼저 실행된다.</span></div></li><li class="sw"><div class="n">4</div><div class="tx"><b><code>setup()</code> → <code>pinMode()</code><span class="tag sw">소프트웨어</span></b><span><code>RCC_APB2ENR.IOPAEN</code> = 1, <code>GPIOA_CRL[23:20]</code> = 0001.</span></div></li><li class="sw"><div class="n">5</div><div class="tx"><b><code>loop()</code> 반복<span class="tag sw">소프트웨어</span></b><span><code>digitalWrite</code> → <code>BSRR</code>/<code>BRR</code> 쓰기, <code>delay</code> → <code>uwTick</code> 비교.</span></div></li><li class="hw"><div class="n">6</div><div class="tx"><b>SysTick 예외 (1 ms마다)<span class="tag hw">하드웨어</span></b><span><code>SysTick_Handler</code> → <code>HAL_IncTick()</code>로 <code>uwTick</code>++. 사용자 코드에는 ISR이 없다.</span></div></li><li class="hw"><div class="n">7</div><div class="tx"><b>ODR5 → PA5 → LD2<span class="tag hw">하드웨어</span></b><span>출력 드라이버가 PA5를 3.3 V/0 V로 구동한다.</span></div></li></ol>
+<div class="tablewrap"><table><tr><th>구분</th><th>위치</th><th>성격</th></tr>
+<tr><td><code>setup()</code>, <code>loop()</code></td><td>src/main.c</td><td>사용자 함수. 코어의 <code>main()</code>이 호출한다</td></tr>
+<tr><td><code>SysTick_Handler</code></td><td>STM32duino 코어</td><td>진짜 ISR. 사용자 코드에서는 보이지 않는다</td></tr>
+<tr><td><code>yield()</code></td><td>STM32duino 코어</td><td><code>delay()</code> 대기 중 반복 호출되는 빈 훅</td></tr></table></div>
+</section>
+
+<section id="s7">
+<h2>7. 코드 읽기</h2>
+<p>외부 부품은 필요 없다. 보드의 LD2만 사용하며 시리얼 출력은 없다.</p>
+<div class="file">src/main.c — 핀 선택과 setup()</div>
+<div class="codepair">
+<pre><code><span class="kw">#include</span> &lt;Arduino.h&gt;
+<span class="cm">// Nucleo-F103RB 보드의 온보드 녹색 LED는 PA5 핀에 연결되어 있음</span>
+<span class="cm">// 아두이노 핀 맵 기준으로는 D13 핀에 해당함</span>
+<span class="kw">const</span> <span class="kw">int</span> ledPin = LED_BUILTIN; <span class="cm">// 또는 13 또는 PA5 로 직접 지정 가능</span>
+
+<span class="kw">void</span> setup() {
+    <span class="cm">// 1. PA5 핀(D13)을 출력(OUTPUT) 모드로 설정</span>
+    <span class="cm">// 내부적으로 GPIOA 클록 활성화 및 CRL/CRH 레지스터 제어가 자동으로 수행됨</span>
+    <span class="kw">pinMode</span>(ledPin, OUTPUT);
+}</code></pre>
+<ol><li><code>LED_BUILTIN</code>은 변형 헤더가 정의한 핀 번호이며 이 보드에서는 PA5(D13)를 가리킨다.</li><li><code>pinMode</code> 한 줄이 포트 클럭 허용과 <code>CRL</code> 설정을 모두 수행한다.</li><li>주석의 "CRL/CRH"는 핀 번호에 따라 둘 중 하나를 쓴다는 뜻이다. PA5는 0~7번이므로 <code>CRL</code>이다.</li></ol>
+</div><div class="file">src/main.c — loop()</div>
+<div class="codepair">
+<pre><code><span class="kw">void</span> loop() {
+    <span class="cm">// 2. 핀 출력을 HIGH(3.3V)로 인가하여 LED 켜기</span>
+    <span class="kw">digitalWrite</span>(ledPin, HIGH);
+
+    <span class="cm">// 3. SysTick 타이머 기반의 정밀 500ms 딜레이 가동</span>
+    <span class="kw">delay</span>(500);
+
+    <span class="cm">// 4. 핀 출력을 LOW(0V)로 인가하여 LED 끄기</span>
+    <span class="kw">digitalWrite</span>(ledPin, LOW);
+
+    <span class="kw">delay</span>(500);
+}</code></pre>
+<ol><li>HIGH는 <code>BSRR</code>의 <code>BS5</code>, LOW는 <code>BRR</code>의 <code>BR5</code>에 1을 쓴다. 둘 다 ODR을 읽지 않는 원자적 쓰기이다.</li><li><code>delay(500)</code>은 블로킹 대기이다. 대기 중 CPU는 다른 일을 하지 않는다.</li><li><code>loop()</code>가 끝나면 코어가 다시 호출하므로 한 바퀴 = 1000 ms이다.</li></ol>
+</div><div class="file">platformio.ini — 빌드 프레임워크</div>
+<div class="codepair">
+<pre><code>[env:nucleo_f103rb]
+platform = ststm32
+;board = genericSTM32F103C8
+board = nucleo_f103rb
+framework = arduino
+; framework = cmsis
+; framework = stm32cube
+
+build_type = debug</code></pre>
+<ol><li><code>framework = arduino</code>가 STM32duino 코어, HAL/LL 드라이버, 변형 파일을 함께 빌드한다.</li><li>주석 처리된 <code>cmsis</code>, <code>stm32cube</code>가 각각 04, 02/03 예제의 프레임워크이다.</li><li><code>monitor_port</code> 등 시리얼 설정은 이 예제에서 쓰지 않는다.</li></ol>
+</div>
+<div class="box"><div class="label">관찰 결과</div><p>업로드 후 LD2가 0.5초 켜지고 0.5초 꺼진다. 로직 분석기(AD2 등)로 D13(CN5 6번 핀)을 측정하면 1.000 Hz 부근, 듀티 50 %의 구형파가 보인다. 빌드 로그의 Flash 사용량은 약 13 KB로, 같은 동작의 레지스터 예제(약 0.7 KB)보다 크다.</p></div>
+</section>
+
+<section id="s8">
+<h2>8. 실험</h2>
+<h3>실험 A. 듀티 바꾸기</h3><p><code>delay(100)</code> / <code>delay(900)</code>으로 바꾸어 주기는 1 s로 유지하고 켜짐 시간만 줄인다. 시뮬레이터의 듀티 계산과 비교한다.</p><h3>실험 B. 핀 이름으로 지정</h3><p><code>LED_BUILTIN</code> 대신 <code>PA5</code>, <code>13</code>(D13)을 각각 넣어 빌드하고 동작이 같은지 확인한다. 디버거에서 세 경우 모두 같은 PinName(<code>PA_5</code>)으로 변환되는지 본다.</p><h3>실험 C. 계층별 Flash 비교</h3><p>01~04 네 예제를 모두 빌드하고 빌드 로그의 Flash/RAM 사용량을 표로 정리한다. 추상화가 높을수록 커지는 이유(핀 변환 표, HAL 드라이버, 코어 초기화)를 설명한다.</p><h3>실험 D. 최대 토글 속도</h3><p><code>loop()</code>에서 <code>delay</code>를 지우고 <code>digitalWrite</code>만 반복하여 PA5의 토글 주파수를 측정한다. 04_BlinkReg에서 <code>BSRR</code>만 반복했을 때와 비교하면 핀 번호 변환 비용을 알 수 있다.</p>
+</section>
+
+<section id="s9">
+<h2>9. 트러블슈팅</h2>
+<div class="tablewrap"><table><tr><th>증상</th><th>원인</th><th>점검/조치</th></tr><tr><td>빌드 시 <code>Arduino.h</code>를 찾지 못한다</td><td><code>framework</code>가 <code>arduino</code>가 아니다</td><td><code>platformio.ini</code>의 <code>framework = arduino</code> 줄이 주석 처리되지 않았는지 확인한다</td></tr><tr><td>LD2가 계속 꺼져 있다</td><td>핀 번호를 다른 보드 기준으로 지정(예: Blue Pill의 PC13)</td><td><code>board = nucleo_f103rb</code>인지, <code>LED_BUILTIN</code>/<code>PA5</code>를 썼는지 확인한다</td></tr><tr><td>점멸 주기가 예상과 다르다</td><td><code>delay</code> 인자 단위 착각(ms), 또는 다른 예제(1000 ms 토글)와 혼동</td><td>이 예제는 500 + 500 ms = 1 s 주기이다. 02~04는 2 s 주기이다</td></tr><tr><td>업로드가 실패한다</td><td>ST-LINK 드라이버 미설치, 다른 프로그램이 ST-LINK를 점유</td><td>장치 관리자에서 ST-Link 확인, STM32CubeProgrammer 등 연결 해제</td></tr><tr><td>패키지 갱신 후 동작 속도가 달라졌다</td><td>STM32duino 버전 변경으로 변형 파일의 클럭 설정이 바뀔 수 있다</td><td>디버거로 <code>SystemCoreClock</code>을 확인하거나 <code>platform</code> 버전을 고정한다</td></tr><tr><td><code>delay</code> 중 다른 일을 할 수 없다</td><td><code>delay</code>는 블로킹 함수이다</td><td><code>millis()</code>로 경과 시간을 비교하는 비블로킹 방식으로 바꾼다</td></tr></table></div>
+</section>
+
+<section id="s10">
+<h2>10. 확인 문제</h2>
+<details><summary><b>문제 1.</b> <code>digitalWrite(LED_BUILTIN, LOW)</code>는 어느 레지스터에 어떤 값을 쓰는가?</summary>
+<div class="ans"><p><code>GPIOA_BRR</code>(0x4001 0814)에 0x0000 0020을 쓴다. <code>BR5</code> = 1이므로 ODR5만 0이 되고 다른 비트는 변하지 않는다. 같은 효과를 <code>GPIOA_BSRR</code>의 상위 반(0x0020 0000)으로도 낼 수 있다.</p></div></details>
+<details><summary><b>문제 2.</b> <code>delay(100)</code>, <code>delay(400)</code>으로 바꾸면 주기와 듀티는?</summary>
+<div class="ans"><p>주기 500 ms(2 Hz), 듀티 100/500 = 20 %이다.</p></div></details>
+<details><summary><b>문제 3.</b> 같은 소스를 Arduino Uno에서 빌드하면 <code>pinMode</code>가 쓰는 레지스터는 어떻게 달라지는가?</summary>
+<div class="ans"><p>AVR에는 RCC와 CRL이 없다. <code>DDRB</code>의 비트 5(D13 = PB5)를 1로 하고, <code>digitalWrite</code>는 <code>PORTB</code>를 바꾼다. API가 같아도 하드웨어 접근은 프레임워크가 칩별로 다르게 구현한다. 이것이 이식성의 근거이다.</p></div></details>
+<details><summary><b>문제 4.</b> 이 예제 폴더에 <code>SystemClock_Config</code>가 없는데 64 MHz로 동작하는 이유는?</summary>
+<div class="ans"><p>STM32duino 코어가 사용자 <code>setup()</code> 전에 보드 변형 파일의 <code>SystemClock_Config()</code>(HSI/2 × 16)를 호출하기 때문이다. 사용자 코드에서 보이지 않는다는 것이 Arduino 계층의 낮은 하드웨어 가시성이다.</p></div></details>
+
+</section>
+
+<section>
+  <h2>정리</h2>
+  <div class="tablewrap"><table><tr><th>예제</th><th>계층</th><th>방식</th><th>핵심</th></tr><tr><td class="m"><b>01_BlinkArduino (이 예제설명)</b></td><td>Arduino</td><td>출력</td><td>pinMode / digitalWrite / delay</td></tr><tr><td class="m"><a href="../02_BlinkHAL/02_BlinkHAL%20예제설명.html">02_BlinkHAL</a></td><td>HAL</td><td>출력</td><td>HAL_GPIO_TogglePin, CubeMX 구조</td></tr><tr><td class="m"><a href="../03_BlinkLL/03_BlinkLL%20예제설명.html">03_BlinkLL</a></td><td>LL</td><td>출력</td><td>LL_GPIO_TogglePin, JTAG 해제</td></tr><tr><td class="m"><a href="../04_BlinkReg/04_BlinkReg%20예제설명.html">04_BlinkReg</a></td><td>레지스터</td><td>출력</td><td>RCC·CRL·BSRR, SysTick 딜레이</td></tr><tr><td class="m"><a href="../05_ReadPin/05_ReadPin%20예제설명.html">05_ReadPin</a></td><td>HAL</td><td>입력(폴링)</td><td>HAL_GPIO_ReadPin</td></tr><tr><td class="m"><a href="../06_ExtInt/06_ExtInt%20예제설명.html">06_ExtInt</a></td><td>HAL+EXTI</td><td>입력(인터럽트)</td><td>EXTI 콜백</td></tr><tr><td class="m"><a href="../07_ReadPinReg/07_ReadPinReg%20예제설명.html">07_ReadPinReg</a></td><td>레지스터</td><td>입력(폴링)</td><td>GPIOC-&gt;IDR 직접 읽기</td></tr><tr><td class="m"><a href="../08_ExternalInt/08_ExternalInt%20예제설명.html">08_ExternalInt</a></td><td>HAL+EXTI</td><td>입력(인터럽트 2개)</td><td>EXTI9_5·EXTI15_10 공용 콜백</td></tr><tr><td class="m"><a href="../09_BitBandingReg/09_BitBandingReg%20예제설명.html">09_BitBandingReg</a></td><td>레지스터</td><td>비트 접근</td><td>Cortex-M3 비트 밴딩</td></tr><tr><td class="m"><a href="../10_AD2Test/10_AD2Test%20예제설명.html">10_AD2Test</a></td><td>HAL</td><td>출력 14핀 + UART</td><td>헤더 핀 순차 점등, AD2 관찰</td></tr></table></div>
+  <div class="nextprev"><span></span><a href="../02_BlinkHAL/02_BlinkHAL%20예제설명.html">02_BlinkHAL →</a></div>
+  <footer>근거: 01_BlinkArduino 소스(<code>src/main.c</code>, <code>platformio.ini</code>)와 빌드 산출물(<code>.pio/build/nucleo_f103rb/firmware.elf</code>) 역어셈블. 계층: Arduino(STM32duino, <code>framework = arduino</code>). 레지스터·비트 이름은 RM0008(STM32F101xx~F107xx 레퍼런스 매뉴얼), SysTick은 PM0056 기준이다. 클럭(HSI/2 × PLL16 = 64 MHz)은 프레임워크 변형 파일의 값을 산출물에서 확인한 것으로 패키지 버전에 따라 달라질 수 있다. 코드는 해당 폴더의 소스에서 발췌한 것이며 일부 줄이 생략되어 있다.</footer>
+</section>
+</div>
+
+<script>
+
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var S;
+  function hex(v){v=v>>>0;var s=v.toString(16).toUpperCase();while(s.length<8)s='0'+s;return '0x'+s.slice(0,4)+' '+s.slice(4)}
+  function par(){return {hi:+$('hi').value, lo:+$('lo').value}}
+  function reset(){
+    S={t:0,line:0,start:0,led:0,reg:'CRL[23:20] ← 0001 (pinMode)'};
+    $('log').textContent='setup(): RCC_APB2ENR.IOPAEN ← 1, GPIOA_CRL[23:20] ← 0001';
+    writeHigh();
+  }
+  function log(m){var l=$('log');l.textContent=l.textContent+'\n'+m;var a=l.textContent.split('\n');if(a.length>8)l.textContent=a.slice(-8).join('\n');l.scrollTop=l.scrollHeight}
+  function writeHigh(){S.led=1;S.line=0;S.start=S.t;S.reg='GPIOA_BSRR ← '+hex(0x20);log('t='+S.t+' ms  digitalWrite(HIGH) → GPIOA_BSRR ← '+hex(0x20))}
+  function writeLow(){S.led=0;S.line=1;S.start=S.t;S.reg='GPIOA_BRR ← '+hex(0x20);log('t='+S.t+' ms  digitalWrite(LOW)  → GPIOA_BRR  ← '+hex(0x20))}
+  function target(){var p=par();return S.line===0?p.hi:p.lo}
+  function check(){
+    if(S.t-S.start>=target()){ if(S.line===0) writeLow(); else writeHigh(); return true }
+    return false;
+  }
+  function tick(n){var ev=false;for(var i=0;i<n;i++){S.t++; if(check()) ev=true;} return ev}
+  function calc(){
+    var p=par(); $('l_hi').textContent=p.hi; $('l_lo').textContent=p.lo;
+    var T=p.hi+p.lo; $('vT').textContent=T+' ms'; $('vF').textContent=(1000/T).toFixed(3)+' Hz'; $('vD').textContent=(100*p.hi/T).toFixed(1)+' %';
+  }
+  function render(msg){
+    calc();
+    $('vTick').textContent=S.t;
+    $('vLine').textContent=S.line===0?'delay('+par().hi+') — HIGH 유지':'delay('+par().lo+') — LOW 유지';
+    $('vEl').textContent=(S.t-S.start)+' / '+target();
+    $('vLed').textContent=S.led?'1 켜짐':'0 꺼짐'; $('vLed').className='lamp'+(S.led?' on':'');
+    $('vReg').textContent=S.reg;
+    if(msg) $('calc').textContent=msg;
+  }
+  function desc(ev){
+    var p=par();
+    return 'delay(): 경과 = uwTick − start = '+S.t+' − '+S.start+' = '+(S.t-S.start)+' ms, 목표 '+target()+' ms → '+((S.t-S.start)<target()?'계속 대기':'반환')+
+      (ev?'\n방금 delay가 끝나 다음 줄의 digitalWrite가 실행되었다: '+S.reg:'')+
+      '\n주기 = '+p.hi+' + '+p.lo+' = '+(p.hi+p.lo)+' ms';
+  }
+  $('hi').oninput=$('lo').oninput=function(){render(desc(false))};
+  $('b1').onclick=function(){var e=tick(1);render(desc(e))};
+  $('b100').onclick=function(){var e=tick(100);render(desc(e))};
+  $('bLoop').onclick=function(){
+    var guard=0; if(S.line===0){while(S.line===0&&guard++<5000)tick(1)} while(S.line===1&&guard++<5000)tick(1);
+    render('loop() 한 바퀴 완료: 다음 digitalWrite(HIGH)가 t = '+S.t+' ms에 실행되었다.\n'+desc(true));
+  };
+  $('bReset').onclick=function(){reset();render('초기화: setup()을 다시 실행하고 loop()의 첫 줄 digitalWrite(HIGH)까지 진행하였다.')};
+  reset();render();
+})();
+
+</script>
+</body></html>

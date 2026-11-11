@@ -53,4 +53,4 @@ build_flags =
 
 ## 관련 예제
 
-`02_BlinkHAL`(같은 동작의 HAL 버전), `04_BlinkReg`(레지스터 직접 제어). 교안: `03_BlinkLL 교안.html`.
+`02_BlinkHAL`(같은 동작의 HAL 버전), `04_BlinkReg`(레지스터 직접 제어). 예제설명: `03_BlinkLL 예제설명.html`.

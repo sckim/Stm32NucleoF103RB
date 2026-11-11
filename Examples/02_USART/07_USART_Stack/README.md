@@ -4,7 +4,7 @@
 
 > CubeMX(`USART_Stack.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `03_USART_RingBuffer`를 복사해 프로젝트 이름만 바꿨으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
 
-교안: [스택 교안.html](스택%20교안.html) (짝 교안: [03_USART_RingBuffer/UART 링 버퍼 교안.html](../03_USART_RingBuffer/UART%20링%20버퍼%20교안.html))
+예제설명: [스택 예제설명.html](스택%20예제설명.html) (짝 예제설명: [03_USART_RingBuffer/UART 링 버퍼 예제설명.html](../03_USART_RingBuffer/UART%20링%20버퍼%20예제설명.html))
 
 링 버퍼(FIFO)로 받은 글자를 **스택(LIFO)으로 괄호 검사**하고, ISR과 main이 같은 스택을 공유할 때 생기는 **경쟁 상태(race condition)** 를 직접 재현한다.
 
@@ -29,7 +29,7 @@
 | `(((((((((x)))))))))` (9단) | `overflow at col 9: nesting deeper than 8` |
 | B1 누름 | `unprotected : isr_push=500, top=…, lost=…` / `PRIMASK : … lost=0` |
 
-- 괄호 검사 스택 크기 `BR_STK_SIZE`는 교안 시뮬레이터 기본값과 같은 8이다.
+- 괄호 검사 스택 크기 `BR_STK_SIZE`는 예제설명 시뮬레이터 기본값과 같은 8이다.
 - B1 실험은 각 500 ms 동안 SysTick ISR(1 ms)이 공유 스택에 push하고, main은 같은 스택에 push/pop을 짝지어 반복한다. main의 순증감은 0이므로 정상이라면 `top == isr_push`이고, `lost = isr_push − top`이 사라진 항목 수이다. 보호 없음에서는 lost > 0, PRIMASK 보호에서는 lost = 0이 기대값이다. lost의 정확한 크기는 최적화 수준과 루프 구성에 따라 달라진다.
 
 ## ISR vs 콜백

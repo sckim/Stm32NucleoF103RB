@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>03_TIM_Overflow_Counter 예제설명</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+
+/* Layout: 한 열 예제설명(최대 860px) — 문제 → 시퀀스 → 모드 비교 → 시뮬레이터 → HAL 흐름 → Vrefint → 코드 → 실험 → 문제 순서.
+   채널 색을 전 구간에서 고정한다: A0=파랑, A1=주황, A2=청록, Vrefint=보라. (링 버퍼/스택 예제설명과 같은 기본 토큰) */
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --surface2:#E7ECF0; --fg:#14222C; --muted:#52636F; --line:#CBD5DC;
+  --c0:#1D4ED8; --c0-soft:#DCE6FB; --c1:#C2410C; --c1-soft:#FDE6DA; --c2:#0F766E; --c2-soft:#D5F0EC; --c3:#7E22CE; --c3-soft:#EEDFFB;
+  --code-bg:#0F1B24; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#9A3412; --warn-bg:#FFF1E6; --ok:#166534; --ok-bg:#E4F5EA;
+  --font-body:"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Consolas,"Courier New",monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E171E; --surface:#16232C; --surface2:#1E2F3A; --fg:#E4ECF1; --muted:#9BB0BC; --line:#2F4350;
+  --c0:#7AA2F7; --c0-soft:#1A2A4A; --c1:#FB923C; --c1-soft:#3A2416; --c2:#2DD4BF; --c2-soft:#10332F; --c3:#C79BF5; --c3-soft:#2E1F44;
+  --code-bg:#0A1319; --code-fg:#D7E3EA; --code-cmt:#7F95A3; --code-kw:#8CC7F5; --code-hl:#F3B27A;
+  --warn:#FDBA74; --warn-bg:#3A2416; --ok:#86EFAC; --ok-bg:#12301D; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.75;margin:0;
+  padding-block:0 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:860px;margin:0 auto}
+header{padding-block:40px 8px}
+.kicker{font-family:var(--font-mono);font-size:13px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.25;margin:8px 0 12px;text-wrap:balance;font-weight:700}
+.lead{color:var(--muted);margin:0;max-width:62ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0 0;padding:0;list-style:none}
+nav.toc a{display:block;padding:6px 12px;border:1px solid var(--line);border-radius:6px;color:var(--fg);text-decoration:none;font-size:14px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--c0);outline:2px solid var(--c0);outline-offset:1px}
+section{margin-top:56px}
+h2{font-size:24px;line-height:1.35;margin:0 0 12px;text-wrap:balance;font-weight:700}
+h3{font-size:18px;margin:28px 0 8px;font-weight:700}
+p{margin:0 0 14px;max-width:68ch}
+ul,ol{margin:0 0 14px;padding-left:22px;max-width:68ch}
+li{margin-bottom:4px}
+code{font-family:var(--font-mono);font-size:.9em;background:var(--surface2);padding:1px 6px;border-radius:4px}
+.k0{color:var(--c0);font-weight:700} .k1{color:var(--c1);font-weight:700} .k2{color:var(--c2);font-weight:700} .k3{color:var(--c3);font-weight:700}
+.box{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:16px 18px;margin:16px 0}
+.box.warn{background:var(--warn-bg);border-color:var(--warn)} .box.ok{background:var(--ok-bg);border-color:var(--ok)}
+.box > :last-child{margin-bottom:0}
+.label{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.tablewrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:15px;background:var(--surface)}
+th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
+th{background:var(--surface2);font-weight:700;white-space:nowrap}
+td.m,th.m{font-family:var(--font-mono);font-size:13.5px}
+td.n{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+
+/* block diagram */
+.diag{max-width:720px;margin:18px auto}
+.diag svg{display:block;width:100%;height:auto}
+#blk .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+#blk .bx.hot{stroke:var(--warn);stroke-width:2.5;fill:var(--warn-bg)}
+#blk .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+#blk .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+#blk .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+#blk .w0{stroke:var(--c0)} #blk .w1{stroke:var(--c1)} #blk .w2{stroke:var(--c2)} #blk .w3{stroke:var(--c3)}
+#blk .d0{fill:var(--c0)} #blk .d1{fill:var(--c1)} #blk .d2{fill:var(--c2)} #blk .d3{fill:var(--c3)}
+#blk .ah{fill:var(--muted)}
+
+/* flow */
+.flow{list-style:none;padding:0;margin:16px 0;display:grid;gap:0;max-width:none}
+.flow li{display:grid;grid-template-columns:34px 1fr;gap:12px;margin:0;padding:0 0 14px;position:relative}
+.flow li:not(:last-child)::before{content:"";position:absolute;left:16px;top:34px;bottom:0;width:2px;background:var(--line)}
+.flow .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:14px;font-weight:600;background:var(--surface2);border:2px solid var(--line)}
+.flow li.hw .n{border-color:var(--c3);color:var(--c3)} .flow li.sw .n{border-color:var(--c0);color:var(--c0)}
+.flow .tx{min-width:0} .flow .tx b{display:block}
+.flow .tx span{color:var(--muted);font-size:14.5px}
+.tag{display:inline-block;font-family:var(--font-mono);font-size:11.5px;padding:0 6px;border-radius:4px;margin-left:6px;vertical-align:1px}
+.tag.hw{background:var(--c3-soft);color:var(--c3)} .tag.sw{background:var(--c0-soft);color:var(--c0)}
+
+/* mode cards */
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:16px 0}
+.mode{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:14px 16px;min-width:0}
+.mode.pick{border:2px solid var(--ok)}
+.mode b{display:block;margin-bottom:2px}
+.mode .reg{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);display:block;margin-bottom:8px}
+.trk{display:flex;gap:3px;margin:8px 0 6px;flex-wrap:wrap}
+.trk span{font-family:var(--font-mono);font-size:11.5px;font-weight:600;padding:2px 6px;border-radius:4px;border:1px solid var(--line)}
+.trk .g{color:var(--muted);border-style:dashed;background:none}
+.trk .r0{background:var(--c0-soft);color:var(--c0);border-color:var(--c0)} .trk .r1{background:var(--c1-soft);color:var(--c1);border-color:var(--c1)}
+.trk .r2{background:var(--c2-soft);color:var(--c2);border-color:var(--c2)} .trk .r3{background:var(--c3-soft);color:var(--c3);border-color:var(--c3)}
+.trk .x{text-decoration:line-through;opacity:.55}
+.mode p{font-size:14.5px;margin:0}
+
+/* simulator */
+.sim{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:18px;margin:16px 0}
+.subhead{font-weight:700;margin:18px 0 6px;padding-top:14px;border-top:1px dashed var(--line)}
+.subhead:first-child{margin-top:0;padding-top:0;border-top:0}
+.ranks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+@media (max-width:560px){.ranks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.rk{border:2px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);min-width:0;position:relative}
+.rk .h{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.rk .c{font-weight:700;font-size:15px;line-height:1.35}
+.rk .p{font-family:var(--font-mono);font-size:11.5px;color:var(--muted)}
+.rk .v{font-family:var(--font-mono);font-size:13px;font-variant-numeric:tabular-nums;margin-top:4px}
+.rk.nx{box-shadow:0 0 0 3px var(--fg) inset}
+.rk.nx::after{content:"다음 트리거";position:absolute;top:-11px;right:8px;font-size:11px;font-weight:700;background:var(--fg);color:var(--bg);padding:0 6px;border-radius:4px}
+.rk.r0 .c{color:var(--c0)} .rk.r1 .c{color:var(--c1)} .rk.r2 .c{color:var(--c2)} .rk.r3 .c{color:var(--c3)}
+.rk.on.r0{background:var(--c0-soft);border-color:var(--c0)} .rk.on.r1{background:var(--c1-soft);border-color:var(--c1)}
+.rk.on.r2{background:var(--c2-soft);border-color:var(--c2)} .rk.on.r3{background:var(--c3-soft);border-color:var(--c3)}
+.regs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.stat{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.stat .k{font-size:12px;color:var(--muted);font-family:var(--font-mono)}
+.stat .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3;overflow-wrap:anywhere}
+.lamp{display:inline-block;padding:0 10px;border-radius:999px;font-size:15px;border:1px solid var(--line)}
+.lamp.on{background:var(--ok-bg);color:var(--ok);border-color:var(--ok)}
+.outs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+@media (max-width:560px){.outs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.oc{border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--bg);min-width:0}
+.oc .k{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.oc .v{font-family:var(--font-mono);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.oc .f{font-size:12.5px}
+.oc.bad{border:2px solid var(--warn);background:var(--warn-bg)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+button,select,input{font-family:inherit}
+button{font-size:15px;font-weight:700;padding:9px 14px;border-radius:6px;border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;min-height:44px}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+button.hw{border-color:var(--c3);color:var(--c3)} button.hw:hover{background:var(--c3-soft)}
+button.sw{border-color:var(--c0);color:var(--c0)} button.sw:hover{background:var(--c0-soft)}
+button.plain:hover{background:var(--surface2)}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 16px;margin:10px 0}
+.ctl label{display:block;font-size:14px;color:var(--muted)}
+.ctl label b{font-family:var(--font-mono);color:var(--fg);font-weight:600}
+.ctl select{font-size:15px;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);width:100%;min-height:40px}
+.ctl input[type=range]{width:100%;min-height:32px}
+.calc{font-family:var(--font-mono);font-size:13.5px;line-height:1.65;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-height:5.4em;white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0 0}
+.uart{font-family:var(--font-mono);font-size:13px;background:var(--code-bg);color:var(--code-fg);border-radius:6px;padding:10px 12px;white-space:pre;overflow-x:auto;margin:8px 0 0;min-height:2.6em}
+.log{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:8px 0 0;max-height:7.5em;overflow:auto;white-space:pre-wrap}
+
+/* code */
+pre{background:var(--code-bg);color:var(--code-fg);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:0;font-family:var(--font-mono);font-size:13.5px;line-height:1.7;tab-size:2}
+pre code{background:none;padding:0;font-size:inherit;color:inherit}
+.cm{color:var(--code-cmt)} .kw{color:var(--code-kw)} .hl{color:var(--code-hl)}
+.codepair{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;margin:14px 0;align-items:start}
+@media (max-width:760px){.codepair{grid-template-columns:minmax(0,1fr)}}
+.codepair ol{margin:0;padding-left:20px;font-size:15px} .codepair li{margin-bottom:8px}
+.file{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);margin:18px 0 6px}
+
+/* quiz */
+details{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin:10px 0;padding:0}
+summary{cursor:pointer;padding:12px 16px;font-weight:500;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";color:var(--c0)} details[open] summary::before{content:"▾ "}
+summary:focus-visible{outline:3px solid var(--fg);outline-offset:-3px;border-radius:8px}
+details .ans{padding:0 16px 14px;color:var(--fg)} details .ans p{margin-bottom:8px}
+footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+
+/* 타이머 예제설명 추가 토큰 */
+.diag .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.diag .bx.hot{stroke:var(--warn);stroke-width:2.5;fill:var(--warn-bg)}
+.diag .bx.hw{stroke:var(--c3);fill:var(--c3-soft)} .diag .bx.sw{stroke:var(--c0);fill:var(--c0-soft)}
+.diag .t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.diag .s{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.diag .w{stroke:var(--muted);stroke-width:1.6;fill:none}
+.diag .ah{fill:var(--muted)}
+.diag .ax{stroke:var(--muted);stroke-width:1.3;fill:none}
+.diag .gd{stroke:var(--line);stroke-width:1.2;stroke-dasharray:5 4;fill:none}
+.diag .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .diag .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.diag .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .diag .s3{stroke:var(--c3);stroke-width:2.2;fill:none}
+.diag .d1{fill:var(--c1)} .diag .d0{fill:var(--c0)} .diag .d3{fill:var(--c3)}
+.diag .blk{fill:var(--c1-soft);stroke:var(--c1)}
+.diag text.m{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.diag text.t{font-family:var(--font-body);font-size:13px;fill:var(--fg)}
+.wave{margin:12px 0}
+.wave svg{display:block;width:100%;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px}
+.wave .ax{stroke:var(--muted);stroke-width:1.2;fill:none}
+.wave .gd{stroke:var(--line);stroke-width:1;stroke-dasharray:4 4;fill:none}
+.wave .s0{stroke:var(--c0);stroke-width:2.2;fill:none} .wave .s1{stroke:var(--c1);stroke-width:2.2;fill:none}
+.wave .s2{stroke:var(--c2);stroke-width:2.2;fill:none} .wave .s3{stroke:var(--c3);stroke-width:2.2;fill:none}
+.wave .ev{stroke:var(--c3);stroke-width:1.6}
+.wave .bar{fill:var(--c1)} .wave .bar0{fill:var(--c0)}
+.wave text{font-family:var(--font-mono);font-size:11.5px;fill:var(--muted)}
+.wave text.tt{font-family:var(--font-body);font-size:12.5px;fill:var(--fg)}
+.bits{display:flex;margin:14px 0;font-family:var(--font-mono);font-size:13.5px;text-align:center}
+.bits div{flex:1;border:2px solid var(--c0);padding:10px 6px;background:var(--c0-soft);min-width:0}
+.bits div.lo{border-color:var(--c2);background:var(--c2-soft)}
+.bits small{display:block;color:var(--muted);font-size:12px}
+.eq{font-family:var(--font-mono);font-size:14.5px;background:var(--surface2);border-left:4px solid var(--c0);padding:10px 14px;margin:14px 0;overflow-x:auto;white-space:pre-wrap}
+.nextprev{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+.nextprev a{border:1px solid var(--line);border-radius:8px;padding:8px 14px;text-decoration:none;color:var(--c0);background:var(--surface)}
+td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
+.rowbad td{background:var(--warn-bg)}
+.cards2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:16px 0}
+.cards2 .mode{min-width:0}
+
+.wave .dot{fill:var(--c3)} .wave .blk{fill:var(--c1-soft);stroke:var(--c1)}
+.capt{font-size:14px;color:var(--muted);margin:6px 2px 14px}
+.stat .v.sm{font-size:15px}
+.sim .row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="kicker">STM32 Nucleo-F103RB · 타이머 · 예제설명 · <a href="../06_Timers_RTC%20개념설명.html" style="color:inherit">↑ 06_Timers_RTC 개념설명</a></div>
+  <h1>자유 계수 카운터: 32비트 µs 시계와 경쟁 조건</h1>
+  <p class="lead">01·02 예제는 오버플로를 '주기 신호'로만 썼다. 이 예제설명은 카운터가 멈추지 않고 계속 도는 자유 계수(free-running) 상태에서 <b>CNT 값 자체를 시간</b>으로 읽는다. 16비트 CNT와 오버플로 횟수를 결합해 32비트 µs 시계를 만들고, 두 번의 읽기 사이에서 생기는 경쟁 조건을 관찰하는 <code>03_TIM_Overflow_Counter</code> 예제를 해석한다.</p>
+  <nav class="toc" aria-label="목차">
+    <a href="#s1">1. 문제: 16비트의 한계</a><a href="#s2">2. 카운터 확장</a><a href="#s3">3. 래핑에 안전한 비교</a><a href="#s4">4. 직접 만져 보기</a><a href="#s5">5. 경쟁 조건</a><a href="#s6">6. 레지스터와 안전한 읽기</a><a href="#s7">7. 코드 읽기</a><a href="#s8">8. 실험</a><a href="#s9">9. 트러블슈팅</a><a href="#s10">10. 확인 문제</a>
+  </nav>
+</header>
+
+<section id="s1">
+<h2>1. 문제: 16비트 CNT는 65.536 ms뿐이다</h2>
+<p>TIM2를 PSC=63(1 MHz), ARR=0xFFFF로 설정하면 CNT는 1 µs마다 증가하여 65.536 ms마다 오버플로한다. 타이머를 멈추거나 되돌리지 않고 계속 돌려 두면 임의 시점에 CNT를 읽는 것만으로 시각을 얻는다. 다만 표현 범위가 65.536 ms이다.</p><div class="eq">f_update = 64 MHz / ((63+1) × (65535+1)) = 15.26 Hz  (주기 65.536 ms)</div><ul><li>16비트 카운터와 오버플로 횟수를 결합하여 32비트 µs 시계로 확장한다.</li><li>두 번의 읽기(<code>gOvf</code>, <code>CNT</code>) 사이의 <b>경쟁 조건</b>을 관찰하고 안전한 읽기를 구현한다.</li><li>래핑에 안전한 비교 <code>(int32_t)(a − b) &lt; 0</code>를 이해한다.</li><li>µs 시계로 printf 한 줄, <code>HAL_Delay</code>의 실행 시간을 실측한다.</li></ul>
+</section>
+<section id="s2">
+<h2>2. 카운터 확장</h2>
+<p>업데이트 인터럽트에서 오버플로 횟수 <code>gOvf</code>를 증가시켜 상위 16비트로 쓰면 32비트 시간이 된다.</p><div class="bits"><div>gOvf (상위 16비트)<br><small>ISR에서 증가</small></div><div class="lo">TIM2-&gt;CNT (하위 16비트)<br><small>하드웨어</small></div></div><div class="eq">시간[µs] = (gOvf &lt;&lt; 16) | CNT  →  2³² µs ≈ 4294.97 s ≈ 71.6분마다 한 바퀴</div>
+</section>
+<section id="s3">
+<h2>3. 래핑에 안전한 비교</h2>
+<p>32비트 값이 한 바퀴 돌아도 두 시각의 <b>차이</b>는 올바르다. 부호 있는 정수로 해석하면 선후를 판정할 수 있다.</p><div class="eq">(int32_t)(a − b) &lt; 0  ⇔  a가 b보다 이전  (두 시각의 차이가 2³¹ µs ≈ 35.8분 이내일 때)</div><div class="tablewrap"><table><tr><th>비교 방식</th><th>71.6분 래핑 후</th><th>비고</th></tr><tr><td><code>a &lt; b</code></td><td>틀림</td><td>래핑 직후 새 값이 작아 보인다</td></tr><tr><td><code>(int32_t)(a − b) &lt; 0</code></td><td>맞음</td><td>차이만 사용</td></tr></table></div>
+</section>
+<section id="s4">
+<h2>4. 직접 만져 보기</h2>
+
+  <p>아래 시뮬레이터는 <code>gOvf</code>를 읽은 직후 <code>CNT</code>를 읽기 전에 오버플로가 끼어드는 상황을 만든다. <b>naive</b>와 <b>safe</b>의 결과를 비교한다.</p>
+  <ol>
+    <li>기본값(첫 읽기 CNT=65500, 간격 100 µs)에서 <b>읽기 실행</b>을 누른다. 오버플로가 두 읽기 사이에 끼므로 naive가 65536 µs 뒤로 튄다.</li>
+    <li>간격을 10 µs로 줄이면 오버플로가 끼지 않아 두 방식이 같은 값을 준다.</li>
+    <li>safe에서 <b>ISR 지연</b>을 40 ms로 늘려 본다. 32.768 ms를 넘으면 safe의 판정 전제가 깨진다.</li>
+  </ol>
+  <div class="sim" id="simbox">
+    <div class="subhead">입력</div>
+    <div class="ctl"><div><label for="c0">첫 읽기(gOvf) 시점의 CNT [µs] = <b id="l_c0"></b></label><input id="c0" type="range" min="0" max="65535" step="1" value="65500"></div><div><label for="gap">두 읽기 사이 간격 [µs] = <b id="l_gap"></b></label><input id="gap" type="range" min="0" max="400" step="1" value="100"></div><div><label for="ovf">현재 gOvf (n) = <b id="l_ovf"></b></label><input id="ovf" type="range" min="0" max="200" step="1" value="15"></div><div><label for="lat">ISR 지연 [ms] = <b id="l_lat"></b></label><input id="lat" type="range" min="0" max="60" step="1" value="0"></div>
+    </div>
+    <div class="subhead">결과</div>
+    <div class="regs"><div class="stat"><div class="k">실제 시각 [µs]</div><div class="v" id="vTrue">–</div></div><div class="stat"><div class="k">Micros_Naive()</div><div class="v" id="vNaive">–</div></div><div class="stat"><div class="k">Micros_Safe()</div><div class="v" id="vSafe">–</div></div><div class="stat"><div class="k">판정</div><div class="v" id="vVerdict">–</div></div></div>
+    <div class="btns">
+      <button class="sw" id="bRun" type="button">읽기 실행</button>
+      <button class="plain" id="bReset" type="button">초기화</button>
+    </div>
+    <div class="calc" id="calc" aria-live="polite">읽기 실행을 눌러 계산 과정을 확인한다.</div>
+  </div>
+  <p style="font-size:14.5px;color:var(--muted)">시뮬레이터 모델: ISR이 아직 실행되지 않아 gOvf는 n으로 남아 있고, 오버플로 후 CNT = (c0+간격) − 65536이다. safe는 인터럽트를 막고 읽은 뒤 UIF = 1이고 CNT &lt; 0x8000이면 hi에 1을 더한다. 인터럽트 차단 구간의 ISR 지연이 32.768 ms 이상이면 CNT가 0x8000을 넘어 보정 조건이 어긋난다고 본다.</p>
+
+</section>
+<section id="s5">
+<h2>5. 경쟁 조건</h2>
+<p><code>gOvf</code>와 <code>CNT</code>는 서로 다른 두 번의 읽기이다. 그 사이에 오버플로가 발생하면 ISR이 <code>gOvf</code>를 올려도 이미 읽은 <code>hi</code>는 옛 값이고, <code>lo</code>는 0 근처의 새 값이 된다.</p><div class="wave"><svg viewBox="0 0 640 190" role="img" aria-label="두 번 읽기 사이에 오버플로가 나는 경쟁 조건">
+<text x="8" y="36" class="m">CNT</text>
+<polyline class="s0" points="90,100 330,36 330,100 560,36"/>
+<line class="gd" x1="330" y1="30" x2="330" y2="170"/><text x="336" y="24">오버플로: gOvf n → n+1 (ISR 대기)</text>
+<text x="8" y="130" class="m">읽기 순서</text>
+<circle class="dot" cx="290" cy="130" r="5"/><text x="214" y="152">① hi = gOvf (= n)</text>
+<circle class="dot" cx="372" cy="130" r="5"/><text x="346" y="152">② lo = CNT (≈ 0)</text>
+<line class="ax" x1="90" y1="130" x2="620" y2="130"/>
+<text x="90" y="178">결과 = (n &lt;&lt; 16) | 0 : 실제 시각 ((n+1) &lt;&lt; 16) | 0 보다 65536 µs 작다 → 시간이 거꾸로 감</text>
+</svg><p class="capt">그림 2. ①과 ② 사이에 오버플로가 끼어들면 상위값은 옛 값, 하위값은 새 값이 된다.</p></div>
+</section>
+<section id="s6">
+<h2>6. 레지스터와 안전한 읽기</h2>
+<div class="tablewrap"><table><tr><th>항목</th><th>설정</th><th>레지스터/비트</th><th>의미</th></tr><tr><td>타이머</td><td>TIM2</td><td>APB1, 타이머 클럭 64 MHz</td><td>×2 규칙 적용</td></tr><tr><td><code>Prescaler</code></td><td>63</td><td><code>PSC</code></td><td>카운터 클럭 1 MHz (1 µs)</td></tr><tr><td><code>Period</code></td><td>65535</td><td><code>ARR</code> = 0xFFFF</td><td>16비트 전 범위</td></tr><tr><td><code>AutoReloadPreload</code></td><td>DISABLE</td><td><code>CR1.ARPE</code> = 0</td><td>ARR을 바꾸지 않으므로 불필요</td></tr><tr><td>인터럽트</td><td>UEV</td><td><code>DIER.UIE</code> = 1</td><td><code>HAL_TIM_Base_Start_IT</code></td></tr><tr><td>읽기</td><td>직접 접근</td><td><code>TIM2-&gt;CNT</code>, <code>TIM2-&gt;SR</code></td><td>HAL 함수 없이 레지스터를 읽는다</td></tr></table></div><h3>Micros_Safe의 논리</h3><ol><li><code>PRIMASK</code>을 저장하고 <code>__disable_irq()</code>로 인터럽트를 막는다. 이제 <code>gOvf</code>는 바뀌지 않는다.</li><li><code>gOvf</code>와 <code>CNT</code>를 읽는다.</li><li><code>SR.UIF = 1</code>이고 <code>CNT &lt; 0x8000</code>이면, 오버플로가 났지만 ISR이 아직 세지 못한 것이므로 <code>hi</code>에 1을 더한다. <code>CNT</code>가 큰 값이면 오버플로 이전에 읽은 값이므로 더하지 않는다.</li><li><code>PRIMASK</code>을 복원한다 (이미 인터럽트가 막힌 문맥이나 ISR 안에서 호출해도 안전하다).</li></ol><div class="box warn"><div class="label">전제</div><p>ISR이 32.768 ms(= 0x8000 µs) 이상 지연되지 않아야 3단계의 판정이 맞다.</p></div><div class="tablewrap"><table><tr><th>항목</th><th><code>Micros_Naive()</code></th><th><code>Micros_Safe()</code></th></tr><tr><td>읽기 순서</td><td><code>gOvf</code> → <code>CNT</code></td><td>인터럽트 차단 → <code>gOvf</code> → <code>CNT</code> → UIF 확인 → 복원</td></tr><tr><td>두 읽기 사이 오버플로</td><td>65536 µs 뒤로 튐</td><td>UIF로 감지하여 보정</td></tr><tr><td>인터럽트 지연</td><td>없음</td><td>수 사이클</td></tr><tr><td>ISR 안에서 호출</td><td>가능</td><td>가능 (PRIMASK 복원)</td></tr></table></div>
+</section>
+<section id="s7">
+<h2>7. 코드 읽기</h2>
+<p>배선이 필요 없다. LD2(PA5)가 1초마다 토글되고, USART2 가상 COM(115200 8N1)으로 결과를 출력한다.</p><div class="file">main.c — 읽기 함수 두 가지</div>
+<div class="codepair">
+<pre><code><span class="kw">static</span> uint32_t Micros_Naive(<span class="kw">void</span>)
+{
+    uint32_t hi = gOvf;          <span class="cm">/* ① 상위 16비트 */</span>
+    <span class="kw">for</span> (int i = 0; i &lt; NAIVE_GAP_NOPS; i++) __NOP();   <span class="cm">/* 실험용: ①과 ② 사이 간격 늘리기 */</span>
+    uint32_t lo = TIM2-&gt;CNT;     <span class="cm">/* ② 하위 16비트 (TIM2-&gt;CNT 직접 읽기) */</span>
+    <span class="kw">return</span> (hi &lt;&lt; 16) | lo;
+}
+
+<span class="kw">static</span> uint32_t Micros_Safe(<span class="kw">void</span>)
+{
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    uint32_t hi = gOvf;
+    uint32_t lo = TIM2-&gt;CNT;
+    <span class="kw">if</span> ((TIM2-&gt;SR &amp; TIM_SR_UIF) &amp;&amp; (lo &lt; 0x8000UL))
+    {
+        hi++;                    <span class="cm">/* 아직 ISR 이 반영하지 못한 오버플로 */</span>
+    }
+    __set_PRIMASK(primask);
+    <span class="kw">return</span> (hi &lt;&lt; 16) | lo;
+}</code></pre>
+<ol><li>naive는 <code>gOvf</code>와 <code>CNT</code>를 차례로 읽을 뿐이다.</li><li>safe는 PRIMASK으로 인터럽트를 막은 상태에서 읽고 UIF로 보정한다.</li><li><code>NAIVE_GAP_NOPS</code>는 두 읽기 사이 창을 일부러 넓히는 장치이다.</li></ol>
+</div><div class="file">main.c — 콜백과 시작 순서</div>
+<div class="codepair">
+<pre><code><span class="kw">void</span> <span class="kw">HAL_TIM_PeriodElapsedCallback</span>(TIM_HandleTypeDef *htim)
+{
+  <span class="kw">if</span> (htim-&gt;Instance == TIM2)
+  {
+    gOvf++;          <span class="cm">/* 오버플로 1회 = 65536us. 콜백은 이 한 줄로 끝낸다 */</span>
+  }
+}
+
+<span class="kw">__HAL_TIM_CLEAR_FLAG</span>(&amp;htim2, TIM_FLAG_UPDATE);     <span class="cm">/* TIM2-&gt;SR = ~TIM_SR_UIF */</span>
+<span class="kw">__HAL_TIM_SET_COUNTER</span>(&amp;htim2, 0);                  <span class="cm">/* TIM2-&gt;CNT = 0 */</span>
+gOvf = 0;
+
+<span class="cm">/* 업데이트 인터럽트로 시작: DIER.UIE=1, CR1.CEN=1 */</span>
+<span class="kw">if</span> (<span class="kw">HAL_TIM_Base_Start_IT</span>(&amp;htim2) != HAL_OK) Error_Handler();</code></pre>
+<ol><li>시작 전에 UIF를 지우고 <code>CNT</code>와 <code>gOvf</code>를 0으로 만든다. 그러지 않으면 시작 직후 <code>gOvf</code>가 1이 될 수 있다.</li><li>콜백은 <code>gOvf++</code> 한 줄로 끝낸다. 출력은 모두 main 루프에서 한다.</li></ol>
+</div><div class="file">main.c — 측정 루프</div>
+<div class="codepair">
+<pre><code>uint32_t naiveBack = 0, safeBack = 0;
+uint32_t prevN = Micros_Naive();
+uint32_t prevS = Micros_Safe();
+uint32_t tEnd  = prevS + TEST_WINDOW_US;
+
+<span class="cm">/* (int32_t)(a - b) &lt; 0 : 32비트 래핑(71.6분)을 넘어도 올바른 비교 */</span>
+<span class="kw">while</span> ((int32_t)(Micros_Safe() - tEnd) &lt; 0)
+{
+  uint32_t n = Micros_Naive();
+  <span class="kw">if</span> ((int32_t)(n - prevN) &lt; 0) naiveBack++;
+  prevN = n;
+
+  uint32_t s = Micros_Safe();
+  <span class="kw">if</span> ((int32_t)(s - prevS) &lt; 0) safeBack++;
+  prevS = s;
+}
+
+<span class="kw">HAL_GPIO_TogglePin</span>(LD2_GPIO_Port, LD2_Pin);    <span class="cm">/* GPIOA-&gt;ODR ^= (1&lt;&lt;5) */</span></code></pre>
+<ol><li>1초 동안 두 함수를 반복 호출하며 이전 값보다 작은 값을 돌려준 횟수(back-jump)를 센다.</li><li><code>HAL_Delay(10)</code>와 직전 printf의 길이를 µs 시계로 잰다.</li></ol>
+</div><div class="box"><div class="label">출력 해석</div><pre><code>[  1 s] t=   1010312 us ovf=   15 | back-jumps naive=0 safe=0 | HAL_Delay(10)=10842 us | prev printf=0 us
+[  2 s] t=   2030145 us ovf=   30 | back-jumps naive=1 safe=0 | HAL_Delay(10)=10377 us | prev printf=9510 us</code></pre><div class="tablewrap"><table><tr><th>항목</th><th>의미</th><th>기대</th></tr><tr><td><code>t</code></td><td>보고 시점의 32비트 µs 시각</td><td>초당 약 1,000,000 증가</td></tr><tr><td><code>ovf</code></td><td>오버플로 횟수</td><td>초당 약 15 증가 (15.26 Hz)</td></tr><tr><td><code>back-jumps naive</code></td><td><code>Micros_Naive()</code>가 이전 값보다 작은 값을 돌려준 횟수</td><td>드물게 1 이상</td></tr><tr><td><code>back-jumps safe</code></td><td><code>Micros_Safe()</code>의 같은 횟수</td><td><b>항상 0</b></td></tr><tr><td><code>HAL_Delay(10)</code></td><td>실측 길이</td><td>10~11 ms (최소 대기 보장을 위해 1틱을 더 기다림)</td></tr><tr><td><code>prev printf</code></td><td>직전 줄의 출력 시간</td><td>약 110자 × 86.8 µs ≈ 9.5 ms</td></tr></table></div><p>02 예제에서 추정한 printf 시간이 이 예제에서는 실측값으로 나타난다.</p></div>
+</section>
+<section id="s8">
+<h2>8. 실험</h2>
+<h3>실험 A. 읽기 사이 간격 늘리기</h3><p><code>NAIVE_GAP_NOPS</code>를 0, 10, 50으로 바꾸고 naive 횟수의 변화를 기록한다. 창이 넓을수록 매초 여러 번 관찰된다.</p><h3>실험 B. 보정 조건 해석</h3><p>UIF 보정에서 <code>lo &lt; 0x8000</code> 조건을 빼면 어떤 경우에 오류가 생기는지 시뮬레이터로 확인한다.</p><h3>실험 C. HAL_Delay(1)의 길이</h3><p><code>HAL_Delay(1)</code>의 실제 길이를 이 시계로 재어 05 예제의 듀티 스윕 시간을 추정한다.</p><h3>실험 D. 비교 연산</h3><p><code>a &lt; b</code>와 <code>(int32_t)(a − b) &lt; 0</code>를 래핑 직전·직후 값으로 비교한다.</p>
+</section>
+<section id="s9">
+<h2>9. 트러블슈팅</h2>
+<div class="tablewrap"><table><tr><th>증상</th><th>원인</th><th>점검/조치</th></tr><tr><td>시작하자마자 <code>ovf</code>가 1이다</td><td>초기화로 남은 UIF가 시작 직후 인터럽트를 일으킴</td><td>시작 전 UIF 클리어, <code>CNT</code>=0, <code>gOvf</code>=0</td></tr><tr><td><code>safe</code>가 0이 아니다</td><td>ISR 지연이 32.768 ms 이상이거나 <code>PRIMASK</code> 처리 오류</td><td>더 긴 ISR 존재 여부, 보정 조건 재검토</td></tr><tr><td><code>naive</code>가 계속 0이다</td><td>두 읽기 사이 창이 몇 사이클이라 확률이 낮음</td><td><code>NAIVE_GAP_NOPS</code>를 50으로 늘려 관찰. <b>창이 짧으면 드물게 틀릴 뿐, 틀린다는 사실은 그대로이다.</b></td></tr><tr><td>시간 비교가 71.6분 뒤에 어긋난다</td><td><code>a &lt; b</code>로 직접 비교</td><td><code>(int32_t)(a − b) &lt; 0</code> 사용</td></tr><tr><td><code>gOvf</code>가 갱신되지 않는 것처럼 보인다</td><td><code>volatile</code> 누락</td><td>ISR과 main이 공유하므로 <code>volatile</code> 필수</td></tr><tr><td>더 긴 시간이 필요하다</td><td>32비트는 약 71.6분</td><td><code>uint64_t</code>로 <code>(gOvf &lt;&lt; 16) | CNT</code> 계산 (Cortex-M3에서 32비트 <code>gOvf</code> 읽기는 원자적)</td></tr></table></div>
+</section>
+<section id="s10">
+<h2>10. 확인 문제</h2>
+<details><summary><b>문제 1.</b> <code>lo &lt; 0x8000</code> 조건이 없으면 어떤 경우에 오류가 생기는가?</summary>
+<div class="ans"><p><code>CNT</code>를 읽은 직후 <code>SR</code>을 읽기 전에 오버플로가 나면, <code>lo</code>는 오버플로 이전의 큰 값인데 UIF=1이므로 <code>hi</code>가 잘못 1 증가한다.</p></div></details>
+<details><summary><b>문제 2.</b> 이 확장 기법을 입력 캡처에 적용하면 측정 하한(15.3 Hz)보다 느린 신호를 어떻게 잴 수 있는가?</summary>
+<div class="ans"><p>캡처 시점의 CNT에 오버플로 횟수를 결합해 32비트 시각으로 만들고 두 시각의 차이를 구한다. (06 예제)</p></div></details>
+<details><summary><b>문제 3.</b> 32비트 µs 시계가 한 바퀴 도는 데 걸리는 시간은?</summary>
+<div class="ans"><p>2³² µs ≈ 4294.97 s ≈ 71.6분이다.</p></div></details>
+<details><summary><b>문제 4.</b> <code>HAL_Delay(10)</code>이 10~11 ms가 걸리는 이유는?</summary>
+<div class="ans"><p>HAL은 최소 대기를 보장하려고 1틱(1 ms)을 더 기다린다. 따라서 <code>HAL_Delay(1)</code>도 약 2 ms이다.</p></div></details>
+
+</section>
+
+<section>
+  <h2>정리</h2>
+  <div class="tablewrap"><table><tr><th>예제</th><th>타이머</th><th>이벤트 처리</th><th>타이머를 쓰는 방식</th></tr><tr><td class="m"><a href="../01_TIM_TimeBase/01_TIM_TimeBase%20예제설명.html">01_TIM_TimeBase</a></td><td>TIM3</td><td>인터럽트(UIE)</td><td>주기 신호 (1 ms)</td></tr><tr><td class="m"><a href="../02_TIM_TimeBase_Polling/02_TIM_TimeBase_Polling%20예제설명.html">02_TIM_TimeBase_Polling</a></td><td>TIM3</td><td>폴링(UIF)</td><td>주기 신호 (1 ms)</td></tr><tr><td class="m"><b>03_TIM_Overflow_Counter (이 예제설명)</b></td><td>TIM2</td><td>UEV 인터럽트</td><td>CNT 값 자체 (1 µs)</td></tr><tr><td class="m"><a href="../04_TIM_OutputCompare/04_TIM_OutputCompare%20예제설명.html">04_TIM_OutputCompare</a></td><td>TIM2</td><td>CCx 인터럽트</td><td>CNT == CCR 일치</td></tr><tr><td class="m"><a href="../05_TIM_PWM/05_TIM_PWM%20예제설명.html">05_TIM_PWM</a></td><td>TIM1</td><td>없음 (하드웨어)</td><td>CNT &lt; CCR 비교</td></tr></table></div>
+  <div class="nextprev"><a href="../02_TIM_TimeBase_Polling/02_TIM_TimeBase_Polling%20예제설명.html">← 02_TIM_TimeBase_Polling</a><a href="../04_TIM_OutputCompare/04_TIM_OutputCompare%20예제설명.html">04_TIM_OutputCompare →</a></div>
+  <footer>근거: 03_TIM_Overflow_Counter 소스. 계층: HAL. 레지스터·비트 이름은 RM0008(STM32F101xx~F107xx 레퍼런스 매뉴얼) 기준이다. 타이머 클럭은 SYSCLK 64 MHz(HSI/2 × PLL16), APB1 ÷2, APB2 ÷1 구성을 기준으로 한다. 코드는 해당 폴더의 소스에서 발췌한 것이며 일부 줄이 생략되어 있다.</footer>
+</section>
+</div>
+
+<script>
+
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  function lab(){['c0','gap','ovf','lat'].forEach(function(i){$('l_'+i).textContent=$(i).value})}
+  function run(){
+    lab();
+    var c0=+$('c0').value, gap=+$('gap').value, n=+$('ovf').value, lat=+$('lat').value;
+    var tot=c0+gap, wrapped=tot>=65536, c1=wrapped?tot-65536:tot;
+    var trueT=(wrapped?(n+1):n)*65536+c1;                  // 실제 시각
+    var naive=(n*65536+c1)>>>0;                             // hi = 옛 gOvf
+    // safe: 인터럽트 차단 구간에서 읽고 UIF·lo<0x8000 로 보정. ISR 지연이 길면 CNT가 0x8000을 넘어갈 수 있다.
+    var cs=wrapped?c1+Math.round(lat*1000):c1;              // 보정 판정 시점의 CNT
+    var uif=wrapped, hi=n;
+    if(uif && (cs&0xFFFF)<0x8000) hi=n+1;
+    var safe=(hi*65536+(c1))>>>0;
+    $('vTrue').textContent=trueT; $('vNaive').textContent=naive; $('vSafe').textContent=safe;
+    var nbad=naive!==trueT, sbad=safe!==trueT;
+    $('vVerdict').textContent=(nbad?'naive 오류 ':'naive 정상 ')+'/ '+(sbad?'safe 오류':'safe 정상');
+    var t='gOvf = '+n+' 읽음 → '+(wrapped?'오버플로 발생(CNT 65535→0, ISR 대기) → ':'오버플로 없음 → ')+'CNT = '+c1+' 읽음\n';
+    t+='naive = ('+n+' << 16) | '+c1+' = '+naive+(nbad?'  (실제보다 '+(trueT-naive)+' µs 작다 → 시간이 거꾸로 감)':'')+'\n';
+    t+='safe: UIF = '+(uif?1:0)+(uif?', CNT = '+(cs&0xFFFF)+(((cs&0xFFFF)<0x8000)?' < 0x8000 → hi + 1':' ≥ 0x8000 → 보정하지 않음 ✗'):'')+' → '+safe+(sbad?'  (오류: ISR 지연이 32.768 ms 이상)':'  (정상)');
+    $('calc').textContent=t;
+  }
+  ['c0','gap','ovf','lat'].forEach(function(i){$(i).oninput=function(){lab()}});
+  $('bRun').onclick=run;
+  $('bReset').onclick=function(){$('c0').value=65500;$('gap').value=100;$('ovf').value=15;$('lat').value=0;lab();['vTrue','vNaive','vSafe','vVerdict'].forEach(function(i){$(i).textContent='–'});$('calc').textContent='읽기 실행을 눌러 계산 과정을 확인한다.'};
+  lab();
+})();
+
+</script>
+</body></html>

@@ -128,17 +128,6 @@ footer ul{max-width:none}
   </nav>
 </header>
 
-<div class="box">
-  <div class="label">이 개념설명이 쓰는 근거</div>
-  <p>근거 문서와 인용·표기 규칙, <span class="eqv">등가 모델</span> 표시의 뜻은 <a href="../../교안의_활용법.html">교안의 활용법</a>에 있다. GPIO·NVIC·클럭 게이트 같은 공통 개념은 <a href="../01_GPIO/01_GPIO%20개념설명.html">01_GPIO 개념설명</a>에서 다뤘다.</p>
-  <ul>
-    <li><a href="../../Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a>(참조 매뉴얼): 11장 ADC, 7장 RCC(클럭), 13장 DMA</li>
-    <li><a href="../../Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a>(데이터시트): ADC 전기적 특성(Table 47~50), 온도 센서(Table 51), 내부 기준전압(Table 12)</li>
-    <li><a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a>(Cortex-M3 프로그래밍 매뉴얼): 예외 번호와 벡터 주소(Table 16)</li>
-    <li><a href="../../Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a>(정오표)</li>
-  </ul>
-</div>
-
 <details class="gloss"><summary>약어 모음</summary><div class="ans"><div class="tablewrap"><table>
 <tr><th>약어</th><th>풀네임</th><th>뜻</th></tr>
 <tr><td class="m">ADC / DAC</td><td>Analog-to-Digital / Digital-to-Analog Converter</td><td>전압 → 숫자 변환기 / 숫자 → 전압 변환기</td></tr>
@@ -692,6 +681,16 @@ V_DDA = V_REFINT × 4096 / code_REFINT                           (code = V_REFIN
     <li><b>시작 시점 선택</b>(5장, 6장): 외부 트리거를 고르는 EXTSEL·EXTTRIG, 연결할 수 있는 타이머 신호의 종류.</li>
     <li><b>온도 센서와 V<sub>REFINT</sub> 읽기</b>(7장): 내부 채널은 샘플링 시간을 17.1 µs 정도로 길게 잡아야 한다.</li>
     <li><b>값의 정렬</b>(5장): 12비트 결과를 16비트 레지스터의 오른쪽 또는 왼쪽에 붙여 놓는 방식을 고른다.</li>
+  </ul>
+</div>
+<div class="box">
+  <div class="label">이 개념설명이 쓰는 근거</div>
+  <p>근거 문서와 인용·표기 규칙, <span class="eqv">등가 모델</span> 표시의 뜻은 <a href="../../교안의_활용법.html">교안의 활용법</a>에 있다. GPIO·NVIC·클럭 게이트 같은 공통 개념은 <a href="../01_GPIO/01_GPIO%20개념설명.html">01_GPIO 개념설명</a>에서 다뤘다.</p>
+  <ul>
+    <li><a href="../../Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a>(참조 매뉴얼): 11장 ADC, 7장 RCC(클럭), 13장 DMA</li>
+    <li><a href="../../Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a>(데이터시트): ADC 전기적 특성(Table 47~50), 온도 센서(Table 51), 내부 기준전압(Table 12)</li>
+    <li><a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a>(Cortex-M3 프로그래밍 매뉴얼): 예외 번호와 벡터 주소(Table 16)</li>
+    <li><a href="../../Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a>(정오표)</li>
   </ul>
 </div>
 <div class="nextprev"><a href="../02_USART/02_USART%20개념설명.html">← 02_USART 개념설명</a><a href="01_ADC_Single/01_ADC_Single%20예제설명.html">첫 예제: 01_ADC_Single →</a><a href="../04_I2C_Communication/04_I2C_Communication%20개념설명.html">다음 그룹: 04_I2C_Communication 개념설명 →</a></div>

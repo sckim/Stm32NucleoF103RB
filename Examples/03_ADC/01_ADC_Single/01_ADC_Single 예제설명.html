@@ -226,20 +226,20 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
   <li>코드 → mV 환산식과 양자화 오차(1 LSB = 3.3 V / 4096 ≈ 0.806 mV)를 구분한다.</li>
 </ul>
 <div class="box"><div class="label">이 예제의 동작</div>
-<p>시작 시 한 번 <code>HAL_ADCEx_Calibration_Start()</code>로 교정하고 <code>HAL_ADC_Start()</code>로 연속 변환을 켠다. 이후 무한 루프에서 <code>HAL_ADC_PollForConversion()</code> → <code>HAL_ADC_GetValue()</code>로 최신 결과를 읽고 <code>ADC PA0 = &lt;raw&gt; (&lt;mV&gt; mV)</code>를 출력한 뒤 200 ms 쉰다. 인터럽트·DMA는 쓰지 않는다.</p></div>
+<p>시작 시 한 번 <code>HAL_ADCEx_Calibration_Start()</code>로 교정하고 <code>HAL_ADC_Start()</code>로 연속 변환을 켠다. 이후 무한 루프에서 <code>HAL_ADC_PollForConversion()</code> → <code>HAL_ADC_GetValue()</code>로 최신 결과를 읽고 <code>ADC PA1 = &lt;raw&gt; (&lt;mV&gt; mV)</code>를 출력한 뒤 200 ms 쉰다. 인터럽트·DMA는 쓰지 않는다.</p></div>
 <div class="box warn"><div class="label">흔한 실수 — CubeMX에서 채널을 잘못 고른다</div>
-<p>CubeMX의 ADC1 설정 화면에서 Temperature Sensor Channel을 켜면 랭크 1 채널이 <span class="k3"><code>ADC_CHANNEL_TEMPSENSOR</code>(CH16)</span>로 바뀌고, 새로 추가한 채널의 샘플 시간은 기본값 1.5 사이클이 되기 쉽다. 이 경우 핀 설정(PA0 아날로그)과 <code>printf</code> 문구는 그대로여서 겉보기에는 PA0를 읽는 것 같지만, 실제로는 PA0와 무관한 값이 나온다. 다시 생성한 뒤에는 <code>MX_ADC1_Init()</code>의 <code>sConfig.Channel</code>과 <code>SamplingTime</code>을 반드시 확인한다(9절, 실험 A).</p></div>
+<p>CubeMX의 ADC1 설정 화면에서 Temperature Sensor Channel을 켜면 랭크 1 채널이 <span class="k3"><code>ADC_CHANNEL_TEMPSENSOR</code>(CH16)</span>로 바뀌고, 새로 추가한 채널의 샘플 시간은 기본값 1.5 사이클이 되기 쉽다. 이 경우 핀 설정(PA1 아날로그)과 <code>printf</code> 문구는 그대로여서 겉보기에는 PA1을 읽는 것 같지만, 실제로는 PA1과 무관한 값이 나온다. 다시 생성한 뒤에는 <code>MX_ADC1_Init()</code>의 <code>sConfig.Channel</code>과 <code>SamplingTime</code>을 반드시 확인한다(9절, 실험 A).</p></div>
 </section>
 
 <section id="s2">
 <h2>2. ADC 블록 구조: 샘플&amp;홀드와 축차 비교</h2>
 <p>STM32F103의 ADC는 축차 비교형(SAR, Successive Approximation Register) 변환기이다. 아날로그 멀티플렉서가 18개 입력(외부 CH0~15, 내부 CH16 온도 센서, CH17 Vrefint) 중 하나를 고르고, 샘플&amp;홀드 커패시터가 그 전압을 붙잡은 뒤, SAR 논리가 내부 DAC 전압과 12번 비교해 비트를 위에서부터 하나씩 확정한다.</p>
 <div class="diag">
-<svg viewBox="0 0 720 250" role="img" aria-label="PA0와 내부 채널이 멀티플렉서를 거쳐 샘플앤홀드, SAR 변환기, DR, CPU로 이어지는 ADC 블록도">
+<svg viewBox="0 0 720 250" role="img" aria-label="PA1와 내부 채널이 멀티플렉서를 거쳐 샘플앤홀드, SAR 변환기, DR, CPU로 이어지는 ADC 블록도">
   <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker></defs>
-  <circle class="d0" cx="18" cy="70" r="6"/><text class="t" x="30" y="74">PA0 (A0) · CH0</text>
+  <circle class="d1" cx="18" cy="70" r="6"/><text class="t" x="30" y="74">PA1 (A1) · CH1</text>
   <circle class="d3" cx="18" cy="150" r="6"/><text class="t" x="30" y="154">온도 센서 · CH16</text>
-  <path class="s0" d="M138,70 H170 L196,104"/><path class="s3" d="M138,150 H170 L196,122"/>
+  <path class="s1" d="M138,70 H170 L196,104"/><path class="s3" d="M138,150 H170 L196,122"/>
   <path class="bx" d="M196,86 L236,100 L236,128 L196,142 Z"/><text class="t" x="200" y="118">MUX</text>
   <text class="s" x="178" y="168">SQR3.SQ1</text>
   <path class="w" d="M236,114 H262" marker-end="url(#ar)"/>
@@ -263,12 +263,12 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
   <text class="s" x="264" y="210">교정: CR2.RSTCAL → CR2.CAL (커패시터 뱅크 오차 보정 코드 계산)</text>
   <text class="s" x="264" y="228">연속 변환: CR2.CONT = 1 → EOC 후 즉시 다음 변환</text>
 </svg>
-<p class="capt">그림 1. ADC1 단일 채널 경로. 파랑은 이 예제가 읽는 외부 채널(PA0), 보라는 같은 MUX에 연결된 내부 채널(CH16, 02 예제)이다. 결과 레지스터 DR은 하나뿐이며, 연속 변환에서는 새 결과가 이전 값을 덮어쓴다.</p>
+<p class="capt">그림 1. ADC1 단일 채널 경로. 주황은 이 예제가 읽는 외부 채널(PA1), 보라는 같은 MUX에 연결된 내부 채널(CH16, 02 예제)이다. 결과 레지스터 DR은 하나뿐이며, 연속 변환에서는 새 결과가 이전 값을 덮어쓴다.</p>
 </div>
 <div class="tablewrap"><table>
   <tr><th>단계</th><th>하드웨어 동작</th><th>걸리는 시간</th><th>관련 레지스터</th></tr>
   <tr><td>채널 선택</td><td>MUX가 랭크 1 채널을 샘플링 회로에 연결</td><td>—</td><td class="m">SQR3.SQ1[4:0], SQR1.L = 0</td></tr>
-  <tr><td>샘플</td><td>스위치(R_ADC)를 통해 C_ADC가 입력 전압까지 충전</td><td>1.5~239.5 사이클</td><td class="m">SMPR2.SMP0[2:0] / SMPR1.SMP16[2:0]</td></tr>
+  <tr><td>샘플</td><td>스위치(R_ADC)를 통해 C_ADC가 입력 전압까지 충전</td><td>1.5~239.5 사이클</td><td class="m">SMPR2.SMP1[2:0] / SMPR1.SMP16[2:0]</td></tr>
   <tr><td>홀드 + 변환</td><td>스위치를 열고 MSB부터 12비트를 비교로 확정</td><td>12.5 사이클 (고정)</td><td>—</td></tr>
   <tr><td>결과</td><td>DR에 12비트 저장, EOC = 1</td><td>—</td><td class="m">DR[11:0], SR.EOC, CR2.ALIGN = 0 (오른쪽 정렬)</td></tr>
 </table></div>
@@ -301,11 +301,11 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <h3>핀</h3>
 <div class="tablewrap"><table>
   <tr><th>신호</th><th>MCU 핀</th><th>Nucleo 헤더</th><th>설정</th></tr>
-  <tr><td class="k0">ADC1_IN0</td><td class="m">PA0</td><td>Arduino A0 (CN8)</td><td><code>GPIO_MODE_ANALOG</code> → <code>GPIOA_CRL</code>의 <code>MODE0 = 00</code>, <code>CNF0 = 00</code> (아날로그 입력)</td></tr>
+  <tr><td class="k1">ADC1_IN1</td><td class="m">PA1</td><td>Arduino A1 (CN8)</td><td><code>GPIO_MODE_ANALOG</code> → <code>GPIOA_CRL</code>의 <code>MODE1 = 00</code>, <code>CNF1 = 00</code> (아날로그 입력)</td></tr>
   <tr><td>USART2_TX / RX</td><td class="m">PA2 / PA3</td><td>ST-LINK 가상 COM</td><td>115200 8N1, <code>printf</code> 출력</td></tr>
   <tr><td class="k3">온도 센서</td><td>핀 없음 (CH16)</td><td>—</td><td>같은 ADC1의 내부 채널. 02 예제에서 다룬다.</td></tr>
 </table></div>
-<p>PA0는 <code>HAL_ADC_MspInit()</code>에서 아날로그 모드로 설정된다. 아날로그 모드에서는 디지털 입력 슈미트 트리거가 끊겨 중간 전압에서도 누설 전류가 늘지 않는다. LQFP64 패키지는 VREF+가 내부에서 VDDA에, VREF−가 VSSA에 연결되어 있어 기준 전압이 곧 VDDA(보드에서 3.3 V)이다.</p>
+<p>PA1은 <code>HAL_ADC_MspInit()</code>에서 아날로그 모드로 설정된다. 아날로그 모드에서는 디지털 입력 슈미트 트리거가 끊겨 중간 전압에서도 누설 전류가 늘지 않는다. LQFP64 패키지는 VREF+가 내부에서 VDDA에, VREF−가 VSSA에 연결되어 있어 기준 전압이 곧 VDDA(보드에서 3.3 V)이다.</p>
 <h3>클럭</h3>
 <div class="tablewrap"><table>
   <tr><th>단계</th><th>설정 (SystemClock_Config)</th><th>클럭</th></tr>
@@ -322,7 +322,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
   <tr><td class="m">ADC_CR1</td><td class="m">0x04</td><td><code>SCAN</code> = 0 (단일 채널)</td></tr>
   <tr><td class="m">ADC_CR2</td><td class="m">0x08</td><td><code>ADON</code>(0), <code>CONT</code>(1), <code>CAL</code>(2), <code>RSTCAL</code>(3), <code>ALIGN</code>(11), <code>EXTSEL[19:17]</code>, <code>EXTTRIG</code>(20), <code>SWSTART</code>(22), <code>TSVREFE</code>(23)</td></tr>
   <tr><td class="m">ADC_SMPR1</td><td class="m">0x0C</td><td><code>SMP16[20:18]</code> (CH10~17의 샘플 시간)</td></tr>
-  <tr><td class="m">ADC_SMPR2</td><td class="m">0x10</td><td><code>SMP0[2:0]</code> (CH0~9의 샘플 시간)</td></tr>
+  <tr><td class="m">ADC_SMPR2</td><td class="m">0x10</td><td><code>SMP1[2:0]</code> (CH0~9의 샘플 시간)</td></tr>
   <tr><td class="m">ADC_SQR1</td><td class="m">0x2C</td><td><code>L[23:20]</code> = 0 (변환 1개)</td></tr>
   <tr><td class="m">ADC_SQR3</td><td class="m">0x34</td><td><code>SQ1[4:0]</code> = 랭크 1 채널 번호</td></tr>
   <tr><td class="m">ADC_DR</td><td class="m">0x4C</td><td><code>DATA[15:0]</code>, 오른쪽 정렬이면 하위 12비트. 읽으면 EOC가 하드웨어로 지워진다.</td></tr>
@@ -336,7 +336,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 
 <section id="s4">
 <h2>4. 직접 만져 보기</h2>
-<p>아래 시뮬레이터는 PA0 전압을 12비트 코드로 바꾸고, 예제와 같은 정수식으로 mV를 계산한다. 샘플 시간과 ADC 분주비를 바꾸면 변환 시간과 허용 신호원 저항이 함께 바뀐다.</p>
+<p>아래 시뮬레이터는 PA1 전압을 12비트 코드로 바꾸고, 예제와 같은 정수식으로 mV를 계산한다. 샘플 시간과 ADC 분주비를 바꾸면 변환 시간과 허용 신호원 저항이 함께 바뀐다.</p>
 <ol>
   <li>입력 전압을 1650 mV에 두고 코드가 2048 근처인지, 출력 mV와 실제 전압의 차이가 1 LSB(0.806 mV) 안팎인지 확인한다.</li>
   <li>입력을 1 mV씩 움직여 코드가 바뀌지 않는 구간(같은 코드를 내는 입력 범위)을 찾는다.</li>
@@ -347,9 +347,9 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <div class="sim" id="simbox">
   <div class="subhead">입력</div>
   <div class="ctl">
-    <div><label for="vin"><span class="k0">PA0</span> 입력 전압 = <b id="l_vin"></b></label><input id="vin" type="range" min="0" max="3400" step="1" value="1650"></div>
+    <div><label for="vin"><span class="k1">PA1</span> 입력 전압 = <b id="l_vin"></b></label><input id="vin" type="range" min="0" max="3400" step="1" value="1650"></div>
     <div><label for="vdda">실제 VDDA = <b id="l_vdda"></b></label><input id="vdda" type="range" min="3000" max="3600" step="10" value="3300"></div>
-    <div><label for="ch">랭크 1 채널 (SQR3.SQ1)</label><select id="ch"><option value="0" selected>CH0 · PA0 (이 예제)</option><option value="16">CH16 · 온도 센서 (실수 재현)</option></select></div>
+    <div><label for="ch">랭크 1 채널 (SQR3.SQ1)</label><select id="ch"><option value="1" selected>CH1 · PA1 (이 예제)</option><option value="16">CH16 · 온도 센서 (실수 재현)</option></select></div>
     <div><label for="smp">샘플 시간 (SMPx)</label><select id="smp">
       <option value="1.5">000 · 1.5 사이클</option><option value="7.5">001 · 7.5</option><option value="13.5">010 · 13.5</option><option value="28.5">011 · 28.5</option><option value="41.5">100 · 41.5</option><option value="55.5">101 · 55.5</option><option value="71.5">110 · 71.5</option><option value="239.5" selected>111 · 239.5 사이클 (이 예제)</option></select></div>
     <div><label for="pre">ADC 분주 (RCC_CFGR.ADCPRE)</label><select id="pre"><option value="2">÷2 → 32 MHz</option><option value="4">÷4 → 16 MHz</option><option value="6">÷6 → 10.67 MHz</option><option value="8" selected>÷8 → 8 MHz (이 예제)</option></select></div>
@@ -393,8 +393,8 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
   <tr><td><code>ExternalTrigConv</code></td><td>SOFTWARE_START</td><td class="m">CR2.EXTSEL = 111</td><td>SWSTART 비트로 시작</td></tr>
   <tr><td><code>DataAlign</code></td><td>RIGHT</td><td class="m">CR2.ALIGN = 0</td><td>DR[11:0]에 결과</td></tr>
   <tr><td><code>NbrOfConversion</code></td><td>1</td><td class="m">SQR1.L = 0000</td><td>변환 1개</td></tr>
-  <tr><td><code>sConfig.Channel</code></td><td><code>ADC_CHANNEL_0</code></td><td class="m">SQR3.SQ1 = 0</td><td>랭크 1 채널 번호</td></tr>
-  <tr><td><code>sConfig.SamplingTime</code></td><td><code>ADC_SAMPLETIME_239CYCLES_5</code></td><td class="m">SMPR2.SMP0 = 111</td><td>29.9 µs 샘플. 샘플 시간은 채널마다 따로 둔다</td></tr>
+  <tr><td><code>sConfig.Channel</code></td><td><code>ADC_CHANNEL_1</code></td><td class="m">SQR3.SQ1 = 1</td><td>랭크 1 채널 번호</td></tr>
+  <tr><td><code>sConfig.SamplingTime</code></td><td><code>ADC_SAMPLETIME_239CYCLES_5</code></td><td class="m">SMPR2.SMP1 = 111</td><td>29.9 µs 샘플. 샘플 시간은 채널마다 따로 둔다</td></tr>
   <tr><td><code>HAL_ADCEx_Calibration_Start()</code></td><td>—</td><td class="m">ADON=1 → RSTCAL=1 → CAL=1</td><td>ADON 후 2 ADC 클럭 이상 기다린 뒤 교정 레지스터 초기화, 교정 시작. 각각 하드웨어가 0으로 내릴 때까지 대기</td></tr>
   <tr><td><code>HAL_ADC_Start()</code></td><td>—</td><td class="m">ADON=1, SR.EOC=0, CR2.SWSTART|EXTTRIG=1</td><td>변환 시작. CONT=1이므로 이후 계속 변환</td></tr>
   <tr><td><code>HAL_ADC_PollForConversion()</code></td><td>timeout 100 ms</td><td class="m">SR.EOC 대기 → SR.STRT·EOC 클리어</td><td>SCAN=0, L=0이므로 진짜 EOC 폴링을 한다(03 예제와 다름)</td></tr>
@@ -406,9 +406,9 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
   <tr><td class="m">CR1</td><td class="m">0x0000 0000</td><td>SCAN=0, DISCEN=0</td></tr>
   <tr><td class="m">CR2</td><td class="m">0x001E 0003</td><td>TSVREFE(23) = 0 · EXTTRIG(20) · EXTSEL=111(19:17) · CONT(1) · ADON(0)</td></tr>
   <tr><td class="m">SMPR1</td><td class="m">0x0000 0000</td><td>CH10~17 미사용</td></tr>
-  <tr><td class="m">SMPR2</td><td class="m">0x0000 0007</td><td>SMP0 = 111 (239.5 사이클)</td></tr>
+  <tr><td class="m">SMPR2</td><td class="m">0x0000 0038</td><td>SMP1 = 111 (239.5 사이클)</td></tr>
   <tr><td class="m">SQR1</td><td class="m">0x0000 0000</td><td>L = 0 (변환 1개)</td></tr>
-  <tr><td class="m">SQR3</td><td class="m">0x0000 0000</td><td>SQ1 = 0 (CH0)</td></tr>
+  <tr><td class="m">SQR3</td><td class="m">0x0000 0001</td><td>SQ1 = 1 (CH1)</td></tr>
 </table></div>
 </section>
 
@@ -416,7 +416,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <h2>6. 초기화부터 결과 출력까지의 경로</h2>
 <p>이 예제에는 ADC 인터럽트가 없다. 동작하는 ISR은 <code>HAL_Delay()</code>용 <code>SysTick_Handler</code>뿐이다(CubeMX가 만든 B1의 <code>EXTI15_10_IRQHandler</code>도 있으나 콜백을 쓰지 않는다).</p>
 <ol class="flow">
-  <li class="sw"><div class="n">1</div><div class="tx"><b><code>MX_ADC1_Init()</code><span class="tag sw">소프트웨어</span></b><span><code>HAL_ADC_Init()</code>이 MSP에서 ADC1 클럭과 PA0 아날로그 모드를 켜고 CR1·CR2·SQR1을 쓴다. <code>HAL_ADC_ConfigChannel()</code>이 SQR3·SMPRx를 쓴다.</span></div></li>
+  <li class="sw"><div class="n">1</div><div class="tx"><b><code>MX_ADC1_Init()</code><span class="tag sw">소프트웨어</span></b><span><code>HAL_ADC_Init()</code>이 MSP에서 ADC1 클럭과 PA1 아날로그 모드를 켜고 CR1·CR2·SQR1을 쓴다. <code>HAL_ADC_ConfigChannel()</code>이 SQR3·SMPRx를 쓴다.</span></div></li>
   <li class="hw"><div class="n">2</div><div class="tx"><b>교정<span class="tag hw">하드웨어</span></b><span>ADON=1로 2 ADC 클럭 이상 켠 뒤 RSTCAL → CAL. 데이터시트 t_CAL은 83 ADC 클럭으로, 8 MHz에서 약 10.4 µs이다. 결과 보정 코드는 이후 모든 변환에 적용된다.</span></div></li>
   <li class="sw"><div class="n">3</div><div class="tx"><b><code>HAL_ADC_Start()</code><span class="tag sw">소프트웨어</span></b><span>EOC를 지우고 <code>SWSTART | EXTTRIG</code>를 세운다. 한 번만 호출한다.</span></div></li>
   <li class="hw"><div class="n">4</div><div class="tx"><b>샘플 → SAR → DR, EOC = 1<span class="tag hw">하드웨어</span></b><span>CONT=1이므로 T_conv(31.5 µs)마다 DR이 새 값으로 바뀐다. CPU가 읽지 않아도 계속 덮어쓴다.</span></div></li>
@@ -456,7 +456,7 @@ hadc1.Init.NbrOfConversion = 1;
 
 <span class="cm">/** Configure Regular Channel
 */</span>
-sConfig.Channel = <span class="hl">ADC_CHANNEL_0</span>;
+sConfig.Channel = <span class="hl">ADC_CHANNEL_1</span>;
 sConfig.Rank = ADC_REGULAR_RANK_1;
 sConfig.SamplingTime = <span class="hl">ADC_SAMPLETIME_239CYCLES_5</span>;
 <span class="kw">if</span> (<span class="kw">HAL_ADC_ConfigChannel</span>(&amp;hadc1, &amp;sConfig) != HAL_OK)
@@ -465,9 +465,9 @@ sConfig.SamplingTime = <span class="hl">ADC_SAMPLETIME_239CYCLES_5</span>;
 }</code></pre>
 <ol>
   <li><code>CR1.SCAN = 0</code>, <code>CR2.CONT = 1</code>, <code>CR2.EXTSEL = 111</code>, <code>CR2.ALIGN = 0</code>, <code>SQR1.L = 0</code>.</li>
-  <li>채널 0(PA0) → <code>SQR3.SQ1 = 0</code>. 외부 채널이므로 <code>CR2.TSVREFE</code>는 건드리지 않는다.</li>
-  <li>샘플 시간 239.5 사이클 → <code>SMPR2.SMP0 = 111</code>. 239.5 / 8 MHz ≈ 29.9 µs, 변환 1회 (239.5 + 12.5) / 8 MHz = 31.5 µs.</li>
-  <li>이 값들은 CubeMX의 <code>ADC_Single.ioc</code>(Rank 1 = Channel 0, 239.5 Cycles)에서 생성된다. 손으로 고치면 다음 생성 때 덮어써지므로 <code>.ioc</code>에서 바꾼다.</li>
+  <li>채널 1(PA1) → <code>SQR3.SQ1 = 1</code>. 외부 채널이므로 <code>CR2.TSVREFE</code>는 건드리지 않는다.</li>
+  <li>샘플 시간 239.5 사이클 → <code>SMPR2.SMP1 = 111</code>. 239.5 / 8 MHz ≈ 29.9 µs, 변환 1회 (239.5 + 12.5) / 8 MHz = 31.5 µs.</li>
+  <li>이 값들은 CubeMX의 <code>ADC_Single.ioc</code>(Rank 1 = Channel 1, 239.5 Cycles)에서 생성된다. 손으로 고치면 다음 생성 때 덮어써지므로 <code>.ioc</code>에서 바꾼다.</li>
 </ol>
 </div>
 <div class="file">Core/Src/stm32f1xx_hal_msp.c — HAL_ADC_MspInit()</div>
@@ -477,12 +477,12 @@ __HAL_RCC_ADC1_CLK_ENABLE();
 
 __HAL_RCC_GPIOA_CLK_ENABLE();
 <span class="cm">/**ADC1 GPIO Configuration
-PA0-WKUP     ------&gt; ADC1_IN0
+PA1           ------&gt; ADC1_IN1
 */</span>
-GPIO_InitStruct.Pin = GPIO_PIN_0;
+GPIO_InitStruct.Pin = GPIO_PIN_1;
 GPIO_InitStruct.Mode = <span class="hl">GPIO_MODE_ANALOG</span>;
 <span class="kw">HAL_GPIO_Init</span>(GPIOA, &amp;GPIO_InitStruct);</code></pre>
-<ol><li><code>RCC_APB2ENR.ADC1EN = 1</code>.</li><li>PA0를 아날로그 입력(<code>CRL.MODE0 = 00</code>, <code>CNF0 = 00</code>)으로 둔다. <code>.ioc</code>의 PA0 = ADCx_IN0 설정에서 생성된 코드이다.</li></ol>
+<ol><li><code>RCC_APB2ENR.ADC1EN = 1</code>.</li><li>PA1을 아날로그 입력(<code>CRL.MODE1 = 00</code>, <code>CNF1 = 00</code>)으로 둔다. <code>.ioc</code>의 PA1 = ADCx_IN1 설정에서 생성된 코드이다.</li></ol>
 </div>
 <div class="file">Core/Src/main.c — USER CODE BEGIN WHILE (교정·시작·루프)</div>
 <div class="codepair">
@@ -500,13 +500,13 @@ uint16_t adc1;
 
 <span class="kw">while</span> (1)
 {
-  <span class="cm">// ADC1_SR.EOC 플래그 대기 후 ADC1_DR에서 PA0(ADC1_IN0) 변환값(12bit, 0~4095) 읽기</span>
+  <span class="cm">// ADC1_SR.EOC 플래그 대기 후 ADC1_DR에서 PA1(ADC1_IN1) 변환값(12bit, 0~4095) 읽기</span>
   <span class="kw">if</span> (<span class="kw">HAL_ADC_PollForConversion</span>(&amp;hadc1, 100) != HAL_OK)
   {
     Error_Handler();
   }
   adc1 = <span class="kw">HAL_ADC_GetValue</span>(&amp;hadc1);
-  printf(&quot;ADC PA0 = %d (%d mV)\n&quot;, adc1, (<span class="kw">int</span>)(<span class="hl">adc1 * 3300UL / 4095</span>));
+  printf(&quot;ADC PA1 = %d (%d mV)\n&quot;, adc1, (<span class="kw">int</span>)(<span class="hl">adc1 * 3300UL / 4095</span>));
   <span class="cm">/* USER CODE END WHILE */</span>
 
   <span class="cm">/* USER CODE BEGIN 3 */</span>
@@ -521,17 +521,17 @@ uint16_t adc1;
 </ol>
 </div>
 <div class="box"><div class="label">기대 출력</div>
-<pre><code>ADC PA0 = 0 (0 mV)          ← A0를 GND에 연결
-ADC PA0 = 2048 (1650 mV)    ← 가변저항 중간
-ADC PA0 = 4095 (3300 mV)    ← A0를 3V3에 연결</code></pre>
+<pre><code>ADC PA1 = 0 (0 mV)          ← A1을 GND에 연결
+ADC PA1 = 2048 (1650 mV)    ← 가변저항 중간
+ADC PA1 = 4095 (3300 mV)    ← A1을 3V3에 연결</code></pre>
 <p>2048 × 3300 / 4095 = 1650.4 → 1650 mV이다. 실제 값은 잡음과 ADC 오차로 몇 LSB 흔들린다. 각 줄은 <code>0D 0A</code>로 끝난다.</p></div>
 </section>
 
 <section id="s8">
 <h2>8. 실험</h2>
-<p><b>배선</b>: 10 kΩ 가변저항의 양 끝을 3V3과 GND에, 가운데 단자를 A0(PA0)에 연결한다. 터미널은 115200 8N1이다.</p>
-<h3>실험 A. 채널을 잘못 고르면</h3><p>프로젝트를 복사한 뒤 CubeMX에서 Temperature Sensor Channel을 켜고 Rank 1 채널을 이것으로, 샘플 시간을 1.5 Cycles로 바꿔 다시 생성한다. 출력이 가변저항과 무관해지는 것을 확인하고, 디버거로 <code>ADC1-&gt;SQR3</code>(SQ1 = 16)와 <code>CR2.TSVREFE</code>를 읽어 원인을 찾는다. 원래 설정(Channel 0, 239.5 Cycles)으로 되돌려 복구한다.</p>
-<h3>실험 B. 샘플 시간과 신호원 저항</h3><p>A0와 가변저항 사이에 100 kΩ 저항을 직렬로 넣는다. 샘플 시간을 239.5와 1.5 사이클로 바꿔 가며 같은 전압에서 값이 어떻게 달라지는지 본다. 시뮬레이터의 R_AIN 상한과 비교한다. (100 kΩ은 데이터시트의 R_AIN 최대 50 kΩ을 넘으므로 &lsquo;규격 밖&rsquo; 관찰 실험이다.)</p>
+<p><b>배선</b>: 10 kΩ 가변저항의 양 끝을 3V3과 GND에, 가운데 단자를 A1(PA1)에 연결한다. 터미널은 115200 8N1이다.</p>
+<h3>실험 A. 채널을 잘못 고르면</h3><p>프로젝트를 복사한 뒤 CubeMX에서 Temperature Sensor Channel을 켜고 Rank 1 채널을 이것으로, 샘플 시간을 1.5 Cycles로 바꿔 다시 생성한다. 출력이 가변저항과 무관해지는 것을 확인하고, 디버거로 <code>ADC1-&gt;SQR3</code>(SQ1 = 16)와 <code>CR2.TSVREFE</code>를 읽어 원인을 찾는다. 원래 설정(Channel 1, 239.5 Cycles)으로 되돌려 복구한다.</p>
+<h3>실험 B. 샘플 시간과 신호원 저항</h3><p>A1과 가변저항 사이에 100 kΩ 저항을 직렬로 넣는다. 샘플 시간을 239.5와 1.5 사이클로 바꿔 가며 같은 전압에서 값이 어떻게 달라지는지 본다. 시뮬레이터의 R_AIN 상한과 비교한다. (100 kΩ은 데이터시트의 R_AIN 최대 50 kΩ을 넘으므로 &lsquo;규격 밖&rsquo; 관찰 실험이다.)</p>
 <h3>실험 C. VDDA 가정 확인</h3><p>멀티미터로 보드의 3V3(=VDDA)을 잰다. 3.30 V가 아니라면 같은 입력에서 출력 mV가 얼마나 틀어지는지 계산하고, 3300 대신 실측값을 넣었을 때와 비교한다. VDDA를 칩 내부에서 역산하는 방법은 <code>06_ADC_Vrefint_VDDA_c</code>에서 다룬다.</p>
 <h3>실험 D. 단일 변환 모드로 바꾼다</h3><p><code>ContinuousConvMode</code>를 DISABLE로 바꾸고 실행해 첫 줄만 출력되고 멈추는지(폴링 타임아웃 → <code>Error_Handler</code>) 확인한다. 이어서 루프 안에서 매번 <code>HAL_ADC_Start()</code>를 부르도록 고쳐 정상 동작을 회복시킨다.</p>
 </section>
@@ -540,12 +540,12 @@ ADC PA0 = 4095 (3300 mV)    ← A0를 3V3에 연결</code></pre>
 <h2>9. 트러블슈팅</h2>
 <div class="tablewrap"><table>
   <tr><th>증상</th><th>원인</th><th>점검/조치</th></tr>
-  <tr><td>가변저항을 돌려도 값이 거의 변하지 않는다</td><td>랭크 1 채널이 CH0가 아니다(예: CubeMX에서 온도 센서 채널을 선택)</td><td><code>sConfig.Channel</code>과 <code>.ioc</code>의 Rank 1 채널을 확인한다. <code>ADC1-&gt;SQR3</code>를 디버거로 읽어 SQ1 = 0인지 본다.</td></tr>
-  <tr><td>아무것도 연결하지 않았는데 값이 마구 흔들린다</td><td>PA0 플로팅</td><td>정상이다. 측정하려면 신호원을 연결하거나 GND에 묶어 0 근처인지 확인한다.</td></tr>
+  <tr><td>가변저항을 돌려도 값이 거의 변하지 않는다</td><td>랭크 1 채널이 CH1이 아니다(예: CubeMX에서 온도 센서 채널을 선택)</td><td><code>sConfig.Channel</code>과 <code>.ioc</code>의 Rank 1 채널을 확인한다. <code>ADC1-&gt;SQR3</code>를 디버거로 읽어 SQ1 = 1인지 본다.</td></tr>
+  <tr><td>아무것도 연결하지 않았는데 값이 마구 흔들린다</td><td>PA1 플로팅</td><td>정상이다. 측정하려면 신호원을 연결하거나 GND에 묶어 0 근처인지 확인한다.</td></tr>
   <tr><td>첫 줄만 출력되고 멈춘다</td><td>CONT=0인데 Start를 한 번만 불러 폴링이 타임아웃</td><td><code>ContinuousConvMode = ENABLE</code> 또는 루프마다 <code>HAL_ADC_Start()</code></td></tr>
   <tr><td>값이 일정하게 몇십 LSB 어긋난다</td><td>교정 생략, 또는 VDDA가 3.3 V가 아니다</td><td><code>HAL_ADCEx_Calibration_Start()</code>를 변환 전에 호출하고, VDDA를 실측한다.</td></tr>
   <tr><td>신호원 저항이 큰 센서에서 값이 실제보다 작거나 채널 간 간섭이 보인다</td><td>샘플 시간 부족으로 C_ADC가 덜 충전된다</td><td>샘플 시간을 늘리거나 버퍼(전압 팔로워)·RC 필터 커패시터를 둔다. R_AIN ≤ 50 kΩ을 지킨다.</td></tr>
-  <tr><td>출력이 4095(3300 mV)에서 더 올라가지 않는다</td><td>입력이 VDDA 이상이다(포화)</td><td>입력은 0~VDDA여야 한다. 5 V 신호는 분압해서 넣는다(PA0는 5 V 허용 핀이 아니다).</td></tr>
+  <tr><td>출력이 4095(3300 mV)에서 더 올라가지 않는다</td><td>입력이 VDDA 이상이다(포화)</td><td>입력은 0~VDDA여야 한다. 5 V 신호는 분압해서 넣는다(PA1은 5 V 허용 핀이 아니다).</td></tr>
 </table></div>
 </section>
 
@@ -556,7 +556,7 @@ ADC PA0 = 4095 (3300 mV)    ← A0를 3V3에 연결</code></pre>
 <details><summary><b>문제 2.</b> raw = 1241일 때 예제가 출력하는 mV는? 1 LSB 크기와 함께 답하라.</summary>
 <div class="ans"><p>1241 × 3300 / 4095 = 4,095,300 / 4095 = 1000.07 → 1000 mV이다. 1 LSB = 3300 / 4096 ≈ 0.806 mV이므로 실제 입력은 대략 1000.1 ± 0.8 mV 범위에 있다(ADC 자체 오차 제외).</p></div></details>
 <details><summary><b>문제 3.</b> 이 예제의 <code>SQR3</code>, <code>SMPR2</code> 값은? CubeMX에서 실수로 CH16·1.5 사이클을 고르면?</summary>
-<div class="ans"><p>이 예제: <code>SQR3 = 0x0000 0000</code>(SQ1 = 0), <code>SMPR2 = 0x0000 0007</code>(SMP0 = 111). 실수한 경우: <code>SQR3 = 0x0000 0010</code>(SQ1 = 16), <code>SMPR2 = 0</code>이고 샘플 시간은 <code>SMPR1.SMP16 = 000</code>(1.5 사이클)에 있다.</p></div></details>
+<div class="ans"><p>이 예제: <code>SQR3 = 0x0000 0001</code>(SQ1 = 1), <code>SMPR2 = 0x0000 0038</code>(SMP1 = 111). 실수한 경우: <code>SQR3 = 0x0000 0010</code>(SQ1 = 16), <code>SMPR2 = 0</code>이고 샘플 시간은 <code>SMPR1.SMP16 = 000</code>(1.5 사이클)에 있다.</p></div></details>
 <details><summary><b>문제 4.</b> 이 예제에서 <code>HAL_ADC_PollForConversion()</code>은 EOC를 실제로 폴링하는가? 03_ADC_Multi와 무엇이 다른가?</summary>
 <div class="ans"><p>폴링한다. <code>CR1.SCAN = 0</code>이고 <code>SQR1.L = 0</code>이면 HAL은 <code>SR.EOC</code>를 기다린다. 03_ADC_Multi는 SCAN=1, L=3이라 EOC가 시퀀스 끝에서만 서므로 HAL이 EOC 대신 최대 변환 시간만큼 빈 루프로 기다린다.</p></div></details>
 </section>
@@ -565,7 +565,7 @@ ADC PA0 = 4095 (3300 mV)    ← A0를 3V3에 연결</code></pre>
   <h2>정리</h2>
   <div class="tablewrap"><table>
     <tr><th>예제</th><th>계층</th><th>변환 시작·결과 회수</th><th>핵심</th></tr>
-    <tr><td class="m"><b>01_ADC_Single (이 예제설명)</b></td><td>HAL</td><td>연속 변환 + 폴링</td><td>PA0(CH0), 교정, mV 환산</td></tr>
+    <tr><td class="m"><b>01_ADC_Single (이 예제설명)</b></td><td>HAL</td><td>연속 변환 + 폴링</td><td>PA1(CH1), 교정, mV 환산</td></tr>
     <tr><td class="m"><a href="../02_ADC_Temperature/02_ADC_Temperature%20예제설명.html">02_ADC_Temperature</a></td><td>HAL</td><td>연속 변환 + 폴링</td><td>내부 온도 센서(CH16), 긴 샘플링 시간</td></tr>
     <tr><td class="m"><a href="../03_ADC_Multi/ADC%20다채널%20예제설명.html">03_ADC_Multi</a></td><td>HAL</td><td>스캔 + 불연속, 폴링</td><td>4채널(A0/A1/A2/Vrefint)</td></tr>
     <tr><td class="m"><a href="../04_ADC_DMA_TimTrigger/ADC%20타이머%20트리거%20DMA%20예제설명.html">04_ADC_DMA_TimTrigger</a></td><td>HAL+TIM+DMA</td><td>TIM3 TRGO 1 kHz + DMA 원형</td><td>반 버퍼 처리</td></tr>
@@ -613,7 +613,7 @@ ADC PA0 = 4095 (3300 mV)    ← A0를 3V3에 연결</code></pre>
     else{
       var mv=mvOf(S.dr), vin=+$('vin').value, ch=+$('ch').value;
       $('vRaw').textContent=S.dr; $('vHex').textContent=hex3(S.dr)+' / '+bin12(S.dr); $('vMv').textContent=mv+' mV';
-      $('vErr').textContent=ch===16?'PA0와 무관':((mv-vin>=0?'+':'')+(mv-vin)+' mV');
+      $('vErr').textContent=ch===16?'PA1과 무관':((mv-vin>=0?'+':'')+(mv-vin)+' mV');
     }
     var e=$('vEoc'); e.textContent=S.eoc; e.className='lamp'+(S.eoc?' on':'');
   }
@@ -623,7 +623,7 @@ ADC PA0 = 4095 (3300 mV)    ← A0를 3V3에 연결</code></pre>
     if(t.f>14e6) L.push('경고: ADCCLK '+fmtMHz(t.f)+' > 14 MHz — 데이터시트 범위 밖이다. ÷6 또는 ÷8을 쓴다.');
     L.push('T_conv = ('+t.smp+' + 12.5) / '+fmtMHz(t.f)+' = '+fmtT(t.tc)+'   (t_S = '+fmtT(t.ts)+')');
     if(ch===16){
-      L.push('SQ1 = 16: 온도 센서를 변환한다. PA0 입력 '+$('vin').value+' mV는 결과에 영향을 주지 않는다.');
+      L.push('SQ1 = 16: 온도 센서를 변환한다. PA1 입력 '+$('vin').value+' mV는 결과에 영향을 주지 않는다.');
       L.push(t.ts<17.1e-6?'t_S '+fmtT(t.ts)+' < 17.1 µs (RM0008 권장) → 센서 출력이 충분히 샘플링되지 않는다.':'t_S ≥ 17.1 µs → 온도 센서 샘플링 조건 충족.');
     }else{
       var r=S.dr===null?Math.floor(vin/vdda*4096):S.dr; r=Math.max(0,Math.min(4095,r));
@@ -640,7 +640,7 @@ ADC PA0 = 4095 (3300 mV)    ← A0를 3V3에 연결</code></pre>
   function readOnce(){
     if(!S.eoc) convert();          // PollForConversion: 연속 변환 중이므로 다음 EOC가 곧 온다
     S.eoc=0;                       // STRT·EOC 클리어, DR 읽기
-    var r=S.dr; uart('ADC PA0 = '+r+' ('+mvOf(r)+' mV)');
+    var r=S.dr; uart('ADC PA1 = '+r+' ('+mvOf(r)+' mV)');
     convert(); S.eoc=1;            // CONT=1: 하드웨어는 계속 변환한다
     return r;
   }

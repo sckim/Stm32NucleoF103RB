@@ -16,9 +16,9 @@
   ******************************************************************************
   */
 /**
- * 01_ADC_Single  —  [계층: HAL]  ADC1 단일 채널(PA0 = ADC1_IN0) 폴링 변환 + UART 출력
+ * 01_ADC_Single  —  [계층: HAL]  ADC1 단일 채널(PA1 = ADC1_IN1) 폴링 변환 + UART 출력
  *
- * 이 예제는 PA0 의 원시 12비트 값(0~4095)과 mV 환산값을 출력한다 (VDDA = 3.3V 가정).
+ * 이 예제는 PA1 의 원시 12비트 값(0~4095)과 mV 환산값을 출력한다 (VDDA = 3.3V 가정).
  *
  * 하드웨어 대응 (RM0008)
  *   HAL_ADCEx_Calibration_Start : ADC1_CR2.CAL = 1 (변환 전 보정, 오프셋 오차 감소)
@@ -139,13 +139,13 @@ int main(void)
 
   while (1)
   {
-    // ADC1_SR.EOC 플래그 대기 후 ADC1_DR에서 PA0(ADC1_IN0) 변환값(12bit, 0~4095) 읽기
+    // ADC1_SR.EOC 플래그 대기 후 ADC1_DR에서 PA1(ADC1_IN1) 변환값(12bit, 0~4095) 읽기
     if (HAL_ADC_PollForConversion(&hadc1, 100) != HAL_OK)
     {
       Error_Handler();
     }
     adc1 = HAL_ADC_GetValue(&hadc1);
-    printf("ADC PA0 = %d (%d mV)\n", adc1, (int)(adc1 * 3300UL / 4095));
+    printf("ADC PA1 = %d (%d mV)\n", adc1, (int)(adc1 * 3300UL / 4095));
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -233,7 +233,7 @@ static void MX_ADC1_Init(void)
 
   /** Configure Regular Channel
   */
-  sConfig.Channel = ADC_CHANNEL_0;
+  sConfig.Channel = ADC_CHANNEL_1;
   sConfig.Rank = ADC_REGULAR_RANK_1;
   sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)

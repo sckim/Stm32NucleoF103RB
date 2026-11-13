@@ -143,17 +143,6 @@ footer ul{max-width:none}
   </nav>
 </header>
 
-<div class="box">
-  <div class="label">이 개념설명이 쓰는 근거</div>
-  <p>근거 문서와 인용·표기 규칙, <span class="eqv">등가 모델</span> 표시의 뜻은 <a href="../../교안의_활용법.html">교안의 활용법</a>에 있다. 문서에 숫자가 없는 것(예: DMA 전송 한 번에 드는 버스 클럭 수)은 없다고 밝혔다. NVIC·클럭 게이트 같은 공통 개념은 <a href="../01_GPIO/01_GPIO%20개념설명.html">01_GPIO 개념설명</a>에서 다뤘다.</p>
-  <ul>
-    <li><a href="../../Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a>(참조 매뉴얼): 3장 메모리와 버스 구조, 13장 DMA</li>
-    <li><a href="../../Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a>(데이터시트): 이 칩에 있는 DMA 채널 수, 메모리 맵</li>
-    <li><a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a>(Cortex-M3 프로그래밍 매뉴얼): NVIC(Nested Vectored Interrupt Controller, 중첩 벡터 인터럽트 컨트롤러), MPU(Memory Protection Unit, 메모리 보호 장치)</li>
-    <li><a href="../../Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a>(정오표)</li>
-  </ul>
-</div>
-
 <details class="gloss"><summary>약어 모음</summary><div class="ans"><div class="tablewrap"><table>
 <tr><th>약어</th><th>풀네임</th><th>뜻</th></tr>
 <tr><td class="m">DMA</td><td>Direct Memory Access</td><td>CPU를 거치지 않는 메모리·주변장치 전송</td></tr>
@@ -694,6 +683,16 @@ CPU 처리 마감 = N / (2·f_req)           (절반 하나를 옮기는 시간)
     <li>중재는 PL 등급이 먼저, 같으면 번호가 작은 채널이 먼저이다. 버스 행렬은 CPU에게 대역폭 절반 이상을 보장한다. 전송당 클럭 수는 문서에 없다.</li>
     <li>원형 모드 + HT·TC로 핑퐁 버퍼를 만든다. CPU 마감은 절반 하나를 옮기는 시간 N/(2·f_req)이다.</li>
     <li>폭이 다르면 0 확장·하위 절단(Table 76, 원본 오타 주의), APB에 좁게 쓰면 32비트로 복제된다. 레지스터는 32비트로만 접근하고, 동작 중에는 CGIF를 쓰지 않는다(ES096 2.4).</li>
+  </ul>
+</div>
+<div class="box">
+  <div class="label">이 개념설명이 쓰는 근거</div>
+  <p>근거 문서와 인용·표기 규칙, <span class="eqv">등가 모델</span> 표시의 뜻은 <a href="../../교안의_활용법.html">교안의 활용법</a>에 있다. 문서에 숫자가 없는 것(예: DMA 전송 한 번에 드는 버스 클럭 수)은 없다고 밝혔다. NVIC·클럭 게이트 같은 공통 개념은 <a href="../01_GPIO/01_GPIO%20개념설명.html">01_GPIO 개념설명</a>에서 다뤘다.</p>
+  <ul>
+    <li><a href="../../Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a>(참조 매뉴얼): 3장 메모리와 버스 구조, 13장 DMA</li>
+    <li><a href="../../Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a>(데이터시트): 이 칩에 있는 DMA 채널 수, 메모리 맵</li>
+    <li><a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a>(Cortex-M3 프로그래밍 매뉴얼): NVIC(Nested Vectored Interrupt Controller, 중첩 벡터 인터럽트 컨트롤러), MPU(Memory Protection Unit, 메모리 보호 장치)</li>
+    <li><a href="../../Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a>(정오표)</li>
   </ul>
 </div>
 <div class="nextprev"><a href="../06_Timers_RTC/06_Timers_RTC%20개념설명.html">← 06_Timers_RTC 개념설명</a><a href="01_DMA_MemToMem/01_DMA_MemToMem%20예제설명.html">첫 예제: 01_DMA_MemToMem →</a><a href="../08_Clock_System/08_Clock_System%20개념설명.html">다음 그룹: 08_Clock_System 개념설명 →</a></div>

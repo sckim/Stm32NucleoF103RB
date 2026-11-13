@@ -92,3 +92,44 @@ Docs/UM1718_STM32CubeMX_User_Manual.pdf
 # 학생용 안내서는 HTML 원본을 로컬에서만 관리하고, 저장소에는 PDF로 올린다
 /Git_개념과_기본사용법.html
 /Examples/실습자료_최신화.html
+
+# Quartus가 컴파일할 때 만드는 산출물. 소스(.v), 프로젝트 파일(.qpf/.qsf), SignalTap 설정(.stp)은 올린다.
+# output_files/ 안의 .sof/.rpt/.pin 등도 폴더째 제외된다.
+Examples/12_Advanced_Topics/DE1SoC/db/
+Examples/12_Advanced_Topics/DE1SoC/incremental_db/
+Examples/12_Advanced_Topics/DE1SoC/output_files/
+Examples/12_Advanced_Topics/DE1SoC/simulation/
+Examples/12_Advanced_Topics/DE1SoC/greybox_tmp/
+Examples/12_Advanced_Topics/DE1SoC/qdb/
+Examples/12_Advanced_Topics/DE1SoC/tmp-clearbox/
+Examples/12_Advanced_Topics/DE1SoC/*.qws
+Examples/12_Advanced_Topics/DE1SoC/*.bsf
+Examples/12_Advanced_Topics/DE1SoC/*.bak
+Examples/12_Advanced_Topics/DE1SoC/*.qdf
+Examples/12_Advanced_Topics/DE1SoC/c5_pin_model_dump.txt
+Examples/13_DE1SoC_Link/fpga/db/
+Examples/13_DE1SoC_Link/fpga/incremental_db/
+Examples/13_DE1SoC_Link/fpga/output_files/
+Examples/13_DE1SoC_Link/fpga/simulation/
+Examples/13_DE1SoC_Link/fpga/greybox_tmp/
+Examples/13_DE1SoC_Link/fpga/qdb/
+Examples/13_DE1SoC_Link/fpga/tmp-clearbox/
+Examples/13_DE1SoC_Link/fpga/*.qws
+Examples/13_DE1SoC_Link/fpga/*.bsf
+Examples/13_DE1SoC_Link/fpga/*.bak
+Examples/13_DE1SoC_Link/fpga/*.qdf
+Examples/13_DE1SoC_Link/fpga/c5_pin_model_dump.txt
+
+# 13_DE1SoC_Link 예제 폴더 안의 Quartus 프로젝트(예: 04_Link_Clock_Counter_HAL/Quartus)가 컴파일할 때 만드는 산출물
+Examples/13_DE1SoC_Link/*/Quartus/db/
+Examples/13_DE1SoC_Link/*/Quartus/incremental_db/
+Examples/13_DE1SoC_Link/*/Quartus/output_files/
+Examples/13_DE1SoC_Link/*/Quartus/simulation/
+Examples/13_DE1SoC_Link/*/Quartus/greybox_tmp/
+Examples/13_DE1SoC_Link/*/Quartus/qdb/
+Examples/13_DE1SoC_Link/*/Quartus/tmp-clearbox/
+Examples/13_DE1SoC_Link/*/Quartus/*.qws
+Examples/13_DE1SoC_Link/*/Quartus/*.bsf
+Examples/13_DE1SoC_Link/*/Quartus/*.bak
+Examples/13_DE1SoC_Link/*/Quartus/*.qdf
+Examples/13_DE1SoC_Link/*/Quartus/c5_pin_model_dump.txt

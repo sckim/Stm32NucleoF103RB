@@ -128,17 +128,6 @@ footer ul{max-width:none}
   </nav>
 </header>
 
-<div class="box">
-  <div class="label">이 개념설명이 쓰는 근거</div>
-  <p>근거 문서와 인용·표기 규칙, <span class="eqv">등가 모델</span> 표시의 뜻은 <a href="../../교안의_활용법.html">교안의 활용법</a>에 있다. 문서의 숫자로 직접 유도한 계산에도 <span class="eqv">등가 모델</span> 표시를 달았다. RM0008은 CAN 프로토콜 자체(비트 스터핑 규칙, CRC 다항식, 오류 카운터 증감 규칙 등)를 "CAN 표준(ISO 11898)을 보라"며 설명하지 않는다. 그래서 문서에 없는 CAN 일반 상식은 2장의 <b>일반 개념</b> 상자에만 최소한으로 적고 출처를 달지 않았다. 와이어드 AND 버스와 중재의 기본 발상은 <a href="../04_I2C_Communication/04_I2C_Communication%20개념설명.html#s2">04_I2C 개념설명 2장</a>에서, NVIC와 클럭 게이트는 <a href="../01_GPIO/01_GPIO%20개념설명.html">01_GPIO 개념설명</a>에서 다뤘다.</p>
-  <ul>
-    <li><a href="../../Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a>(참조 매뉴얼): 24장 Controller area network (bxCAN)</li>
-    <li><a href="../../Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a>(데이터시트): CAN 개요, 핀 정의, 메모리 맵</li>
-    <li><a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a>(Cortex-M3 프로그래밍 매뉴얼): NVIC(Nested Vectored Interrupt Controller, 중첩 벡터 인터럽트 컨트롤러)</li>
-    <li><a href="../../Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a>(정오표)</li>
-  </ul>
-</div>
-
 <details class="gloss"><summary>약어 모음</summary><div class="ans"><div class="tablewrap"><table>
 <tr><th>약어</th><th>풀네임</th><th>뜻</th></tr>
 <tr><td class="m">CAN · bxCAN</td><td>Controller Area Network · Basic Extended CAN</td><td>제어기 영역 네트워크 · ST의 CAN 제어기 주변장치 이름</td></tr>
@@ -737,6 +726,16 @@ t_BS2   = tq × (TS2[2:0] + 1)              1 ~ 8 tq
     <li>tq = (BRP+1) / PCLK1, 비트 = (1 + TS1+1 + TS2+1) tq, 샘플 지점은 BS1 끝이다. 재동기는 BS1을 늘이거나 BS2를 줄이며 그 한도가 SJW이다.</li>
     <li>모드는 Sleep(리셋) → Initialization → Normal의 요청·확인 상태기계이고, BTR과 시험 모드는 초기화 모드에서만 바꾼다. FMP는 RFOM으로만 줄어든다.</li>
     <li>벡터 4개(USB와 2개 공유), DMA 없음, USB와 SRAM·핀 공유로 동시 사용 불가. 정오표: TTCM 미지원, PA12의 USART1_RTS 충돌.</li>
+  </ul>
+</div>
+<div class="box">
+  <div class="label">이 개념설명이 쓰는 근거</div>
+  <p>근거 문서와 인용·표기 규칙, <span class="eqv">등가 모델</span> 표시의 뜻은 <a href="../../교안의_활용법.html">교안의 활용법</a>에 있다. 문서의 숫자로 직접 유도한 계산에도 <span class="eqv">등가 모델</span> 표시를 달았다. RM0008은 CAN 프로토콜 자체(비트 스터핑 규칙, CRC 다항식, 오류 카운터 증감 규칙 등)를 "CAN 표준(ISO 11898)을 보라"며 설명하지 않는다. 그래서 문서에 없는 CAN 일반 상식은 2장의 <b>일반 개념</b> 상자에만 최소한으로 적고 출처를 달지 않았다. 와이어드 AND 버스와 중재의 기본 발상은 <a href="../04_I2C_Communication/04_I2C_Communication%20개념설명.html#s2">04_I2C 개념설명 2장</a>에서, NVIC와 클럭 게이트는 <a href="../01_GPIO/01_GPIO%20개념설명.html">01_GPIO 개념설명</a>에서 다뤘다.</p>
+  <ul>
+    <li><a href="../../Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a>(참조 매뉴얼): 24장 Controller area network (bxCAN)</li>
+    <li><a href="../../Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a>(데이터시트): CAN 개요, 핀 정의, 메모리 맵</li>
+    <li><a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a>(Cortex-M3 프로그래밍 매뉴얼): NVIC(Nested Vectored Interrupt Controller, 중첩 벡터 인터럽트 컨트롤러)</li>
+    <li><a href="../../Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a>(정오표)</li>
   </ul>
 </div>
 <div class="nextprev"><a href="../10_Flash_CRC/10_Flash_CRC%20개념설명.html">← 10_Flash_CRC 개념설명</a><a href="01_CAN_Loopback_c/">첫 예제: 01_CAN_Loopback_c →</a></div>

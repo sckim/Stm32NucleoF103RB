@@ -140,17 +140,6 @@ tr.hl td{background:var(--c0-soft)}
   </nav>
 </header>
 
-<div class="box">
-  <div class="label">이 개념설명이 쓰는 근거</div>
-  <p>근거 문서와 인용·표기 규칙, <span class="eqv">등가 모델</span> 표시의 뜻은 <a href="../../교안의_활용법.html">교안의 활용법</a>에 있다. GPIO·NVIC·클럭 게이트 같은 공통 개념은 <a href="../01_GPIO/01_GPIO%20개념설명.html">01_GPIO 개념설명</a>, 이중 버퍼·플래그·DMA 요청의 기본 구조는 <a href="../02_USART/02_USART%20개념설명.html">02_USART 개념설명</a>에서 다뤘다.</p>
-  <ul>
-    <li><a href="../../Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a>(참조 매뉴얼): 25장 SPI/I2S 중 SPI 부분(25.1~25.3, 25.5)</li>
-    <li><a href="../../Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a>(데이터시트): SPI 개수, 최대 클럭, 전기적 타이밍(Table 43)</li>
-    <li><a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a>(Cortex-M3 프로그래밍 매뉴얼): NVIC(Nested Vectored Interrupt Controller, 중첩 벡터 인터럽트 컨트롤러)</li>
-    <li><a href="../../Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a>(정오표): SPI CRC 결함 2건과 핀 공유 결함</li>
-  </ul>
-</div>
-
 <details class="gloss"><summary>약어 모음</summary><div class="ans"><div class="tablewrap"><table>
 <tr><th>약어</th><th>풀네임</th><th>뜻</th></tr>
 <tr><td class="m">SPI</td><td>Serial Peripheral Interface</td><td>클럭 선을 공유하는 동기식 직렬 인터페이스</td></tr>
@@ -710,6 +699,16 @@ f_PCLK = PCLK2 (SPI1)  또는  PCLK1 (SPI2)
     <li>TXE는 "Tx 버퍼 빔", RXNE는 "마지막 샘플 엣지에 Rx 버퍼 채움", BSY는 "선 위에서 진행 중"이다. 끝 판단과 끄기는 TXE → BSY 순서이다. OVR은 DR 읽기 → SR 읽기, MODF는 SR 접근 → CR1 쓰기로 지운다.</li>
     <li>내부 NSS는 마스터에서도 High여야 한다(SSM = 1이면 SSI = 1). 프레임마다 CS가 필요한 장치는 GPIO로 CS를 토글한다.</li>
     <li>프레임 시간이 µs 이하이므로 연속 전송은 폴링 또는 DMA(SPI1: 채널 2·3, SPI2: 4·5)로 한다.</li>
+  </ul>
+</div>
+<div class="box">
+  <div class="label">이 개념설명이 쓰는 근거</div>
+  <p>근거 문서와 인용·표기 규칙, <span class="eqv">등가 모델</span> 표시의 뜻은 <a href="../../교안의_활용법.html">교안의 활용법</a>에 있다. GPIO·NVIC·클럭 게이트 같은 공통 개념은 <a href="../01_GPIO/01_GPIO%20개념설명.html">01_GPIO 개념설명</a>, 이중 버퍼·플래그·DMA 요청의 기본 구조는 <a href="../02_USART/02_USART%20개념설명.html">02_USART 개념설명</a>에서 다뤘다.</p>
+  <ul>
+    <li><a href="../../Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a>(참조 매뉴얼): 25장 SPI/I2S 중 SPI 부분(25.1~25.3, 25.5)</li>
+    <li><a href="../../Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a>(데이터시트): SPI 개수, 최대 클럭, 전기적 타이밍(Table 43)</li>
+    <li><a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a>(Cortex-M3 프로그래밍 매뉴얼): NVIC(Nested Vectored Interrupt Controller, 중첩 벡터 인터럽트 컨트롤러)</li>
+    <li><a href="../../Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a>(정오표): SPI CRC 결함 2건과 핀 공유 결함</li>
   </ul>
 </div>
 <div class="nextprev"><a href="../04_I2C_Communication/04_I2C_Communication%20개념설명.html">← 04_I2C_Communication 개념설명</a><a href="../06_Timers_RTC/06_Timers_RTC%20개념설명.html">다음 그룹: 06_Timers_RTC 개념설명 →</a></div>

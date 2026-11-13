@@ -136,17 +136,6 @@ tr.cur td{background:var(--c0-soft)}
   </nav>
 </header>
 
-<div class="box">
-  <div class="label">이 개념설명이 쓰는 근거</div>
-  <p>근거 문서와 인용·표기 규칙, <span class="eqv">등가 모델</span> 표시의 뜻은 <a href="../../교안의_활용법.html">교안의 활용법</a>에 있다. 문서의 숫자로 직접 유도한 계산에도 <span class="eqv">등가 모델</span> 표시를 달았다. 오픈드레인 출력, 풀업, 대체 기능 선택, NVIC 같은 공통 개념은 <a href="../01_GPIO/01_GPIO%20개념설명.html#s2">01_GPIO 개념설명</a>에서 다뤘다. 이 개념설명은 I2C 규격서(NXP UM10204)를 근거로 쓰지 않는다. 그래서 규격서에만 있는 내용(예약 주소 표 전체, 비트 단위 중재의 세부 규칙 등)은 "이 네 문서에는 없다"고 따로 밝혔다.</p>
-  <ul>
-    <li><a href="../../Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a>(참조 매뉴얼): 26장 I2C(p.752~784)</li>
-    <li><a href="../../Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a>(데이터시트): I2C 전기적 특성(Table 41), 핀 정의</li>
-    <li><a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a>(Cortex-M3 프로그래밍 매뉴얼): NVIC(Nested Vectored Interrupt Controller, 중첩 벡터 인터럽트 컨트롤러)</li>
-    <li><a href="../../Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a>(정오표): I2C 항목이 일곱 개(2.8.1~2.8.7) 있다. 이 그룹에서 가장 중요하게 읽어야 할 문서이다</li>
-  </ul>
-</div>
-
 <details class="gloss"><summary>약어 모음</summary><div class="ans"><div class="tablewrap"><table>
 <tr><th>약어</th><th>풀네임</th><th>뜻</th></tr>
 <tr><td class="m">I2C</td><td>Inter-Integrated Circuit</td><td>칩 간 2선 직렬 버스</td></tr>
@@ -729,6 +718,16 @@ R_p 최소 (F103 쪽만) ≈ (VDD − 0.4 V) / 8 mA    (DS5319 Table 37: 8 mA �
     <li>SCL = PCLK1을 CCR로 나눈 것(표준 2CCR, 고속 3CCR 또는 25CCR 주기)이고, TRISE는 상승 시간 상한 + 1이다. 실제 상승 시간은 R<sub>p</sub> × C<sub>b</sub>가 정한다.</li>
     <li>SB·ADDR·BTF는 SCL을 붙잡고 소프트웨어를 기다리며, 정해진 읽기 순서(SR1 → DR 쓰기 / SR1 → SR2 / SR1 → DR)로 지워진다. RxNE·TxE와 ACK 변경은 기다려 주지 않으므로 마감이 있다. 이것이 정오표 2.8.1·2.8.2의 뿌리이다.</li>
     <li>인터럽트는 사건 줄과 오류 줄 두 개이고, DMA는 데이터 바이트만 옮기며 LAST로 마지막 NACK를 하드웨어에 맡길 수 있다.</li>
+  </ul>
+</div>
+<div class="box">
+  <div class="label">이 개념설명이 쓰는 근거</div>
+  <p>근거 문서와 인용·표기 규칙, <span class="eqv">등가 모델</span> 표시의 뜻은 <a href="../../교안의_활용법.html">교안의 활용법</a>에 있다. 문서의 숫자로 직접 유도한 계산에도 <span class="eqv">등가 모델</span> 표시를 달았다. 오픈드레인 출력, 풀업, 대체 기능 선택, NVIC 같은 공통 개념은 <a href="../01_GPIO/01_GPIO%20개념설명.html#s2">01_GPIO 개념설명</a>에서 다뤘다. 이 개념설명은 I2C 규격서(NXP UM10204)를 근거로 쓰지 않는다. 그래서 규격서에만 있는 내용(예약 주소 표 전체, 비트 단위 중재의 세부 규칙 등)은 "이 네 문서에는 없다"고 따로 밝혔다.</p>
+  <ul>
+    <li><a href="../../Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a>(참조 매뉴얼): 26장 I2C(p.752~784)</li>
+    <li><a href="../../Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a>(데이터시트): I2C 전기적 특성(Table 41), 핀 정의</li>
+    <li><a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a>(Cortex-M3 프로그래밍 매뉴얼): NVIC(Nested Vectored Interrupt Controller, 중첩 벡터 인터럽트 컨트롤러)</li>
+    <li><a href="../../Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a>(정오표): I2C 항목이 일곱 개(2.8.1~2.8.7) 있다. 이 그룹에서 가장 중요하게 읽어야 할 문서이다</li>
   </ul>
 </div>
 <div class="nextprev"><a href="../03_ADC/03_ADC%20개념설명.html">← 03_ADC 개념설명</a><a href="01_I2C_Scan/01_I2C_Scan%20예제설명.html">첫 예제: 01_I2C_Scan →</a><a href="../05_SPI_Communication/05_SPI_Communication%20개념설명.html">05_SPI 개념설명 →</a></div>

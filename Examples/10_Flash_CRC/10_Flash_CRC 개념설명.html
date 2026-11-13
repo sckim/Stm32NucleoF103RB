@@ -128,18 +128,6 @@ footer ul{max-width:none}
   </nav>
 </header>
 
-<div class="box">
-  <div class="label">이 개념설명이 쓰는 근거</div>
-  <p>근거 문서와 인용·표기 규칙, <span class="eqv">등가 모델</span> 표시의 뜻은 <a href="../../교안의_활용법.html">교안의 활용법</a>에 있다. 이 개념설명은 PM0075를 포함한 다섯 문서를 쓴다. 클럭 게이트·NVIC(Nested Vectored Interrupt Controller, 중첩 벡터 인터럽트 컨트롤러) 같은 공통 개념은 <a href="../01_GPIO/01_GPIO%20개념설명.html">01_GPIO 개념설명</a>, 버스 행렬과 DMA(Direct Memory Access, 직접 메모리 접근)는 <a href="../07_DMA/07_DMA%20개념설명.html">07_DMA 개념설명</a>에서 다뤘다.</p>
-  <ul>
-    <li><a href="../../Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a>(참조 매뉴얼): 3장 메모리와 버스 구조(3.3.3 Embedded Flash memory), 4장 CRC calculation unit</li>
-    <li><a href="../../Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a>(데이터시트): 메모리 맵, Flash 쓰기·소거 시간, 수명과 보존 기간</li>
-    <li><a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a>(Cortex-M3 프로그래밍 매뉴얼): 이 그룹에서는 직접 인용할 내용이 없었다</li>
-    <li><a href="../../Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a>(정오표): Flash 관련 결함 2건</li>
-    <li><a href="../../Docs/PM0075-stm32f10xxx-flash-memory.pdf">PM0075 Rev 2</a>(Flash 프로그래밍 매뉴얼): RM0008이 Flash 레지스터와 쓰기·소거 절차를 넘기는 문서이다(RM0008 3.3.3, <a href="../../Docs/RM0008_Reference_manual.pdf#page=58">p.58</a>·<a href="../../Docs/RM0008_Reference_manual.pdf#page=59">p.59</a>). 잠금 해제 키, 쓰기·소거 순서, 상태 플래그, 옵션 바이트와 보호를 여기서 가져왔다</li>
-  </ul>
-</div>
-
 <details class="gloss"><summary>약어 모음</summary><div class="ans"><div class="tablewrap"><table>
 <tr><th>약어</th><th>풀네임</th><th>뜻</th></tr>
 <tr><td class="m">CRC</td><td>Cyclic Redundancy Check</td><td>순환 중복 검사. 데이터를 다항식으로 나눈 나머지로 오류를 검출한다</td></tr>
@@ -720,6 +708,17 @@ LATENCY = 2 (대기 2)  : 48 MHz &lt; SYSCLK ≤ 72 MHz          (RM0008 p.58, F
     <li>쓰기·소거는 HSI로 도는 FPEC가 맡는다. KEY1·KEY2로 잠금을 풀고, PG(반워드 쓰기)·PER/MER + STRT(소거)로 시작하며, BSY → EOP 또는 PGERR·WRPRTERR로 끝난다. 16비트 쓰기 40~70 µs, 페이지 소거 20~40 ms, 수명 10 kcycles. 그동안 Flash 읽기는 멈춘다.</li>
     <li>CRC 유닛은 다항식 0x04C11DB7, 초기값 0xFFFF FFFF, 32비트 워드당 4 HCLK인 고정 회로이다. 쓰기가 계산 동안 멈추므로 플래그·인터럽트가 없고, DMA 요청선도 없다.</li>
     <li>정오표: 대기 2 + 프리페치에서는 FLITFEN을 켜 둘 것(2.2.1), STRT 뒤 BSY는 한 클럭 늦게 선다(2.2.11).</li>
+  </ul>
+</div>
+<div class="box">
+  <div class="label">이 개념설명이 쓰는 근거</div>
+  <p>근거 문서와 인용·표기 규칙, <span class="eqv">등가 모델</span> 표시의 뜻은 <a href="../../교안의_활용법.html">교안의 활용법</a>에 있다. 이 개념설명은 PM0075를 포함한 다섯 문서를 쓴다. 클럭 게이트·NVIC(Nested Vectored Interrupt Controller, 중첩 벡터 인터럽트 컨트롤러) 같은 공통 개념은 <a href="../01_GPIO/01_GPIO%20개념설명.html">01_GPIO 개념설명</a>, 버스 행렬과 DMA(Direct Memory Access, 직접 메모리 접근)는 <a href="../07_DMA/07_DMA%20개념설명.html">07_DMA 개념설명</a>에서 다뤘다.</p>
+  <ul>
+    <li><a href="../../Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a>(참조 매뉴얼): 3장 메모리와 버스 구조(3.3.3 Embedded Flash memory), 4장 CRC calculation unit</li>
+    <li><a href="../../Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a>(데이터시트): 메모리 맵, Flash 쓰기·소거 시간, 수명과 보존 기간</li>
+    <li><a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a>(Cortex-M3 프로그래밍 매뉴얼): 이 그룹에서는 직접 인용할 내용이 없었다</li>
+    <li><a href="../../Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a>(정오표): Flash 관련 결함 2건</li>
+    <li><a href="../../Docs/PM0075-stm32f10xxx-flash-memory.pdf">PM0075 Rev 2</a>(Flash 프로그래밍 매뉴얼): RM0008이 Flash 레지스터와 쓰기·소거 절차를 넘기는 문서이다(RM0008 3.3.3, <a href="../../Docs/RM0008_Reference_manual.pdf#page=58">p.58</a>·<a href="../../Docs/RM0008_Reference_manual.pdf#page=59">p.59</a>). 잠금 해제 키, 쓰기·소거 순서, 상태 플래그, 옵션 바이트와 보호를 여기서 가져왔다</li>
   </ul>
 </div>
 <div class="nextprev"><a href="../09_WatchDog_Sleep/09_WatchDog_Sleep%20개념설명.html">← 09_WatchDog_Sleep 개념설명</a><a href="01_Flash_Write_c/">첫 예제: 01_Flash_Write_c →</a><a href="../11_CAN_Communication/11_CAN_Communication%20개념설명.html">다음 그룹: 11_CAN_Communication 개념설명 →</a></div>

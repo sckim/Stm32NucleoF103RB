@@ -135,17 +135,6 @@ footer ul{max-width:none}
   </nav>
 </header>
 
-<div class="box">
-  <div class="label">이 개념설명이 쓰는 근거</div>
-  <p>근거 문서와 인용·표기 규칙, <span class="eqv">등가 모델</span> 표시의 뜻은 <a href="../../교안의_활용법.html">교안의 활용법</a>에 있다. 클럭 트리와 NVIC(Nested Vectored Interrupt Controller, 중첩 벡터 인터럽트 컨트롤러)는 <a href="../08_Clock_System/08_Clock_System%20개념설명.html">08_Clock_System 개념설명</a>, EXTI(External Interrupt/event controller, 외부 인터럽트·이벤트 제어기)는 <a href="../01_GPIO/01_GPIO%20개념설명.html">01_GPIO 개념설명</a>, RTC(Real-Time Clock, 실시간 시계)는 <a href="../06_Timers_RTC/06_Timers_RTC%20개념설명.html#s3">06_Timers_RTC 개념설명 3장</a>에서 다뤘다.</p>
-  <ul>
-    <li><a href="../../Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a>(참조 매뉴얼): 5장 PWR, 6장 BKP, 7.1 리셋, 19장 IWDG, 20장 WWDG, 31.16 DBGMCU(MCU debug component)</li>
-    <li><a href="../../Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a>(데이터시트): LSI(Low-Speed Internal oscillator, 저속 내부 발진기) 주파수 범위, 저전력 모드 전류, 웨이크업 시간</li>
-    <li><a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a>(Cortex-M3 프로그래밍 매뉴얼): WFI(Wait For Interrupt)/WFE(Wait For Event) 명령, 시스템 제어 레지스터(SCB_SCR, System Control Register)</li>
-    <li><a href="../../Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a>(정오표)</li>
-  </ul>
-</div>
-
 <details class="gloss"><summary>약어 모음</summary><div class="ans"><div class="tablewrap"><table>
 <tr><th>약어</th><th>풀네임</th><th>뜻</th></tr>
 <tr><td class="m">IWDG</td><td>Independent Watchdog</td><td>독립 워치독. 자기 전용 클럭(LSI)으로 도는 감시 타이머</td></tr>
@@ -775,6 +764,16 @@ EWI → 리셋 여유 = tick 1칸                      (0x40에서 EWI, 0x3F로 
     <li>IWDG는 키 값으로만 움직이고(0xCCCC 시작, 0xAAAA 갱신, 0x5555 설정 열기) 끌 수 없다. WWDG의 WDGA와 EWI도 1로만 쓸 수 있다. 리셋 원인은 RCC_CSR 플래그가 시스템 리셋을 넘어 알려 준다.</li>
     <li>Sleep은 CPU 클럭만, Stop은 1.8 V 영역 클럭 전부, Standby는 1.8 V 전원을 끊는다. 깊을수록 전류(mA → 14~24 µA → 2~3.4 µA)는 줄고, 깨는 시간(1.8 → 3.6~5.4 → 50 µs와 부팅)은 늘고, 깨울 수 있는 사건(모든 인터럽트 → EXTI → WKUP·RTC 알람·NRST·IWDG)은 줄어든다.</li>
     <li>Stop에서 깨면 시스템 클럭은 HSI이다. Standby에서 깨면 리셋이고, SBF와 백업 레지스터가 이어 주는 유일한 기억이다. 탬퍼는 백업 레지스터를 하드웨어가 즉시 지운다.</li>
+  </ul>
+</div>
+<div class="box">
+  <div class="label">이 개념설명이 쓰는 근거</div>
+  <p>근거 문서와 인용·표기 규칙, <span class="eqv">등가 모델</span> 표시의 뜻은 <a href="../../교안의_활용법.html">교안의 활용법</a>에 있다. 클럭 트리와 NVIC(Nested Vectored Interrupt Controller, 중첩 벡터 인터럽트 컨트롤러)는 <a href="../08_Clock_System/08_Clock_System%20개념설명.html">08_Clock_System 개념설명</a>, EXTI(External Interrupt/event controller, 외부 인터럽트·이벤트 제어기)는 <a href="../01_GPIO/01_GPIO%20개념설명.html">01_GPIO 개념설명</a>, RTC(Real-Time Clock, 실시간 시계)는 <a href="../06_Timers_RTC/06_Timers_RTC%20개념설명.html#s3">06_Timers_RTC 개념설명 3장</a>에서 다뤘다.</p>
+  <ul>
+    <li><a href="../../Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a>(참조 매뉴얼): 5장 PWR, 6장 BKP, 7.1 리셋, 19장 IWDG, 20장 WWDG, 31.16 DBGMCU(MCU debug component)</li>
+    <li><a href="../../Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a>(데이터시트): LSI(Low-Speed Internal oscillator, 저속 내부 발진기) 주파수 범위, 저전력 모드 전류, 웨이크업 시간</li>
+    <li><a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a>(Cortex-M3 프로그래밍 매뉴얼): WFI(Wait For Interrupt)/WFE(Wait For Event) 명령, 시스템 제어 레지스터(SCB_SCR, System Control Register)</li>
+    <li><a href="../../Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a>(정오표)</li>
   </ul>
 </div>
 <div class="nextprev"><a href="../08_Clock_System/08_Clock_System%20개념설명.html">← 08_Clock_System 개념설명</a><a href="01_WatchdogTimer/">첫 예제: 01_WatchdogTimer →</a><a href="../10_Flash_CRC/10_Flash_CRC%20개념설명.html">다음 그룹: 10_Flash_CRC 개념설명 →</a></div>

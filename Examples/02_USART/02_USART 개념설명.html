@@ -128,17 +128,6 @@ footer ul{max-width:none}
   </nav>
 </header>
 
-<div class="box">
-  <div class="label">이 개념설명이 쓰는 근거</div>
-  <p>근거 문서와 인용·표기 규칙, <span class="eqv">등가 모델</span> 표시의 뜻은 <a href="../../교안의_활용법.html">교안의 활용법</a>에 있다. GPIO·NVIC·클럭 게이트 같은 공통 개념은 <a href="../01_GPIO/01_GPIO%20개념설명.html">01_GPIO 개념설명</a>에서 다뤘다.</p>
-  <ul>
-    <li><a href="../../Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a>(참조 매뉴얼): 27장 USART</li>
-    <li><a href="../../Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a>(데이터시트): 블록도, 최대 통신 속도</li>
-    <li><a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a>(Cortex-M3 프로그래밍 매뉴얼): NVIC(Nested Vectored Interrupt Controller, 중첩 벡터 인터럽트 컨트롤러)</li>
-    <li><a href="../../Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a>(정오표)</li>
-  </ul>
-</div>
-
 <details class="gloss"><summary>약어 모음</summary><div class="ans"><div class="tablewrap"><table>
 <tr><th>약어</th><th>풀네임</th><th>뜻</th></tr>
 <tr><td class="m">USART / UART</td><td>Universal Synchronous/Asynchronous Receiver-Transmitter / Universal Asynchronous Receiver-Transmitter</td><td>동기·비동기 둘 다 되는 직렬 송수신기 / 비동기만 되는 것</td></tr>
@@ -558,6 +547,16 @@ RXNE가 선 뒤 다음 바이트의 RDR 복사까지 ≈ 프레임 1개 시간  
     <li>수신기는 비트당 16회 샘플링하고, 시작 비트는 시퀀스 검출로, 각 비트는 3표 다수결로 판정한다. 불일치는 NE이다.</li>
     <li>TXE는 "TDR 빔", TC는 "선까지 다 나감", RXNE는 "RDR에 새 바이트"이다. RDR은 한 칸이라 프레임 하나 시간 안에 비워야 한다(아니면 ORE).</li>
     <li>사건 10가지가 벡터 하나로 모이고, RXNE/TXE는 DMA 요청이 될 수 있으며, IDLE은 메시지 경계를 알려 준다.</li>
+  </ul>
+</div>
+<div class="box">
+  <div class="label">이 개념설명이 쓰는 근거</div>
+  <p>근거 문서와 인용·표기 규칙, <span class="eqv">등가 모델</span> 표시의 뜻은 <a href="../../교안의_활용법.html">교안의 활용법</a>에 있다. GPIO·NVIC·클럭 게이트 같은 공통 개념은 <a href="../01_GPIO/01_GPIO%20개념설명.html">01_GPIO 개념설명</a>에서 다뤘다.</p>
+  <ul>
+    <li><a href="../../Docs/RM0008_Reference_manual.pdf">RM0008 Rev 21</a>(참조 매뉴얼): 27장 USART</li>
+    <li><a href="../../Docs/Datasheet_stm32f103.pdf">DS5319 Rev 19</a>(데이터시트): 블록도, 최대 통신 속도</li>
+    <li><a href="../../Docs/PM0056_CortexM3_Programming_Manual.pdf">PM0056 Rev 7</a>(Cortex-M3 프로그래밍 매뉴얼): NVIC(Nested Vectored Interrupt Controller, 중첩 벡터 인터럽트 컨트롤러)</li>
+    <li><a href="../../Docs/ES096_F103x8xB_Errata.pdf">ES096 Rev 15</a>(정오표)</li>
   </ul>
 </div>
 <div class="nextprev"><a href="../01_GPIO/01_GPIO%20개념설명.html">← 01_GPIO 개념설명</a><a href="01_USART_printf/01_USART_printf%20예제설명.html">첫 예제: 01_USART_printf →</a><a href="../03_ADC/03_ADC%20개념설명.html">다음 그룹: 03_ADC 개념설명 →</a></div>

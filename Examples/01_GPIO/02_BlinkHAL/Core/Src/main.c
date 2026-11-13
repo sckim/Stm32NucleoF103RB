@@ -16,16 +16,16 @@
  ******************************************************************************
  */
 /**
- * 02_BlinkHAL  —  [계층: HAL]  CubeMX 생성 코드 + HAL API 로 LD2(PA5) 점멸
+ * 02_BlinkHAL  —  [계층: HAL]  CubeMX 생성 코드 + HAL API 로 GPIOA PA6 점멸
  *
  * 01_BlinkArduino -> 02_BlinkHAL -> 03_BlinkLL -> 04_BlinkReg 시리즈의 두 번째.
  * 사용자 코드는 main 루프의 두 줄(HAL_GPIO_TogglePin, HAL_Delay)뿐이고, 클록/GPIO 초기화는
  * CubeMX 가 만든 SystemClock_Config(), MX_GPIO_Init() 이 담당한다.
  *
  * 하드웨어 대응 (RM0008)
- *   HAL_GPIO_TogglePin : GPIOA 의 출력 데이터(ODR 비트 5) 반전 — 내부적으로 GPIOA_BSRR/ODR 사용
- *   HAL_Delay(1000)    : SysTick 1ms ISR 이 증가시키는 uwTick 을 비교하는 방식
- *   MX_GPIO_Init       : RCC_APB2ENR(GPIOx 클록), GPIOA_CRL(PA5 출력) 설정
+ *   HAL_GPIO_TogglePin : GPIOA 의 출력 데이터(ODR 비트 6) 반전 — 내부적으로 GPIOA_BSRR/ODR 사용
+ *   HAL_Delay(50)      : SysTick 1ms ISR 이 증가시키는 uwTick 을 비교하는 방식
+ *   MX_GPIO_Init       : RCC_APB2ENR(GPIOx 클록), GPIOA_CRL(PA6 출력) 설정
  *
  * ISR 과 콜백의 구분
  *   SysTick_Handler() (stm32f1xx_it.c, 진짜 ISR) -> HAL_IncTick() 으로 uwTick 증가.
@@ -112,8 +112,8 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    HAL_GPIO_TogglePin (LD2_GPIO_Port, LD2_Pin);
-    HAL_Delay (1000);
+    HAL_GPIO_TogglePin (PA6_GPIO_Port, PA6_Pin);
+    HAL_Delay (50);
 	}
   /* USER CODE END 3 */
 }
@@ -186,7 +186,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(PA6_GPIO_Port, PA6_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
@@ -194,12 +194,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : LD2_Pin */
-  GPIO_InitStruct.Pin = LD2_Pin;
+  /*Configure GPIO pin : PA6_Pin */
+  GPIO_InitStruct.Pin = PA6_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(PA6_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : D6_Pin D10_Pin */
   GPIO_InitStruct.Pin = D6_Pin|D10_Pin;
@@ -208,7 +208,6 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
-
   /* USER CODE END MX_GPIO_Init_2 */
 }
 

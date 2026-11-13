@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>13_DE1SoC_Link 실습매뉴얼</title>
+<style>
+:root{--bg:#fbfaf7;--panel:#f1efe9;--ink:#1c1b19;--muted:#5d5a54;--line:#d9d5cb;--accent:#1f5fae;--code-bg:#f4f2ec;--warn:#b3261e;
+--cds-text-primary:#1c1b19;--cds-text-secondary:#5d5a54;--cds-chart-axis:#8f8a80;--cds-chart-grid:#e2ded4;--cds-chart-categorical-1:#1f5fae;--cds-chart-status-critical:#c5221f}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17181a;--panel:#202226;--ink:#e9e7e2;--muted:#a5a199;--line:#383b40;--accent:#7fb0f5;--code-bg:#1f2125;--warn:#ff8a80;
+--cds-text-primary:#e9e7e2;--cds-text-secondary:#a5a199;--cds-chart-axis:#7c7f85;--cds-chart-grid:#33363b;--cds-chart-categorical-1:#7fb0f5;--cds-chart-status-critical:#ff8a80}}
+:root[data-theme="dark"]{--bg:#17181a;--panel:#202226;--ink:#e9e7e2;--muted:#a5a199;--line:#383b40;--accent:#7fb0f5;--code-bg:#1f2125;--warn:#ff8a80;
+--cds-text-primary:#e9e7e2;--cds-text-secondary:#a5a199;--cds-chart-axis:#7c7f85;--cds-chart-grid:#33363b;--cds-chart-categorical-1:#7fb0f5;--cds-chart-status-critical:#ff8a80}
+*{box-sizing:border-box}
+html{scroll-padding-top:16px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 "Pretendard","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;word-break:keep-all;overflow-wrap:anywhere}
+main{max-width:860px;margin:0 auto;padding:24px 16px 96px}
+h1{font-size:1.7rem;line-height:1.3;margin:8px 0 4px;text-wrap:balance}
+h2{font-size:1.35rem;margin:56px 0 12px;padding-top:20px;border-top:2px solid var(--ink)}
+h3{font-size:1.08rem;margin:32px 0 8px}
+p{margin:10px 0}
+.byline{color:var(--muted);font-size:.9rem;margin-top:0}
+a{color:var(--accent)}
+code{font:0.88em/1.5 "JetBrains Mono","D2Coding",Consolas,monospace;background:var(--code-bg);padding:.1em .35em;border-radius:4px}
+pre{position:relative;background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:14px 0;tab-size:4}
+pre code{background:none;padding:0;font-size:.82rem;white-space:pre;word-break:normal;overflow-wrap:normal}
+pre[data-lang]::before{content:attr(data-lang);position:absolute;top:6px;right:64px;font:600 .68rem/1 system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.copy{position:absolute;top:4px;right:6px;font:inherit;font-size:.72rem;padding:2px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--muted);cursor:pointer}
+.copy:hover{color:var(--ink)}
+.scroll{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;min-width:480px;font-size:.92rem;font-variant-numeric:tabular-nums}
+th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{border-bottom:2px solid var(--ink);font-weight:600;white-space:nowrap}
+ol,ul{padding-left:1.5em}
+li{margin:5px 0}
+li.task{list-style:none;margin-left:-1.5em}
+li.task label{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+li.task input{margin-top:.45em;width:16px;height:16px;flex:none;accent-color:var(--accent)}
+li.task input:checked+span{color:var(--muted);text-decoration:line-through}
+figure.dia{margin:20px 0}
+figure.dia .scroll{margin:0;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+figure.dia svg{display:block;width:100%;min-width:640px;height:auto;font-family:inherit}
+figure.dia img{display:block;max-width:100%;height:auto;border:1px solid var(--line);border-radius:8px;background:#fff}
+figcaption{font-size:.84rem;color:var(--muted);margin-top:6px}
+.note{border-left:4px solid var(--accent);background:var(--panel);padding:10px 14px;border-radius:0 8px 8px 0;margin:14px 0;font-size:.94rem}
+.formula{display:flex;flex-wrap:wrap;gap:12px 40px;align-items:center;justify-content:center;padding:16px;margin:14px 0;background:var(--panel);border-radius:8px;font-family:"Cambria Math","STIX Two Math",Georgia,serif;font-size:1.1rem}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 4px}
+.frac>span:first-child{border-bottom:1px solid var(--ink);padding:0 6px}
+.frac>span:last-child{padding:0 6px}
+.toc{max-width:860px;margin:0 auto;padding:16px 16px 0;font-size:.9rem}
+.toc-title{font-weight:600;color:var(--muted);font-size:.78rem;letter-spacing:.08em}
+.toc ul{list-style:none;padding:0;margin:6px 0 0;display:flex;flex-wrap:wrap;gap:4px 16px}
+.toc ul ul{display:none}
+.toc a{text-decoration:none}
+.toc a:hover{text-decoration:underline}
+strong{font-weight:650}
+@media print{.toc,.copy{display:none}pre{white-space:pre-wrap}h2{break-after:avoid}}
+
+</style>
+</head>
+<body>
+<nav class="toc" aria-label="목차"><div class="toc-title">목차</div><div class="toc">
+<ul>
+<li><a href="#실습-개요">실습 개요</a></li>
+<li><a href="#폴더-구성">폴더 구성</a></li>
+<li><a href="#준비물과-공통-배선">준비물과 공통 배선</a></li>
+<li><a href="#실습-1-signaltap으로-uart-파형-관찰">실습 1: SignalTap으로 UART 파형 관찰</a></li>
+<li><a href="#실습-2-uart-링크">실습 2: UART 링크</a></li>
+<li><a href="#실습-3-pwm-주기듀티-측정기">실습 3: PWM 주기·듀티 측정기</a></li>
+<li><a href="#문제-해결과-확인-문제">문제 해결과 확인 문제</a></li>
+<li><a href="#부록">부록</a></li>
+</ul>
+</div>
+</nav>
+<main>
+<h1 id="stm32-nucleo-f103rb-de1-soc-연동-실습-매뉴얼">STM32 Nucleo-F103RB + DE1-SoC 연동 실습 매뉴얼</h1>
+<p class="byline">임베디드시스템 · 최종 수정 2026-11-13</p>
+
+<h2 id="실습-개요">실습 개요</h2>
+<p>이 매뉴얼은 STM32 Nucleo-F103RB(마이크로컨트롤러, MCU)와 DE1-SoC(FPGA)를 점퍼선 3가닥으로 연결해 세 가지 실습을 순서대로 수행한다. MCU가 만든 신호를 FPGA가 관찰하고, 해석하고, 측정한다.</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>실습</th>
+<th>내용</th>
+<th>FPGA 설계량</th>
+<th>예상 시간</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>UART 한 프레임을 LED 10개에 표시, SignalTap으로 파형 관찰</td>
+<td>프레임 캡처(시프트 레지스터)</td>
+<td>60분</td>
+</tr>
+<tr>
+<td>2</td>
+<td>UART 링크: 수신 바이트를 7세그먼트에 표시, 되돌려 보내기</td>
+<td>UART 수신기·송신기</td>
+<td>120분</td>
+</tr>
+<tr>
+<td>3</td>
+<td>PWM 주기·듀티 측정기</td>
+<td>엣지 검출기 + 카운터</td>
+<td>90분</td>
+</tr>
+</tbody>
+</table></div>
+<p>세 실습은 같은 배선을 그대로 쓴다. 실습 1과 2는 같은 MCU 프로젝트에서 출발하므로 실습 1에서 만든 것을 지우지 않는다.</p>
+<p>선수 지식은 다음과 같다.</p>
+<ul>
+<li>VS Code + PlatformIO에서 프로젝트를 빌드하고 보드에 내려받을 수 있다.</li>
+<li>Quartus에서 Verilog 프로젝트를 컴파일하고 DE1-SoC에 내려받을 수 있다.</li>
+<li>플립플롭, 카운터, 상태기계(FSM, Finite State Machine)를 Verilog로 쓸 수 있다.</li>
+</ul>
+<h2 id="폴더-구성">폴더 구성</h2>
+<p>이 폴더 하나에 매뉴얼, FPGA 소스, MCU 프로젝트가 모두 들어 있다.</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>위치</th>
+<th>내용</th>
+<th>쓰는 실습</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>13_DE1SoC_Link 실습매뉴얼.html</code></td>
+<td>이 문서</td>
+<td>전체</td>
+</tr>
+<tr>
+<td><a href="fpga/"><code>fpga/</code></a></td>
+<td>Verilog 소스 7개와 핀 배치 스크립트 <code>pins.tcl</code></td>
+<td>1, 2, 3</td>
+</tr>
+<tr>
+<td><a href="01_Link_UART_Frame_HAL_c/"><code>01_Link_UART_Frame_HAL_c/</code></a></td>
+<td>MCU 프로젝트(HAL): 1초마다 <code>A</code> 한 바이트 송신</td>
+<td>1</td>
+</tr>
+<tr>
+<td><a href="02_Link_UART_Echo_HAL_c/"><code>02_Link_UART_Echo_HAL_c/</code></a></td>
+<td>MCU 프로젝트(HAL): PC 터미널과 FPGA 사이 중계</td>
+<td>2</td>
+</tr>
+<tr>
+<td><a href="03_Link_PWM_Meter_HAL_c/"><code>03_Link_PWM_Meter_HAL_c/</code></a></td>
+<td>MCU 프로젝트(HAL): 1 kHz PWM, 듀티 5단계</td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p>MCU 프로젝트는 VS Code + PlatformIO로 폴더를 열어 바로 내려받을 수 있다. 본문의 "MCU 프로그램" 단계는 저장소의 원본 예제에서 이 프로젝트를 직접 만드는 과정을 설명한다. 폴더명 끝의 <code>_c</code>는 저장소 규칙대로 사용자 검토 전이라는 표시이다.</p>
+<h2 id="준비물과-공통-배선">준비물과 공통 배선</h2>
+<p>두 보드의 입출력은 모두 3.3 V이므로 레벨 변환 없이 점퍼선으로 직접 연결한다. DE1-SoC GPIO 헤더의 36개 핀은 모두 3.3 V이다(<a href="https://people.ece.cornell.edu/land/courses/ece5760/DE1_SOC/DE1-SoC_User_manualv.1.2.2_revE.pdf">DE1-SoC User Manual</a> Table 3-11).</p>
+<h3 id="준비물">준비물</h3>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th>수량</th>
+<th>비고</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>STM32 Nucleo-F103RB + USB 케이블(mini-B)</td>
+<td>1</td>
+<td>ST-LINK 내장</td>
+</tr>
+<tr>
+<td>DE1-SoC + 12 V 어댑터 + USB 케이블(USB Blaster II)</td>
+<td>1</td>
+<td>FPGA는 Cyclone V 5CSEMA5F31C6</td>
+</tr>
+<tr>
+<td>점퍼선(암-암)</td>
+<td>4</td>
+<td>20 cm 이하 권장</td>
+</tr>
+<tr>
+<td>PC</td>
+<td>1</td>
+<td>VS Code + PlatformIO, Quartus Prime Lite 18.1</td>
+</tr>
+<tr>
+<td>멀티미터</td>
+<td>1</td>
+<td>접지 핀 확인용</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="배선">배선</h3>
+<figure class="dia"><div class="scroll"><svg viewBox="0 0 760 312" role="img" aria-label="신호선 3가닥과 접지 1가닥으로 세 실습을 모두 한다" font-size="13"><defs><marker id="wire-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--cds-chart-axis)"></path></marker></defs><text x="24" y="32" font-size="15" font-weight="600" fill="var(--cds-text-primary)">신호선 3가닥과 접지 1가닥으로 세 실습을 모두 한다</text><g><rect x="24" y="56" width="232" height="232" rx="8" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25"></rect><text x="40" y="84" font-size="14" font-weight="600" fill="var(--cds-text-primary)">Nucleo-F103RB</text><text x="40" y="102" font-size="11.5" fill="var(--cds-text-secondary)">Arduino 헤더, 3.3 V</text><text x="244" y="128" text-anchor="end" fill="var(--cds-text-primary)">D8 (PA9) USART1_TX</text><text x="244" y="168" text-anchor="end" fill="var(--cds-text-primary)">D2 (PA10) USART1_RX</text><text x="244" y="208" text-anchor="end" fill="var(--cds-text-primary)">D7 (PA8) TIM1_CH1</text><text x="244" y="260" text-anchor="end" font-weight="600" fill="var(--cds-text-primary)">GND</text></g><g><rect x="504" y="56" width="232" height="232" rx="8" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25"></rect><text x="520" y="84" font-size="14" font-weight="600" fill="var(--cds-text-primary)">DE1-SoC</text><text x="520" y="102" font-size="11.5" fill="var(--cds-text-secondary)">JP1 (GPIO 0) 헤더, 3.3 V</text><text x="516" y="128" fill="var(--cds-text-primary)">1번 GPIO_0[0] PIN_AC18</text><text x="516" y="168" fill="var(--cds-text-primary)">2번 GPIO_0[1] PIN_Y17</text><text x="516" y="208" fill="var(--cds-text-primary)">3번 GPIO_0[2] PIN_AD17</text><text x="516" y="260" font-weight="600" fill="var(--cds-text-primary)">12번 GND</text></g><g fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25"><path d="M256 124H504" marker-end="url(#wire-arrow)"></path><path d="M504 164H256" marker-end="url(#wire-arrow)"></path><path d="M256 204H504" marker-end="url(#wire-arrow)"></path><path d="M256 256H504" stroke="var(--cds-chart-categorical-1)" stroke-width="2"></path></g><text x="380" y="116" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">UART MCU→FPGA (실습 1, 2)</text><text x="380" y="156" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">UART FPGA→MCU (실습 2)</text><text x="380" y="196" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">PWM (실습 3)</text><text x="380" y="248" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">공통 접지 (항상 먼저 연결)</text></svg></div><figcaption>그림 1. 공통 배선: 신호선 3가닥과 접지 1가닥</figcaption></figure>
+
+<p>화살표는 신호가 흐르는 방향이다. 접지선은 신호선보다 먼저 연결하고 가장 나중에 뺀다.</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>신호</th>
+<th>Nucleo</th>
+<th>DE1-SoC JP1</th>
+<th>쓰는 실습</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UART MCU→FPGA</td>
+<td>D8 (PA9, USART1_TX)</td>
+<td>1번 핀, GPIO_0[0], PIN_AC18</td>
+<td>1, 2</td>
+</tr>
+<tr>
+<td>UART FPGA→MCU</td>
+<td>D2 (PA10, USART1_RX)</td>
+<td>2번 핀, GPIO_0[1], PIN_Y17</td>
+<td>2</td>
+</tr>
+<tr>
+<td>PWM</td>
+<td>D7 (PA8, TIM1_CH1)</td>
+<td>3번 핀, GPIO_0[2], PIN_AD17</td>
+<td>3</td>
+</tr>
+<tr>
+<td>접지</td>
+<td>GND</td>
+<td>12번 핀, GND</td>
+<td>전체</td>
+</tr>
+</tbody>
+</table></div>
+<p><a href="https://docs.google.com/presentation/d/1-unUFm7HCOJQZZ3Xv1KmMhNMqeHUhKm3E9avW3YwSTQ/edit?slide=id.h484a8d682bfdc8ce_0_6#slide=id.h484a8d682bfdc8ce_0_6">DE1-SoC pin map</a></p>
+<p>JP1 헤더는 1번 핀부터 GPIO_0[0], GPIO_0[1], … 순서이고 11번이 5 V, 12번이 GND, 29번이 3.3 V, 30번이 GND이다. 1번 핀 위치는 보드 실크 인쇄와 사용자 매뉴얼의 GPIO 헤더 핀 배치 그림으로 확인한다.</p>
+<h3 id="보드에서-핀-찾기">보드에서 핀 찾기</h3>
+<p><strong>Nucleo-F103RB.</strong> 분홍색이 Arduino 헤더이다. 이 실습은 오른쪽의 CN5, CN9와 왼쪽의 CN6을 쓴다.</p>
+<figure class="dia"><img src="img/UM1724_Fig13_p31.png" alt="NUCLEO-F103RB 헤더 핀 배치"><figcaption>그림 2. NUCLEO-F103RB 헤더 핀 배치 (UM1724 Rev 17, 31쪽, Figure 13)</figcaption></figure>
+
+<p>출처: UM1724 Rev 17, 31쪽, Figure 13. 커넥터별 핀 번호는 같은 문서 40쪽 Table 12(Arduino)와 57쪽 Table 27(Morpho)에 있다. CN10은 그림의 파란색 오른쪽 커넥터이고, 홀수 핀이 안쪽 줄이다.</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>신호</th>
+<th>커넥터와 핀 (Arduino / Morpho)</th>
+<th>그림에서의 위치</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D8 (PA9)</td>
+<td>CN5 1번 / CN10 21번</td>
+<td>오른쪽 위 커넥터의 맨 아래</td>
+</tr>
+<tr>
+<td>D7 (PA8)</td>
+<td>CN9 8번 / CN10 23번</td>
+<td>오른쪽 아래 커넥터의 맨 위</td>
+</tr>
+<tr>
+<td>D2 (PA10)</td>
+<td>CN9 3번 / CN10 33번</td>
+<td>오른쪽 아래 커넥터의 아래에서 세 번째</td>
+</tr>
+<tr>
+<td>GND</td>
+<td>CN6 6번 또는 7번 / CN10 9번 또는 20번</td>
+<td>왼쪽 위 커넥터의 아래에서 두·세 번째</td>
+</tr>
+</tbody>
+</table></div>
+<p>D8과 D7은 서로 다른 커넥터이고 그 사이에 틈이 있다. 보드 실크 인쇄의 D8, D7, D2, GND 글자로 한 번 더 확인한다.</p>
+<p><strong>DE1-SoC JP1.</strong> 2줄 × 20핀 헤더이고, 홀수 핀이 한 줄, 짝수 핀이 다른 줄이다.</p>
+<figure class="dia"><div class="scroll"><svg viewBox="0 0 760 236" role="img" aria-label="JP1에서 쓰는 핀은 1, 2, 3, 12번이고 11번과 29번은 전원이다" font-size="13"><text x="24" y="30" font-size="15" font-weight="600" fill="var(--cds-text-primary)">JP1에서 쓰는 핀은 1, 2, 3, 12번이고 11번과 29번은 전원이다</text><g><rect x="60" y="100" width="28" height="28" rx="4" fill="var(--cds-chart-categorical-1)" fill-opacity="0.16" stroke="var(--cds-chart-categorical-1)" stroke-width="2"></rect><rect x="60" y="132" width="28" height="28" rx="4" fill="var(--cds-chart-categorical-1)" fill-opacity="0.16" stroke="var(--cds-chart-categorical-1)" stroke-width="2"></rect><rect x="92" y="100" width="28" height="28" rx="4" fill="var(--cds-chart-categorical-1)" fill-opacity="0.16" stroke="var(--cds-chart-categorical-1)" stroke-width="2"></rect><rect x="92" y="132" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="124" y="100" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="124" y="132" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="156" y="100" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="156" y="132" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="188" y="100" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="188" y="132" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="220" y="100" width="28" height="28" rx="4" fill="var(--cds-chart-status-critical)" fill-opacity="0.16" stroke="var(--cds-chart-status-critical)" stroke-width="2"></rect><rect x="220" y="132" width="28" height="28" rx="4" fill="var(--cds-chart-categorical-1)" fill-opacity="0.16" stroke="var(--cds-chart-categorical-1)" stroke-width="2"></rect><rect x="252" y="100" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="252" y="132" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="284" y="100" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="284" y="132" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="316" y="100" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="316" y="132" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="348" y="100" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="348" y="132" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="380" y="100" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="380" y="132" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="412" y="100" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="412" y="132" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="444" y="100" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="444" y="132" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="476" y="100" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="476" y="132" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="508" y="100" width="28" height="28" rx="4" fill="var(--cds-chart-status-critical)" fill-opacity="0.16" stroke="var(--cds-chart-status-critical)" stroke-width="2"></rect><rect x="508" y="132" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="540" y="100" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="540" y="132" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="572" y="100" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="572" y="132" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="604" y="100" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="604" y="132" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="636" y="100" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="636" y="132" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="668" y="100" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect><rect x="668" y="132" width="28" height="28" rx="4" fill="none" fill-opacity="1" stroke="var(--cds-chart-axis)" stroke-width="1"></rect></g><g fill="none" stroke="var(--cds-chart-axis)" stroke-width="1"><path d="M74 100V52"></path><path d="M106 100V76"></path><path d="M234 100V76"></path><path d="M522 100V76"></path><path d="M74 160V208"></path><path d="M234 160V184"></path><path d="M522 160V184"></path></g><text x="74" y="118" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">1</text><text x="74" y="150" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">2</text><text x="106" y="118" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">3</text><text x="234" y="118" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">11</text><text x="234" y="150" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">12</text><text x="522" y="118" text-anchor="middle" font-size="11.5" font-weight="600" fill="var(--cds-text-primary)">29</text><text x="522" y="150" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">30</text><text x="682" y="118" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">39</text><text x="682" y="150" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">40</text><text x="82" y="56" fill="var(--cds-text-primary)">1번 GPIO_0[0] ← Nucleo D8 (UART MCU→FPGA)</text><text x="114" y="80" fill="var(--cds-text-primary)">3번 ← D7 (PWM)</text><text x="242" y="80" fill="var(--cds-text-primary)">11번 5 V, 연결 금지</text><text x="530" y="80" fill="var(--cds-text-primary)">29번 3.3 V, 연결 금지</text><text x="242" y="188" font-weight="600" fill="var(--cds-text-primary)">12번 GND ↔ Nucleo GND</text><text x="530" y="188" fill="var(--cds-text-secondary)">30번 GND</text><text x="82" y="212" fill="var(--cds-text-primary)">2번 GPIO_0[1] → Nucleo D2 (UART FPGA→MCU)</text></svg></div><figcaption>그림 3. DE1-SoC JP1 핀 번호 배치: 쓰는 핀 4개와 전원 핀 2개</figcaption></figure>
+
+<p>이 그림은 핀 번호의 순서만 나타낸다. 보드 위에서 헤더가 놓인 방향과 1번 핀의 모서리는 매뉴얼 원문으로 확인하지 못했으므로, 보드 실크 인쇄의 1번 표시와 아래의 접지 도통 확인으로 정한다.</p>
+<h3 id="연결-전-확인">연결 전 확인</h3>
+<ol>
+<li>두 보드의 전원을 모두 끈다.</li>
+<li>멀티미터 도통 모드로 JP1 12번 핀과 DE1-SoC의 USB 커넥터 금속 외피가 이어져 있는지 확인한다. 이어져 있으면 그 핀이 GND이다.</li>
+<li>접지선을 먼저 연결하고, 신호선 3가닥을 표대로 연결한다.</li>
+<li>JP1의 11번(5 V)과 29번(3.3 V) 핀에는 아무것도 연결하지 않는다. 두 보드는 각자의 USB·어댑터로 전원을 받는다.</li>
+</ol>
+<h3 id="주의점">주의점</h3>
+<ul>
+<li><strong>USART2가 아니라 USART1을 쓴다.</strong> Nucleo의 USART2(PA2, PA3)는 ST-LINK 가상 COM 포트에 연결되어 있고 Arduino 헤더 D1, D0에는 이어져 있지 않다(저장소 <code>02_USART/08_USART_printf_Dual</code> README).</li>
+<li><strong>D2 선은 실습 2에서만 꽂아 둔다.</strong> 실습 3의 MCU 프로그램은 PA10(D2)을 PWM 출력으로 쓴다. 실습 2의 FPGA 회로도 같은 선을 출력으로 구동하므로, 두 출력이 맞부딪히지 않게 실습 3을 시작하기 전에 D2 선을 뺀다.</li>
+<li>MCU가 보내는 신호는 FPGA의 50 MHz 클럭과 무관한 시점에 변한다. FPGA에서는 반드시 2단 플립플롭 동기화기(synchronizer)를 거친 뒤 사용한다.</li>
+</ul>
+<h3 id="quartus-프로젝트-만들기-세-실습-공통">Quartus 프로젝트 만들기 (세 실습 공통)</h3>
+<div class="note"><b>준비된 파일.</b> <a href="fpga/"><code>fpga/</code></a> 폴더의 Verilog 파일을 <b>Project &gt; Add/Remove Files in Project</b>로 한꺼번에 넣어도 된다. 핀 배치는 <code>fpga/pins.tcl</code>을 Quartus 프로젝트 폴더에 복사한 뒤 Tcl Console에서 <code>source pins.tcl</code>을 실행한다. 아래는 파일을 직접 만드는 절차이다.</div>
+
+<p>프로젝트는 하나만 만들고, 실습마다 최상위 모듈(top-level entity)만 바꾼다.</p>
+<ol>
+<li><strong>File &gt; New Project Wizard</strong>를 연다. 작업 폴더와 프로젝트 이름을 <code>nucleo_link</code>로, 최상위 모듈 이름을 <code>lab1_top</code>으로 적는다.</li>
+<li>Family는 <strong>Cyclone V</strong>, Device는 <strong>5CSEMA5F31C6</strong>을 고른다.</li>
+<li><strong>Assignments &gt; Device &gt; Device and Pin Options &gt; Unused Pins</strong>에서 <strong>As input tri-stated</strong>를 고른다. 쓰지 않는 핀이 출력으로 구동되는 것을 막는다.</li>
+<li><strong>File &gt; New &gt; Verilog HDL File</strong>로 아래 <code>common.v</code>를 만들어 프로젝트에 넣는다. 세 실습이 함께 쓰는 동기화기와 7세그먼트 디코더이다.</li>
+<li><strong>View &gt; Utility Windows &gt; Tcl Console</strong>을 열고, 부록의 핀 배치 명령을 붙여 넣어 실행한다. Pin Planner에서 직접 지정해도 된다(아래 「핀 배치 방법 두 가지」).</li>
+</ol>
+<pre data-lang="verilog"><code>// common.v
+// 2단 플립플롭 동기화기: 비동기 입력을 CLOCK_50 영역으로 옮긴다
+module sync2 #(parameter INIT = 1'b1) (
+    input  wire clk,
+    input  wire d,      // 비동기 입력 (MCU가 만든 신호)
+    output wire q       // clk에 동기된 출력
+);
+    reg [1:0] ff = {2{INIT}};
+    always @(posedge clk) ff &lt;= {ff[0], d};
+    assign q = ff[1];
+endmodule
+
+// 4비트 값 -&gt; 7세그먼트 (DE1-SoC HEX는 0일 때 켜진다)
+module hex7seg (
+    input  wire [3:0] x,
+    output reg  [6:0] seg   // seg[0]=a ... seg[6]=g
+);
+    always @(*) begin
+        case (x)
+            4'h0: seg = 7'b1000000;  4'h1: seg = 7'b1111001;
+            4'h2: seg = 7'b0100100;  4'h3: seg = 7'b0110000;
+            4'h4: seg = 7'b0011001;  4'h5: seg = 7'b0010010;
+            4'h6: seg = 7'b0000010;  4'h7: seg = 7'b1111000;
+            4'h8: seg = 7'b0000000;  4'h9: seg = 7'b0010000;
+            4'hA: seg = 7'b0001000;  4'hB: seg = 7'b0000011;
+            4'hC: seg = 7'b1000110;  4'hD: seg = 7'b0100001;
+            4'hE: seg = 7'b0000110;  default: seg = 7'b0001110;
+        endcase
+    end
+endmodule
+</code></pre>
+<h3 id="핀-배치-방법-두-가지">핀 배치 방법 두 가지</h3>
+<p>핀 배치는 Tcl 명령으로 한 번에 넣거나, Pin Planner 화면에서 하나씩 지정한다. 두 방법 모두 같은 <code>.qsf</code> 파일에 저장되므로 결과는 같다.</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>방법</th>
+<th>장점</th>
+<th>단점</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tcl Console</td>
+<td>한 번에 끝난다. 세 실습의 핀을 미리 다 넣을 수 있다</td>
+<td>어느 핀이 어디인지 눈으로 보이지 않는다</td>
+</tr>
+<tr>
+<td>Pin Planner</td>
+<td>포트 이름과 핀을 표와 칩 그림으로 확인하며 지정한다</td>
+<td>현재 최상위 모듈의 포트만 보인다. 7세그먼트처럼 핀이 많으면 오래 걸린다</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Pin Planner로 지정하는 절차</strong></p>
+<ol>
+<li>최상위 모듈 파일(실습 1이면 lab1_top.v)을 만든 뒤 <strong>Processing &gt; Start &gt; Start Analysis &amp; Elaboration</strong>을 실행한다. 전체 컴파일(<strong>Start Compilation</strong>)을 해도 된다. 이 단계를 거쳐야 포트 이름이 Pin Planner에 나타난다.</li>
+<li><strong>Assignments &gt; Pin Planner</strong>를 연다.</li>
+<li>아래쪽 <strong>All Pins</strong> 목록의 <strong>Node Name</strong> 열에서 포트를 찾는다. <code>LEDR</code>같은 버스는 <code>LEDR[0]</code>, <code>LEDR[1]</code>…로 한 줄씩 나온다.</li>
+<li>그 줄의 <strong>Location</strong> 칸을 더블 클릭하고 핀 이름을 입력한다. <code>AF14</code>만 입력하고 Enter를 누르면 <code>PIN_AF14</code>로 들어간다.</li>
+<li><strong>I/O Standard</strong> 칸을 <strong>3.3-V LVTTL</strong>로 바꾼다. 한 칸을 바꾼 뒤 복사해 나머지 줄에 붙여 넣으면 빠르다.</li>
+<li><code>MCU_TX</code>와 <code>MCU_PWM</code> 줄은 <strong>Weak Pull-Up Resistor</strong> 칸을 <strong>On</strong>으로 한다. 이 열이 없으면 열 제목을 오른쪽 클릭해 <strong>Customize Columns</strong>에서 추가한다.</li>
+<li>Pin Planner를 닫는다. 따로 저장하지 않아도 입력한 값이 프로젝트에 반영된다.</li>
+<li><strong>Processing &gt; Start Compilation</strong>으로 다시 컴파일한다. 핀 배치는 컴파일을 다시 해야 <code>.sof</code>에 들어간다.</li>
+</ol>
+<p>입력할 값은 다음과 같다. <code>LEDR</code>과 <code>HEX0</code>~<code>HEX5</code>의 핀은 부록의 목록을 [0]부터 순서대로 넣는다.</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>Node Name</th>
+<th>Location</th>
+<th>쓰는 실습</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CLOCK_50</code></td>
+<td>PIN_AF14</td>
+<td>1, 2, 3</td>
+</tr>
+<tr>
+<td><code>MCU_TX</code></td>
+<td>PIN_AC18</td>
+<td>1, 2</td>
+</tr>
+<tr>
+<td><code>MCU_RX</code></td>
+<td>PIN_Y17</td>
+<td>2</td>
+</tr>
+<tr>
+<td><code>MCU_PWM</code></td>
+<td>PIN_AD17</td>
+<td>3</td>
+</tr>
+<tr>
+<td><code>SW[0]</code></td>
+<td>PIN_AB12</td>
+<td>3</td>
+</tr>
+<tr>
+<td><code>LEDR[0]</code>~<code>LEDR[9]</code></td>
+<td>부록 목록</td>
+<td>1, 2, 3</td>
+</tr>
+<tr>
+<td><code>HEX0[0]</code>~<code>HEX1[6]</code></td>
+<td>부록 목록</td>
+<td>2, 3</td>
+</tr>
+<tr>
+<td><code>HEX2[0]</code>~<code>HEX5[6]</code></td>
+<td>부록 목록</td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p>Pin Planner는 현재 최상위 모듈의 포트만 보여 준다. 실습 2, 3으로 넘어가 최상위 모듈을 바꾸면 1단계부터 다시 해서 새로 생긴 포트(실습 2는 HEX0, HEX1도 포함: <code>MCU_RX</code>, <code>MCU_PWM</code>, <code>SW[0]</code>, <code>HEX2</code>~<code>HEX5</code>)만 추가로 지정한다. 이름이 같은 포트의 배치는 그대로 남는다.</p>
+<p>컴파일 뒤에는 Compilation Report의 <strong>Fitter &gt; Resource Section &gt; Input Pins / Output Pins</strong>에서 각 포트가 원하는 핀에 배치되었는지 확인한다. Tcl로 넣은 경우도 같은 방법으로 확인한다.</p>
+<h3 id="fpga에-내려받기-세-실습-공통">FPGA에 내려받기 (세 실습 공통)</h3>
+<p>이 절차는 지금 실행하지 않고, 각 실습에서 최상위 모듈 파일을 만든 뒤에 쓴다. 지금은 <code>common.v</code>만 있어서 컴파일하면 최상위 모듈 <code>lab1_top</code>을 찾지 못한다는 오류가 난다.</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>실습</th>
+<th>최상위 모듈(top-level entity)</th>
+<th>그 안에서 불러 쓰는 하위 모듈</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>lab1_top</code></td>
+<td><code>sync2</code>, frame_leds</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>lab2_top</code></td>
+<td><code>sync2</code>, <code>uart_rx</code>, <code>uart_tx</code>, <code>hex7seg</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>lab3_top</code></td>
+<td><code>sync2</code>, <code>hex7seg</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>sync2</code>와 <code>hex7seg</code>는 최상위 모듈이 아니라 부품이다. FPGA의 핀과 연결되는 포트(<code>CLOCK_50</code>, <code>MCU_TX</code>, <code>LEDR</code> 등)는 최상위 모듈에만 있다.</p>
+<h3 id="최상위-모듈-만들기-lab1_top-예">최상위 모듈 만들기 (lab1_top 예)</h3>
+<p>최상위 모듈은 Verilog 파일로 쓰거나 회로도(Block Diagram/Schematic File)로 그린다. 둘 중 하나만 고른다. 같은 이름의 <code>lab1_top.v</code>와 <code>lab1_top.bdf</code>가 함께 프로젝트에 있으면 모듈 이름이 겹쳐 오류가 난다.</p>
+<figure class="dia"><div class="scroll"><svg viewBox="0 0 760 284" role="img" aria-label="lab1_top은 동기화기와 프레임 캡처 회로를 핀에 연결한 것이다" font-size="13"><defs><marker id="top-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--cds-chart-axis)"></path></marker></defs><text x="24" y="32" font-size="15" font-weight="600" fill="var(--cds-text-primary)">lab1_top은 동기화기와 프레임 캡처 회로를 핀에 연결한 것이다</text><g fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25"><path d="M140 108H196" marker-end="url(#top-arrow)"></path><path d="M140 172H196" marker-end="url(#top-arrow)"></path><path d="M316 108H396" marker-end="url(#top-arrow)"></path><path d="M168 172V224H368V172H396" marker-end="url(#top-arrow)"></path><path d="M548 108H620" stroke-width="3" marker-end="url(#top-arrow)"></path></g><g><rect x="24" y="90" width="116" height="36" rx="8" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25"></rect><text x="82" y="112" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">MCU_TX</text><text x="82" y="82" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">입력 · PIN_AC18</text></g><g><rect x="24" y="154" width="116" height="36" rx="8" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25"></rect><text x="82" y="176" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">CLOCK_50</text><text x="82" y="208" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">입력 · PIN_AF14</text></g><g><rect x="196" y="72" width="120" height="132" rx="8" fill="var(--cds-chart-categorical-1)" fill-opacity="0.12" stroke="var(--cds-chart-categorical-1)" stroke-width="2"></rect><text x="256" y="94" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">sync2 (u_sync)</text><text x="206" y="112" fill="var(--cds-text-primary)">d</text><text x="206" y="176" fill="var(--cds-text-primary)">clk</text><text x="306" y="112" text-anchor="end" fill="var(--cds-text-primary)">q</text></g><g><rect x="396" y="72" width="152" height="132" rx="8" fill="var(--cds-chart-categorical-1)" fill-opacity="0.12" stroke="var(--cds-chart-categorical-1)" stroke-width="2"></rect><text x="472" y="94" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">frame_leds (u_cap)</text><text x="406" y="112" fill="var(--cds-text-primary)">rx</text><text x="406" y="176" fill="var(--cds-text-primary)">clk</text><text x="538" y="112" text-anchor="end" fill="var(--cds-text-primary)">frame[9:0]</text><text x="538" y="176" text-anchor="end" fill="var(--cds-text-secondary)">busy</text></g><g><rect x="620" y="90" width="116" height="36" rx="8" fill="none" stroke="var(--cds-chart-axis)" stroke-width="1.25"></rect><text x="678" y="112" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">LEDR[9:0]</text><text x="678" y="82" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">출력 · LED 10개</text></g><text x="356" y="100" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">rx_s</text><text x="24" y="264" font-size="11.5" fill="var(--cds-text-secondary)">이 그림 전체가 lab1_top이다. rx_s와 busy는 SignalTap에서 관찰한다. 굵은 선은 10비트 버스이다.</text></svg></div><figcaption>그림 4. lab1_top 구조: 입력 핀 2개, sync2, frame_leds, LED 10개</figcaption></figure>
+
+<p><strong>방법 A: Verilog로 쓴다 (이 매뉴얼의 기본)</strong></p>
+<ol>
+<li><strong>File &gt; New &gt; Verilog HDL File</strong>을 열고 실습 1의 2단계에 있는 <code>frame_leds.v</code> 코드를 넣어 <code>frame_leds.v</code>로 저장한다.</li>
+<li>같은 방법으로 아래 코드를 넣어 <code>lab1_top.v</code>로 저장한다.</li>
+<li>두 파일 모두 저장할 때 <strong>Add file to current project</strong>에 체크되어 있는지 확인한다.</li>
+</ol>
+<pre data-lang="verilog"><code>// lab1_top.v  (실습 1의 2단계에 있는 코드와 같다)
+module lab1_top (
+    input  wire       CLOCK_50,
+    input  wire       MCU_TX,     // GPIO_0[0] &lt;- Nucleo D8 (PA9, USART1_TX)
+    output wire [9:0] LEDR        // LEDR9 = 시작, LEDR8~1 = D0~D7, LEDR0 = 정지
+);
+    wire rx_s;                    // 동기화된 수신선 (SignalTap에서 볼 신호)
+    wire busy;                    // 프레임 수신 중 (SignalTap에서 볼 신호)
+
+    sync2      u_sync (.clk(CLOCK_50), .d(MCU_TX), .q(rx_s));
+    frame_leds u_cap  (.clk(CLOCK_50), .rx(rx_s), .frame(LEDR), .busy(busy));
+endmodule
+</code></pre>
+<p><strong>방법 B: 회로도로 그린다</strong></p>
+<ol>
+<li><code>frame_leds.v</code>를 먼저 만들어 프로젝트에 넣는다(방법 A의 1번).</li>
+<li><code>common.v</code>를 연 상태에서 <strong>File &gt; Create/Update &gt; Create Symbol Files for Current File</strong>을 실행한다. <code>frame_leds.v</code>를 열고 한 번 더 실행한다. <code>sync2</code>, <code>hex7seg</code>, <code>frame_leds</code>의 심볼(<code>.bsf</code>)이 만들어진다.</li>
+<li><strong>File &gt; New &gt; Block Diagram/Schematic File</strong>을 연다.</li>
+<li>빈 곳을 더블 클릭해 Symbol 창을 열고, <strong>Project</strong> 폴더에서 <code>sync2</code>와 <code>frame_leds</code>를 하나씩 놓는다.</li>
+<li>같은 창의 <code>primitives &gt; pin</code>에서 <code>input</code> 두 개와 <code>output</code> 한 개를 놓는다.</li>
+<li>핀 이름을 더블 클릭해 각각 <code>MCU_TX</code>, <code>CLOCK_50</code>, <code>LEDR[9..0]</code>으로 바꾼다. 회로도에서는 버스 범위를 점 두 개(<code>..</code>)로 쓴다.</li>
+<li>선으로 <code>MCU_TX</code>→<code>sync2</code>의 <code>d</code>, <code>CLOCK_50</code>→두 블록의 <code>clk</code>, <code>sync2</code>의 <code>q</code>→<code>frame_leds</code>의 <code>rx</code>를 잇는다.</li>
+<li><code>frame_leds</code>의 <code>frame[9..0]</code>과 <code>LEDR[9..0]</code>은 버스 선(굵은 선, Bus Tool)으로 잇는다. <code>busy</code>는 연결하지 않아도 된다.</li>
+<li><code>q</code>에서 나가는 선을 클릭하고 <code>rx_s</code>를 입력해 선에 이름을 붙인다. SignalTap에서 이 이름으로 찾는다.</li>
+<li><code>lab1_top.bdf</code>로 저장한다.</li>
+</ol>
+<p>회로도로 만들면 인스턴스 이름이 <code>u_sync</code>, <code>u_cap</code> 대신 <code>inst</code>, <code>inst1</code>로 붙는다. SignalTap에서 <code>busy</code>를 찾을 때 이름이 다르게 보인다.</p>
+<p><strong>최상위 모듈로 지정하기</strong></p>
+<p>프로젝트를 만들 때 최상위 모듈 이름을 <code>lab1_top</code>으로 적었으므로, 파일 이름과 모듈 이름이 <code>lab1_top</code>이면 따로 지정할 것이 없다. 다르게 적었거나 실습 2, 3으로 바꿀 때는 다음 둘 중 하나로 지정한다.</p>
+<ul>
+<li>Project Navigator의 <strong>Files</strong> 탭에서 파일을 오른쪽 클릭해 <strong>Set as Top-Level Entity</strong>를 고른다.</li>
+<li><strong>Assignments &gt; Settings &gt; General</strong>의 <strong>Top-level entity</strong> 칸에 모듈 이름을 적는다.</li>
+</ul>
+<p>지정한 뒤 <strong>Processing &gt; Start &gt; Start Analysis &amp; Elaboration</strong>을 실행하면 Project Navigator의 <strong>Hierarchy</strong> 탭 맨 위에 <code>lab1_top</code>이, 그 아래에 <code>sync2:u_sync</code>가 보인다.</p>
+<ol>
+<li><strong>Processing &gt; Start Compilation</strong>으로 컴파일한다.</li>
+<li><strong>Tools &gt; Programmer</strong>를 열고 <strong>Hardware Setup</strong>에서 <strong>DE-SoC</strong>를 고른다.</li>
+<li><strong>Auto Detect</strong>를 누르고 <strong>5CSEMA5</strong>를 고른다. 목록에 <code>SOCVHPS</code>와 <code>5CSEMA5</code> 두 장치가 나타난다.</li>
+<li><code>5CSEMA5</code>를 오른쪽 클릭해 <strong>Change File</strong>에서 <code>output_files/nucleo_link.sof</code>를 지정한다.</li>
+<li><strong>Program/Configure</strong>에 체크하고 <strong>Start</strong>를 누른다.</li>
+</ol>
+<h2 id="실습-1-signaltap으로-uart-파형-관찰">실습 1: SignalTap으로 UART 파형 관찰</h2>
+<p>MCU가 1초마다 보내는 글자 <code>A</code> 한 프레임을 FPGA가 비트 그대로 LEDR9~LEDR0에 켜고, 같은 선을 FPGA 안의 로직 분석기(SignalTap Logic Analyzer)로 20 ns 간격으로 캡처한다. 목표는 두 가지이다. LED에 <code>0100000101</code>이 보이는 것, 그리고 1비트의 폭이 434클럭(8.68 us)인지 직접 재는 것이다.</p>
+<figure class="dia"><div class="scroll"><svg viewBox="0 0 760 262" role="img" aria-label="0x41은 LSB부터 나가고 수신기는 각 비트의 가운데를 읽는다" font-size="13"><text x="24" y="32" font-size="15" font-weight="600" fill="var(--cds-text-primary)">0x41('A')은 LSB부터 나가고, 수신기는 각 비트의 가운데를 읽는다</text><text x="24" y="52" font-size="11.5" fill="var(--cds-text-secondary)">115200 bps, 8N1 · 1비트 = 8.68 us = CLOCK_50 434클럭</text><g><line x1="44" x2="44" y1="80" y2="148" stroke="var(--cds-chart-grid)"></line><line x1="100" x2="100" y1="80" y2="148" stroke="var(--cds-chart-grid)"></line><line x1="156" x2="156" y1="80" y2="148" stroke="var(--cds-chart-grid)"></line><line x1="212" x2="212" y1="80" y2="148" stroke="var(--cds-chart-grid)"></line><line x1="268" x2="268" y1="80" y2="148" stroke="var(--cds-chart-grid)"></line><line x1="324" x2="324" y1="80" y2="148" stroke="var(--cds-chart-grid)"></line><line x1="380" x2="380" y1="80" y2="148" stroke="var(--cds-chart-grid)"></line><line x1="436" x2="436" y1="80" y2="148" stroke="var(--cds-chart-grid)"></line><line x1="492" x2="492" y1="80" y2="148" stroke="var(--cds-chart-grid)"></line><line x1="548" x2="548" y1="80" y2="148" stroke="var(--cds-chart-grid)"></line><line x1="604" x2="604" y1="80" y2="148" stroke="var(--cds-chart-grid)"></line><line x1="660" x2="660" y1="80" y2="148" stroke="var(--cds-chart-grid)"></line><line x1="716" x2="716" y1="80" y2="148" stroke="var(--cds-chart-grid)"></line></g><path d="M44 92H100V136H156V92H212V136H492V92H548V136H604V92H716" fill="none" stroke="var(--cds-text-primary)" stroke-width="2"></path><g><circle cx="184" cy="92" r="4.5" fill="var(--cds-chart-categorical-1)"></circle><circle cx="240" cy="136" r="4.5" fill="var(--cds-chart-categorical-1)"></circle><circle cx="296" cy="136" r="4.5" fill="var(--cds-chart-categorical-1)"></circle><circle cx="352" cy="136" r="4.5" fill="var(--cds-chart-categorical-1)"></circle><circle cx="408" cy="136" r="4.5" fill="var(--cds-chart-categorical-1)"></circle><circle cx="464" cy="136" r="4.5" fill="var(--cds-chart-categorical-1)"></circle><circle cx="520" cy="92" r="4.5" fill="var(--cds-chart-categorical-1)"></circle><circle cx="576" cy="136" r="4.5" fill="var(--cds-chart-categorical-1)"></circle></g><text x="72" y="160" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">유휴</text><text x="128" y="160" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">시작</text><text x="184" y="160" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">D0</text><text x="240" y="160" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">D1</text><text x="296" y="160" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">D2</text><text x="352" y="160" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">D3</text><text x="408" y="160" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">D4</text><text x="464" y="160" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">D5</text><text x="520" y="160" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">D6</text><text x="576" y="160" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">D7</text><text x="632" y="160" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">정지</text><text x="688" y="160" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">유휴</text><text x="128" y="178" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">0</text><text x="184" y="178" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">1</text><text x="240" y="178" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">0</text><text x="296" y="178" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">0</text><text x="352" y="178" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">0</text><text x="408" y="178" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">0</text><text x="464" y="178" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">0</text><text x="520" y="178" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">1</text><text x="576" y="178" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">0</text><text x="632" y="178" text-anchor="middle" font-weight="600" fill="var(--cds-text-primary)">1</text><text x="128" y="202" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">LEDR9</text><text x="184" y="202" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">LEDR8</text><text x="240" y="202" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">LEDR7</text><text x="296" y="202" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">LEDR6</text><text x="352" y="202" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">LEDR5</text><text x="408" y="202" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">LEDR4</text><text x="464" y="202" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">LEDR3</text><text x="520" y="202" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">LEDR2</text><text x="576" y="202" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">LEDR1</text><text x="632" y="202" text-anchor="middle" font-size="11.5" fill="var(--cds-text-secondary)">LEDR0</text><circle cx="50" cy="234" r="4.5" fill="var(--cds-chart-categorical-1)"></circle><text x="62" y="238" font-size="11.5" fill="var(--cds-text-secondary)">값을 읽는 시점. 실습 1은 읽은 값을 아래 LED에 그대로 켠다. D7부터 D0 순으로 읽으면 0100 0001 = 0x41</text></svg></div><figcaption>그림 5. UART 프레임: 0x41('A'), 115200 bps 8N1</figcaption></figure>
+
+<p>선은 유휴(idle) 상태에서 High이고, 시작 비트의 하강 엣지가 프레임의 기준점이다.</p>
+<h3 id="1단계-mcu-프로그램-준비">1단계: MCU 프로그램 준비</h3>
+<div class="note"><b>완성본.</b> <a href="01_Link_UART_Frame_HAL_c/"><code>01_Link_UART_Frame_HAL_c</code></a> 폴더를 열어 바로 Upload해도 된다. 아래는 원본 예제에서 직접 만드는 절차이다.</div>
+
+<p>저장소의 <code>Examples/02_USART/08_USART_printf_Dual</code> 예제를 바탕으로 한다. 이 예제는 USART1(D8)과 USART2(PC 터미널)가 이미 115200 bps 8N1로 설정되어 있다.</p>
+<ol>
+<li>예제 폴더를 저장소 밖의 작업 폴더로 복사한다. 이름은 <code>link_uart</code>로 한다. 저장소 안의 원본은 고치지 않는다.</li>
+<li>VS Code에서 <code>link_uart</code> 폴더를 연다.</li>
+<li><code>Core/Src/main.c</code>에서 <code>while (1)</code> 안의 <code>USER CODE BEGIN 3</code> 영역을 아래로 바꾼다. 1초마다 글자 <code>A</code> 한 바이트만 보낸다.</li>
+<li>PlatformIO의 <strong>Upload</strong>로 내려받는다.</li>
+<li>시리얼 모니터(115200 8N1)에 1초마다 <code>A</code>가 하나씩 이어서 찍히는지 확인한다.</li>
+</ol>
+<pre data-lang="c"><code>    /* USER CODE BEGIN 3 */
+    uint8_t ch = 'A';                           /* 0x41 = 0100 0001 */
+
+    HAL_UART_Transmit(&amp;huart1, &amp;ch, 1, 10);     /* USART1_DR &lt;- ch : D8 -&gt; FPGA */
+    HAL_UART_Transmit(&amp;huart2, &amp;ch, 1, 10);     /* USART2_DR &lt;- ch : PC 터미널 */
+    HAL_Delay(1000);                            /* 1초에 한 프레임 */
+  }
+  /* USER CODE END 3 */
+</code></pre>
+<p>한 번에 한 바이트만 보내는 이유는 LED가 마지막으로 받은 프레임을 보여 주기 때문이다. <code>printf("A\n")</code>처럼 여러 바이트를 연달아 보내면 LED에는 마지막 바이트(0x0A)만 남는다. 이때 LED는 0010100001로 보인다(시작 0, 0x0A의 LSB부터 0101 0000, 정지 1).</p>
+<h3 id="2단계-fpga-회로-작성">2단계: FPGA 회로 작성</h3>
+<div class="note"><b>준비된 파일.</b> <code>fpga/frame_leds.v</code>, <code>fpga/lab1_top.v</code></div>
+
+<p><code>frame_leds.v</code>와 <code>lab1_top.v</code>를 만들어 프로젝트에 넣는다. <code>frame_leds</code>는 카운터 하나와 10비트 시프트 레지스터 하나이다. 시작 비트의 하강 엣지에서 반 비트(217클럭)를 기다린 뒤, 434클럭마다 선의 값을 읽어 왼쪽으로 밀어 넣는다. 열 번 읽으면 그 값을 LED에 내보낸다.</p>
+<pre data-lang="verilog"><code>// frame_leds.v
+// 시작 비트의 하강 엣지부터 1비트 간격으로 10번 표본화해 한 프레임을 LED에 보여 준다.
+//   frame[9] = 시작 비트, frame[8:1] = D0~D7 (도착한 순서), frame[0] = 정지 비트
+module frame_leds #(parameter CLKS_PER_BIT = 434) (   // 50 MHz / 115200 bps = 434
+    input  wire       clk,
+    input  wire       rx,                 // 동기화된 수신선
+    output reg  [9:0] frame = 10'h3FF,    // 마지막으로 받은 프레임 (처음에는 모두 1)
+    output reg        busy  = 1'b0        // 프레임을 받는 동안 1
+);
+    reg        rx_d = 1'b1;               // 한 클럭 전의 rx (엣지 검출용)
+    reg [15:0] cnt  = 16'd0;              // 다음 표본화까지 남은 클럭 수
+    reg [3:0]  n    = 4'd0;               // 지금까지 읽은 비트 수
+    reg [9:0]  sh   = 10'h3FF;            // 시프트 레지스터
+
+    always @(posedge clk) begin
+        rx_d &lt;= rx;
+        if (!busy) begin
+            if (rx_d &amp; ~rx) begin         // 하강 엣지 = 시작 비트의 시작
+                busy &lt;= 1'b1;
+                cnt  &lt;= CLKS_PER_BIT/2;   // 반 비트 뒤 = 시작 비트의 가운데
+                n    &lt;= 4'd0;
+            end
+        end else if (cnt == 16'd0) begin  // 비트의 가운데에 왔다
+            sh  &lt;= {sh[8:0], rx};         // 왼쪽으로 밀며 새 비트를 오른쪽에 넣는다
+            cnt &lt;= CLKS_PER_BIT - 1;
+            n   &lt;= n + 4'd1;
+            if (n == 4'd9) begin          // 10번째(정지 비트)까지 읽었다
+                frame &lt;= {sh[8:0], rx};
+                busy  &lt;= 1'b0;
+            end
+        end else cnt &lt;= cnt - 16'd1;
+    end
+endmodule
+</code></pre>
+<pre data-lang="verilog"><code>// lab1_top.v
+// 실습 1: MCU가 보낸 UART 한 프레임을 LEDR9~LEDR0에 비트 그대로 보여 준다
+module lab1_top (
+    input  wire       CLOCK_50,
+    input  wire       MCU_TX,     // GPIO_0[0] &lt;- Nucleo D8 (PA9, USART1_TX)
+    output wire [9:0] LEDR        // LEDR9 = 시작, LEDR8~1 = D0~D7, LEDR0 = 정지
+);
+    wire rx_s;                    // 동기화된 수신선 (SignalTap에서 볼 신호)
+    wire busy;                    // 프레임 수신 중 (SignalTap에서 볼 신호)
+
+    sync2      u_sync (.clk(CLOCK_50), .d(MCU_TX), .q(rx_s));
+    frame_leds u_cap  (.clk(CLOCK_50), .rx(rx_s), .frame(LEDR), .busy(busy));
+endmodule
+</code></pre>
+<ol>
+<li><strong>Processing &gt; Start &gt; Start Analysis &amp; Elaboration</strong>을 실행한다. SignalTap이 신호 이름을 찾으려면 이 단계가 먼저 필요하다.</li>
+</ol>
+<h3 id="3단계-signaltap-설정">3단계: SignalTap 설정</h3>
+<ol>
+<li><strong>Tools &gt; Signal Tap Logic Analyzer</strong>를 연다.</li>
+<li>오른쪽 <strong>Signal Configuration</strong>의 <strong>Clock</strong> 옆 <code>...</code>을 눌러 Node Finder를 연다. Filter를 <strong>Signal Tap: pre-synthesis</strong>로 두고 <strong>List</strong>를 눈러 <code>CLOCK_50</code>을 고른다.</li>
+<li><strong>Sample depth</strong>를 <strong>16K</strong>로 바꾼다. 16384개 × 20 ns = 328 us를 담는다.</li>
+<li>왼쪽 <strong>Setup</strong> 탭의 빈 곳을 더블 클릭해 Node Finder를 열고, 같은 Filter로 <code>rx_s</code>를 찾아 추가한다. 같은 방법으로 busy도 추가한다.</li>
+<li><code>rx_s</code> 행의 <strong>Trigger Conditions</strong> 칸을 오른쪽 클릭해 <strong>Falling Edge</strong>를 고른다. 시작 비트에서 캡처가 시작된다.</li>
+<li><strong>Trigger position</strong>은 <strong>Pre trigger position</strong>으로 둔다.</li>
+<li><strong>File &gt; Save</strong>로 <code>stp1.stp</code>를 저장한다. 현재 프로젝트에 이 파일을 쓸지 묻는 창에서 <strong>Yes</strong>를 누른다.</li>
+<li>Quartus 주 창으로 돌아가 <strong>Processing &gt; Start Compilation</strong>으로 전체 컴파일한다.</li>
+</ol>
+<h3 id="4단계-내려받기와-캡처">4단계: 내려받기와 캡처</h3>
+<ol>
+<li>SignalTap 창 오른쪽 위 <strong>JTAG Chain Configuration</strong>에서 Hardware를 <strong>DE-SoC</strong>로, Device를 <strong>5CSEMA5</strong>로 고른다.</li>
+<li><strong>SOF Manager</strong>의 <code>...</code>으로 <code>output_files/nucleo_link.sof</code>를 지정하고 <strong>Program Device</strong> 단추를 누른다.</li>
+<li>LED를 본다. 내려받은 직후에는 10개가 모두 켜져 있다가, MCU가 A를 보내는 순간 LEDR8, LEDR2, LEDR0만 켜진 상태(0100000101)로 바뀐다.</li>
+<li><strong>Processing &gt; Run Analysis</strong>를 누른다. 상태가 <code>Waiting for trigger</code>가 되었다가, MCU가 다음 <code>A</code>를 보내는 순간 파형이 <strong>Data</strong> 탭에 나타난다.</li>
+</ol>
+<h3 id="5단계-파형-읽기">5단계: 파형 읽기</h3>
+<ol>
+<li>파형을 클릭(확대)하거나 오른쪽 클릭(축소)해 첫 프레임을 화면에 맞춘다.</li>
+<li>시간 축을 오른쪽 클릭해 <strong>Create Time Bar</strong>로 시간 막대 두 개를 만든다. 시작 비트의 하강 엣지와 D0의 상승 엣지에 하나씩 놓는다.</li>
+<li>두 막대의 표본(sample) 번호 차이를 읽는다.</li>
+</ol>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>측정 항목</th>
+<th>기대값</th>
+<th>근거</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1비트 폭</td>
+<td>434 ± 5 표본</td>
+<td>50 000 000 / 115 200 = 434.03</td>
+</tr>
+<tr>
+<td>1프레임(시작~정지)</td>
+<td>약 4340 표본</td>
+<td>10비트 × 434</td>
+</tr>
+<tr>
+<td>프레임의 비트열</td>
+<td>0 1000 0010 1</td>
+<td>시작, 0x41의 LSB부터, 정지</td>
+</tr>
+<tr>
+<td><code>busy</code>가 1인 길이</td>
+<td>약 4123 표본</td>
+<td>반 비트 217 + 9비트 × 434. 정지 비트 가운데에서 끝난다</td>
+</tr>
+</tbody>
+</table></div>
+<p>1비트 폭이 434에서 조금 벗어나는 것은 정상이다. 이 예제의 MCU는 내부 RC 발진기(HSI)를 클럭원으로 쓰고, FPGA는 보드의 50 MHz 발진기를 쓴다. 두 클럭의 차이가 그대로 측정값에 나타난다.</p>
+<h3 id="6단계-led와-파형-비교">6단계: LED와 파형 비교</h3>
+<p>LED는 왼쪽(LEDR9)부터 도착한 순서대로 켜지므로, SignalTap 파형을 왼쪽부터 읽은 것과 같다. 켜진 LED가 1이다.</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>LED</th>
+<th>의미</th>
+<th><code>A</code>(0x41)일 때</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LEDR9</td>
+<td>시작 비트</td>
+<td>꺼짐 (0)</td>
+</tr>
+<tr>
+<td>LEDR8</td>
+<td>D0 (LSB)</td>
+<td>켜짐 (1)</td>
+</tr>
+<tr>
+<td>LEDR7~LEDR3</td>
+<td>D1~D5</td>
+<td>꺼짐 (0)</td>
+</tr>
+<tr>
+<td>LEDR2</td>
+<td>D6</td>
+<td>켜짐 (1)</td>
+</tr>
+<tr>
+<td>LEDR1</td>
+<td>D7 (MSB)</td>
+<td>꺼짐 (0)</td>
+</tr>
+<tr>
+<td>LEDR0</td>
+<td>정지 비트</td>
+<td>켜짐 (1)</td>
+</tr>
+</tbody>
+</table></div>
+<p>데이터 8비트는 LSB가 먼저 오므로 LED에서는 LSB가 왼쪽이다. 값으로 읽으려면 LEDR1에서 LEDR8 쪽으로 거꾸로 읽는다. 0100 0001 = 0x41이다.</p>
+<h3 id="확인">확인</h3>
+<ul>
+<li class="task"><label><input type="checkbox"> <span>내려받은 직후 LED 10개가 모두 켜져 있다가 1초 안에 0100000101로 바뀐다</span></label></li>
+<li class="task"><label><input type="checkbox"> <span>1비트 폭을 표본 수로 재어 기록했다</span></label></li>
+<li class="task"><label><input type="checkbox"> <span>SignalTap 파형을 왼쪽부터 읽은 비트열과 LED가 같다</span></label></li>
+<li class="task"><label><input type="checkbox"> <span>글자를 <code>U</code>(0x55)로 바꾸면 LED가 0101010101로 하나 건너 하나씩 켜진다</span></label></li>
+<li class="task"><label><input type="checkbox"> <span><code>ch</code>를 보낼 때마다 1씩 늘리도록 고쳐, LED가 1초마다 바뀌는 것을 보고 값을 읽었다</span></label></li>
+</ul>
+<h2 id="실습-2-uart-링크">실습 2: UART 링크</h2>
+<p>PC 터미널에서 글자를 치면 MCU가 FPGA로 보내고, FPGA는 그 바이트를 HEX1~HEX0에 16진수로 표시한 뒤 1을 더해 돌려보낸다. <code>A</code>(0x41)를 치면 7세그먼트에 <code>41</code>이, 터미널에 <code>B</code>(0x42)가 나타난다.</p>
+<p>신호 경로는 다음과 같다.</p>
+<ol>
+<li>PC 터미널 → USART2 → MCU</li>
+<li>MCU → USART1_TX(D8) → FPGA 수신기 → HEX1~HEX0</li>
+<li>FPGA 송신기(받은 값 + 1) → USART1_RX(D2) → MCU</li>
+<li>MCU → USART2 → PC 터미널</li>
+</ol>
+<h3 id="1단계-수신기의-원리">1단계: 수신기의 원리</h3>
+<p>수신기는 카운터 하나와 상태기계 하나이다. 실습 1에서 잰 1비트 = 434클럭이 설계의 기준이다.</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>상태</th>
+<th>하는 일</th>
+<th>다음 상태로 가는 조건</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IDLE</td>
+<td>선이 0이 되기를 기다린다</td>
+<td><code>rx == 0</code></td>
+</tr>
+<tr>
+<td>START</td>
+<td>반 비트(217클럭) 기다려 시작 비트 가운데에서 다시 본다</td>
+<td>여전히 0이면 DATA, 아니면 IDLE</td>
+</tr>
+<tr>
+<td>DATA</td>
+<td>434클럭마다 한 비트씩 시프트 레지스터에 넣는다</td>
+<td>8비트를 다 받음</td>
+</tr>
+<tr>
+<td>STOP</td>
+<td>434클럭 뒤 정지 비트가 1인지 본다</td>
+<td>항상 IDLE (1이면 <code>valid</code> 펄스)</td>
+</tr>
+</tbody>
+</table></div>
+<p>START에서 반 비트를 기다렸기 때문에 그 뒤의 표본화 시점은 항상 비트의 가운데에 온다. 실습 1 그림의 파란 점이 그 시점이다.</p>
+<h3 id="2단계-fpga-회로-작성_1">2단계: FPGA 회로 작성</h3>
+<div class="note"><b>준비된 파일.</b> <code>fpga/uart_rx.v</code>, <code>fpga/uart_tx.v</code>, <code>fpga/lab2_top.v</code></div>
+
+<p>파일 세 개를 만들어 프로젝트에 넣는다.</p>
+<pre data-lang="verilog"><code>// uart_rx.v
+// UART 수신기 (8N1). 시작 비트 가운데에서 한 번 더 확인하고,
+// 그 뒤 1비트 간격으로 각 데이터 비트의 가운데를 표본화한다.
+module uart_rx #(parameter CLKS_PER_BIT = 434) (   // 50 MHz / 115200 bps = 434
+    input  wire       clk,
+    input  wire       rx,            // 동기화된 수신선
+    output reg  [7:0] data  = 8'd0,
+    output reg        valid = 1'b0   // 1바이트 수신 완료 시 1클럭 동안 1
+);
+    localparam IDLE = 2'd0, START = 2'd1, DATA = 2'd2, STOP = 2'd3;
+    reg [1:0]  state = IDLE;
+    reg [15:0] cnt   = 16'd0;    // 비트 시간 카운터
+    reg [2:0]  idx   = 3'd0;     // 받은 데이터 비트 수
+    reg [7:0]  sh    = 8'd0;     // 시프트 레지스터
+
+    always @(posedge clk) begin
+        valid &lt;= 1'b0;
+        case (state)
+            IDLE: begin
+                cnt &lt;= 16'd0;
+                idx &lt;= 3'd0;
+                if (rx == 1'b0) state &lt;= START;          // 하강 엣지 = 시작 비트 후보
+            end
+            START: begin                                  // 반 비트 기다린 뒤 다시 확인
+                if (cnt == (CLKS_PER_BIT/2) - 1) begin
+                    cnt   &lt;= 16'd0;
+                    state &lt;= (rx == 1'b0) ? DATA : IDLE;  // 잡음이면 버린다
+                end else cnt &lt;= cnt + 16'd1;
+            end
+            DATA: begin                                   // 1비트마다 가운데에서 표본화
+                if (cnt == CLKS_PER_BIT - 1) begin
+                    cnt &lt;= 16'd0;
+                    sh  &lt;= {rx, sh[7:1]};                 // LSB가 먼저 들어온다
+                    idx &lt;= idx + 3'd1;
+                    if (idx == 3'd7) state &lt;= STOP;
+                end else cnt &lt;= cnt + 16'd1;
+            end
+            STOP: begin                                   // 정지 비트 가운데
+                if (cnt == CLKS_PER_BIT - 1) begin
+                    cnt   &lt;= 16'd0;
+                    state &lt;= IDLE;
+                    if (rx == 1'b1) begin                 // 정지 비트가 1일 때만 유효
+                        data  &lt;= sh;
+                        valid &lt;= 1'b1;
+                    end
+                end else cnt &lt;= cnt + 16'd1;
+            end
+        endcase
+    end
+endmodule
+</code></pre>
+<pre data-lang="verilog"><code>// uart_tx.v
+// UART 송신기 (8N1). start가 1이 되면 data를 한 프레임으로 내보낸다.
+module uart_tx #(parameter CLKS_PER_BIT = 434) (
+    input  wire       clk,
+    input  wire       start,         // 1클럭 펄스
+    input  wire [7:0] data,
+    output reg        tx = 1'b1,     // 유휴 상태는 High
+    output wire       busy
+);
+    reg [9:0]  sh   = 10'h3FF;   // {정지, 데이터 8비트, 시작}
+    reg [3:0]  left = 4'd0;      // 남은 비트 수
+    reg [15:0] cnt  = 16'd0;
+    assign busy = (left != 4'd0);
+
+    always @(posedge clk) begin
+        if (!busy) begin
+            tx &lt;= 1'b1;
+            if (start) begin
+                sh   &lt;= {1'b1, data, 1'b0};
+                left &lt;= 4'd10;
+                cnt  &lt;= 16'd0;
+                tx   &lt;= 1'b0;                 // 시작 비트
+            end
+        end else if (cnt == CLKS_PER_BIT - 1) begin
+            cnt  &lt;= 16'd0;
+            left &lt;= left - 4'd1;
+            sh   &lt;= {1'b1, sh[9:1]};
+            tx   &lt;= (left == 4'd1) ? 1'b1 : sh[1];   // 다음 비트
+        end else cnt &lt;= cnt + 16'd1;
+    end
+endmodule
+</code></pre>
+<pre data-lang="verilog"><code>// lab2_top.v
+// 실습 2: 받은 바이트를 HEX1~HEX0에 표시하고, 1을 더해 MCU로 돌려보낸다
+module lab2_top #(parameter CLKS_PER_BIT = 434) (
+    input  wire       CLOCK_50,
+    input  wire       MCU_TX,     // GPIO_0[0] &lt;- Nucleo D8 (PA9,  USART1_TX)
+    output wire       MCU_RX,     // GPIO_0[1] -&gt; Nucleo D2 (PA10, USART1_RX)
+    output wire [6:0] HEX0, HEX1,
+    output wire [9:0] LEDR
+);
+    wire       rx_s, valid, busy;
+    wire [7:0] rx_data;
+    reg  [7:0] shown = 8'd0;      // 화면에 유지할 마지막 수신 바이트
+    reg        blink = 1'b0;      // 바이트를 받을 때마다 반전
+
+    sync2 u_sync (.clk(CLOCK_50), .d(MCU_TX), .q(rx_s));
+
+    uart_rx #(.CLKS_PER_BIT(CLKS_PER_BIT)) u_rx
+        (.clk(CLOCK_50), .rx(rx_s), .data(rx_data), .valid(valid));
+
+    uart_tx #(.CLKS_PER_BIT(CLKS_PER_BIT)) u_tx
+        (.clk(CLOCK_50), .start(valid), .data(rx_data + 8'd1), .tx(MCU_RX), .busy(busy));
+
+    always @(posedge CLOCK_50)
+        if (valid) begin
+            shown &lt;= rx_data;
+            blink &lt;= ~blink;
+        end
+
+    hex7seg u_h0 (.x(shown[3:0]), .seg(HEX0));
+    hex7seg u_h1 (.x(shown[7:4]), .seg(HEX1));
+    assign LEDR = {blink, busy, shown};   // LEDR9: 수신마다 반전, LEDR7~0: 수신 바이트
+endmodule
+</code></pre>
+<ol>
+<li>Project Navigator의 <strong>Files</strong> 탭에서 <code>lab2_top.v</code>를 오른쪽 클릭해 <strong>Set as Top-Level Entity</strong>를 고른다.</li>
+<li><strong>Assignments &gt; Settings &gt; Signal Tap Logic Analyzer</strong>에서 <strong>Enable Signal Tap Logic Analyzer</strong> 체크를 푼다. 실습 1의 <code>rx_s</code> 설정은 이 실습에서 쓰지 않으며, 켜 두면 컴파일이 길어진다.</li>
+<li>컴파일하고 FPGA에 내려받는다. HEX1~HEX0에 <code>00</code>이 보인다.</li>
+</ol>
+<h3 id="3단계-mcu-프로그램-수정">3단계: MCU 프로그램 수정</h3>
+<div class="note"><b>완성본.</b> <a href="02_Link_UART_Echo_HAL_c/"><code>02_Link_UART_Echo_HAL_c</code></a> 폴더를 열어 바로 Upload해도 된다.</div>
+
+<p>실습 1의 <code>link_uart</code> 프로젝트에서 <code>main.c</code>의 두 곳을 고친다. CubeMX 설정(<code>.ioc</code>)은 바꾸지 않는다. USART1과 USART2가 이미 115200 8N1, 송수신 모두 켜진 상태이다.</p>
+<p><strong>첫째, <code>USER CODE BEGIN 0</code>의 <code>__io_putchar</code>에서 USART1 송신 두 줄을 지운다.</strong> 그대로 두면 <code>printf</code>의 글자가 FPGA로도 나가고, FPGA가 그것을 돌려보내 출력이 끝없이 되풀이된다.</p>
+<pre data-lang="c"><code>/* USER CODE BEGIN 0 */
+#ifdef __GNUC__
+#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+#else
+#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+#endif
+
+/* printf 1문자 출력 훅 (ISR 아님, main 문맥에서 호출됨)
+ * 실습 2에서는 PC 터미널(USART2)로만 보낸다. USART1은 FPGA 전용이다. */
+PUTCHAR_PROTOTYPE {
+  if (ch == '\n') {
+    HAL_UART_Transmit(&amp;huart2, (uint8_t *)&quot;\r&quot;, 1, 0xFFFF); /* USART2_DR &lt;- '\r' */
+  }
+  HAL_UART_Transmit(&amp;huart2, (uint8_t *)&amp;ch, 1, 0xFFFF);    /* USART2_DR &lt;- ch */
+  return ch;
+}
+/* USER CODE END 0 */
+</code></pre>
+<p><strong>둘째, <code>while (1)</code> 안의 <code>USER CODE BEGIN 3</code> 영역을 아래로 바꾼다.</strong> 인터럽트 없이 두 포트의 수신 플래그를 번갈아 확인하는 폴링(polling) 방식이다.</p>
+<pre data-lang="c"><code>    /* USER CODE BEGIN 3 */
+    uint8_t c;
+
+    /* (1) PC 터미널 -&gt; MCU : USART2_SR.RXNE가 1이면 USART2_DR을 읽는다.
+     *     제한 시간 0 = 기다리지 않고 바로 돌아온다. */
+    if (HAL_UART_Receive(&amp;huart2, &amp;c, 1, 0) == HAL_OK) {
+      HAL_UART_Transmit(&amp;huart1, &amp;c, 1, 10);            /* USART1_DR &lt;- c : FPGA로 */
+      printf(&quot;PC   -&gt; FPGA : 0x%02X\n&quot;, c);
+    }
+
+    /* (2) FPGA -&gt; MCU : USART1_SR.RXNE가 1이면 USART1_DR을 읽는다. */
+    if (HAL_UART_Receive(&amp;huart1, &amp;c, 1, 0) == HAL_OK) {
+      printf(&quot;FPGA -&gt; MCU  : 0x%02X '%c'\n&quot;, c, c);
+    }
+  }
+  /* USER CODE END 3 */
+</code></pre>
+<p><code>while (1)</code> 바로 위의 <code>HAL_Delay(1000);</code>은 그대로 둔다. 실습 1에서 넣은 송신 코드는 이 영역을 바꾸면서 함께 없어진다. <code>index</code> 변수를 쓰지 않는다는 경고는 무시해도 된다.</p>
+<h3 id="4단계-동작-확인">4단계: 동작 확인</h3>
+<ol>
+<li>D2 선(FPGA→MCU)이 꽂혀 있는지 확인한다.</li>
+<li>MCU에 내려받고 시리얼 모니터(115200 8N1)를 연다.</li>
+<li>터미널에 <code>A</code>를 입력한다.</li>
+</ol>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>입력</th>
+<th>HEX1~HEX0</th>
+<th>LEDR7~0</th>
+<th>터미널의 둘째 줄</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>A</code></td>
+<td><code>41</code></td>
+<td>0100 0001</td>
+<td><code>FPGA -&gt; MCU  : 0x42 'B'</code></td>
+</tr>
+<tr>
+<td><code>0</code></td>
+<td><code>30</code></td>
+<td>0011 0000</td>
+<td><code>FPGA -&gt; MCU  : 0x31 '1'</code></td>
+</tr>
+<tr>
+<td><code>z</code></td>
+<td><code>7A</code></td>
+<td>0111 1010</td>
+<td><code>FPGA -&gt; MCU  : 0x7B '{'</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>글자를 하나 받을 때마다 LEDR9가 반전된다.</p>
+<h3 id="확인_1">확인</h3>
+<ul>
+<li class="task"><label><input type="checkbox"> <span><code>A</code>, <code>0</code>, <code>z</code>에 대해 표와 같은 결과를 얻었다</span></label></li>
+<li class="task"><label><input type="checkbox"> <span>D8 선을 뽑고 글자를 치면 HEX가 바뀌지 않고 <code>FPGA -&gt; MCU</code> 줄도 나오지 않는다</span></label></li>
+<li class="task"><label><input type="checkbox"> <span><code>lab2_top</code>의 <code>CLKS_PER_BIT</code>를 400으로 바꾸어 내려받으면 어떤 값이 표시되는지 관찰하고 이유를 설명했다</span></label></li>
+<li class="task"><label><input type="checkbox"> <span>SignalTap을 다시 켜고 <code>rx_s</code>, <code>valid</code>, <code>rx_data</code>를 함께 캡처해 <code>valid</code>가 정지 비트 가운데에서 뜨는 것을 확인했다</span></label></li>
+</ul>
+<h2 id="실습-3-pwm-주기듀티-측정기">실습 3: PWM 주기·듀티 측정기</h2>
+<p>MCU의 타이머가 만든 1 kHz PWM을 FPGA가 0.1 us 단위로 재어 HEX5~HEX0에 10진수로 표시한다. 주기 1000.0 us는 <code>010000</code>으로, 듀티 25 %의 High 시간 250.0 us는 <code>002500</code>으로 보인다.</p>
+<p><strong>시작하기 전에 D2 선을 뺀다.</strong> 이 실습의 MCU 프로그램은 PA10(D2)에도 PWM을 출력한다.</p>
+<h3 id="1단계-측정-원리">1단계: 측정 원리</h3>
+<p>회로는 네 부분이다.</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>블록</th>
+<th>역할</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>동기화기 + 엣지 검출기</td>
+<td>PWM을 CLOCK_50에 맞추고, 상승(<code>rise</code>)·하강(<code>fall</code>) 순간에 1클럭 펄스를 만든다</td>
+</tr>
+<tr>
+<td>틱 발생기</td>
+<td>50 MHz를 5로 나누어 0.1 us마다 <code>tick</code>을 낸다</td>
+</tr>
+<tr>
+<td>6자리 BCD 카운터</td>
+<td><code>tick</code>마다 1씩 센다. 자리마다 0~9를 세므로 7세그먼트에 바로 표시할 수 있다</td>
+</tr>
+<tr>
+<td>래치 두 개</td>
+<td><code>fall</code>에서 카운터 값을 High 시간으로, <code>rise</code>에서 주기로 붙잡고 카운터를 0으로 되돌린다</td>
+</tr>
+</tbody>
+</table></div>
+<p>카운터를 2진수가 아니라 BCD(Binary Coded Decimal, 2진화 10진수)로 만든 이유는 2진수를 10진수로 바꾸는 나눗셈 회로를 피하기 위해서이다.</p>
+<h3 id="2단계-fpga-회로-작성_2">2단계: FPGA 회로 작성</h3>
+<div class="note"><b>준비된 파일.</b> <code>fpga/lab3_top.v</code></div>
+
+<pre data-lang="verilog"><code>// lab3_top.v
+// 실습 3: PWM의 주기와 High 시간을 0.1 us 단위로 재어 HEX5~HEX0에 10진수로 표시한다
+//   SW0 = 0 : 주기,  SW0 = 1 : High 시간   (표시값 010000 = 1000.0 us)
+module lab3_top #(parameter CLKS_PER_TICK = 5) (   // 50 MHz / 5 = 10 MHz -&gt; 0.1 us
+    input  wire       CLOCK_50,
+    input  wire       MCU_PWM,    // GPIO_0[2] &lt;- Nucleo D7 (PA8, TIM1_CH1)
+    input  wire [0:0] SW,
+    output wire [6:0] HEX0, HEX1, HEX2, HEX3, HEX4, HEX5,
+    output wire [9:0] LEDR
+);
+    // 1) 동기화 + 엣지 검출
+    wire pwm_s;
+    reg  pwm_d = 1'b0;
+    sync2 #(.INIT(1'b0)) u_sync (.clk(CLOCK_50), .d(MCU_PWM), .q(pwm_s));
+    always @(posedge CLOCK_50) pwm_d &lt;= pwm_s;
+    wire rise =  pwm_s &amp; ~pwm_d;
+    wire fall = ~pwm_s &amp;  pwm_d;
+
+    // 2) 0.1 us 틱 발생기
+    reg [2:0] pre = 3'd0;
+    wire tick = (pre == CLKS_PER_TICK - 1);
+    always @(posedge CLOCK_50) pre &lt;= tick ? 3'd0 : pre + 3'd1;
+
+    // 3) 6자리 BCD 카운터 (자리마다 0~9, 9 다음에 윗자리로 올림)
+    reg [23:0] cnt = 24'd0;       // {10^5, 10^4, 10^3, 10^2, 10^1, 10^0}
+    reg [23:0] nxt;
+    reg        carry;
+    integer    i;
+    always @(*) begin
+        nxt   = cnt;
+        carry = 1'b1;                              // 맨 아랫자리에 1을 더한다
+        for (i = 0; i &lt; 6; i = i + 1)
+            if (carry) begin
+                if (cnt[4*i +: 4] == 4'd9) nxt[4*i +: 4] = 4'd0;      // 올림 유지
+                else begin nxt[4*i +: 4] = cnt[4*i +: 4] + 4'd1; carry = 1'b0; end
+            end
+    end
+
+    // 4) 상승 엣지에서 주기를, 하강 엣지에서 High 시간을 붙잡는다
+    reg [23:0] period = 24'd0, high = 24'd0;
+    always @(posedge CLOCK_50) begin
+        if (fall) high &lt;= cnt;
+        if (rise) begin
+            period &lt;= cnt;
+            cnt    &lt;= 24'd0;                       // 다음 주기 측정 시작
+        end else if (tick) cnt &lt;= nxt;
+    end
+
+    // 5) 표시
+    wire [23:0] show = SW[0] ? high : period;
+    hex7seg u0 (.x(show[ 3: 0]), .seg(HEX0));
+    hex7seg u1 (.x(show[ 7: 4]), .seg(HEX1));
+    hex7seg u2 (.x(show[11: 8]), .seg(HEX2));
+    hex7seg u3 (.x(show[15:12]), .seg(HEX3));
+    hex7seg u4 (.x(show[19:16]), .seg(HEX4));
+    hex7seg u5 (.x(show[23:20]), .seg(HEX5));
+    assign LEDR = {9'd0, pwm_s};                   // LEDR0: PWM 밝기로 듀티를 눈으로 본다
+endmodule
+</code></pre>
+<ol>
+<li><code>lab3_top.v</code>를 프로젝트에 넣고 <strong>Set as Top-Level Entity</strong>로 지정한다.</li>
+<li>컴파일하고 FPGA에 내려받는다. 신호가 없으면 HEX에 <code>000000</code>이 보인다.</li>
+</ol>
+<h3 id="3단계-mcu-프로그램-준비">3단계: MCU 프로그램 준비</h3>
+<div class="note"><b>완성본.</b> <a href="03_Link_PWM_Meter_HAL_c/"><code>03_Link_PWM_Meter_HAL_c</code></a> 폴더를 열어 바로 Upload해도 된다.</div>
+
+<p>저장소의 <code>Examples/06_Timers_RTC/05_TIM_PWM</code> 예제를 쓴다. TIM1은 64 MHz 클럭에서 PSC = 63, ARR = 999로 설정되어 있어 1카운트가 1 us, 주기가 1000 us(1 kHz)이다.</p>
+<ol>
+<li>예제 폴더를 작업 폴더로 복사해 이름을 <code>link_pwm</code>으로 한다.</li>
+<li><code>main.c</code>의 <code>USER CODE BEGIN 1</code>에 있는 <code>int32_t duty = 0, step = 1;</code> 줄을 지운다.</li>
+<li><code>while (1)</code> 안의 <code>USER CODE BEGIN 3</code> 영역을 아래로 바꾼다. 듀티를 3초마다 다섯 단계로 바꾼다.</li>
+<li>MCU에 내려받는다.</li>
+</ol>
+<pre data-lang="c"><code>    /* USER CODE BEGIN 3 */
+    /* TIM1-&gt;CCR1에 넣을 값. 1카운트 = 1 us이므로 High 시간(us)과 같다.
+     * 듀티 = CCR1 / (ARR + 1) = 10, 25, 50, 75, 90 % */
+    static const uint16_t ccr_table[] = {100, 250, 500, 750, 900};
+    static uint8_t k = 0;
+
+    __HAL_TIM_SET_COMPARE(&amp;htim1, TIM_CHANNEL_1, ccr_table[k]);   /* TIM1-&gt;CCR1 = 표의 값 */
+    k = (k + 1) % 5;
+    HAL_Delay(3000);                                              /* 3초 유지 */
+  }
+  /* USER CODE END 3 */
+</code></pre>
+<p>파형은 타이머 하드웨어가 만들고, CPU는 3초에 한 번 <code>CCR1</code>만 바꾼다. 인터럽트와 콜백은 쓰지 않는다.</p>
+<h3 id="4단계-측정">4단계: 측정</h3>
+<p>SW0을 내리면 주기, 올리면 High 시간이 표시된다. 3초마다 값이 바뀐다.</p>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>CCR1</th>
+<th>주기 표시(SW0 = 0)</th>
+<th>High 표시(SW0 = 1)</th>
+<th>듀티</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>100</td>
+<td>010000</td>
+<td>001000</td>
+<td>10 %</td>
+</tr>
+<tr>
+<td>250</td>
+<td>010000</td>
+<td>002500</td>
+<td>25 %</td>
+</tr>
+<tr>
+<td>500</td>
+<td>010000</td>
+<td>005000</td>
+<td>50 %</td>
+</tr>
+<tr>
+<td>750</td>
+<td>010000</td>
+<td>007500</td>
+<td>75 %</td>
+</tr>
+<tr>
+<td>900</td>
+<td>010000</td>
+<td>009000</td>
+<td>90 %</td>
+</tr>
+</tbody>
+</table></div>
+<p>표의 값은 두 보드의 클럭이 정확히 같을 때의 이론값이다. 실제로는 MCU의 내부 RC 발진기(HSI) 오차만큼 주기가 <code>010000</code>에서 벗어나고, 마지막 자리는 1씩 흔들린다. HSI의 정확도는 데이터시트(DS5319)의 HSI oscillator characteristics 표에서 확인한다.</p>
+<p>계산은 다음과 같다.</p>
+<div class="formula"><span><i>f</i> = <span class="frac"><span>10<sup>7</sup></span><span><i>N</i><sub>period</sub></span></span> Hz</span><span><i>D</i> = <span class="frac"><span><i>N</i><sub>high</sub></span><span><i>N</i><sub>period</sub></span></span> × 100 %</span></div>
+
+<p>여기서 N은 HEX에 표시된 값이다. 예를 들어 주기가 <code>010050</code>, High가 <code>002512</code>로 보였다면 f = 995.0 Hz, D = 25.0 %이다. 주기와 High 시간이 같은 비율로 틀어지므로 듀티는 클럭 오차의 영향을 받지 않는다.</p>
+<h3 id="확인_2">확인</h3>
+<ul>
+<li class="task"><label><input type="checkbox"> <span>다섯 단계의 주기와 High 값을 표로 기록하고 주파수와 듀티를 계산했다</span></label></li>
+<li class="task"><label><input type="checkbox"> <span>측정한 주기가 1000.0 us에서 몇 % 벗어나는지 계산하고, 실습 1에서 잰 1비트 폭의 오차와 비교했다</span></label></li>
+<li class="task"><label><input type="checkbox"> <span>MCU의 ARR을 499로 바꾸면(2 kHz) 주기 표시가 <code>005000</code> 부근이 되는지 확인했다</span></label></li>
+<li class="task"><label><input type="checkbox"> <span><code>CLKS_PER_TICK</code>을 1로 바꾸면 표시 단위가 20 ns가 된다. 이때 1 kHz의 주기 표시값을 예상하고 확인했다</span></label></li>
+</ul>
+<h2 id="문제-해결과-확인-문제">문제 해결과 확인 문제</h2>
+<h3 id="문제-해결">문제 해결</h3>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>증상</th>
+<th>가능한 원인</th>
+<th>조치</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>실습 1에서 LED가 모두 켜진 채 변하지 않는다</td>
+<td>D8 선 또는 접지선이 빠짐, JP1 핀 위치 착오</td>
+<td>접지 도통을 다시 재고, 1번 핀 위치를 확인한다</td>
+</tr>
+<tr>
+<td>SignalTap이 <code>Waiting for trigger</code>에서 멈춘다</td>
+<td>MCU가 송신하지 않음, 트리거 조건이 Falling Edge가 아님</td>
+<td>시리얼 모니터에 <code>A</code>가 찍히는지 보고, 트리거 칸을 다시 설정한다</td>
+</tr>
+<tr>
+<td>SignalTap에 <code>Program the device to continue</code>가 뜨다</td>
+<td>내려받은 .sof가 현재 .stp 설정과 다름</td>
+<td>전체 컴파일 후 SignalTap 창에서 다시 내려받는다</td>
+</tr>
+<tr>
+<td>Programmer에서 내려받기가 실패한다</td>
+<td>장치 목록에 <code>SOCVHPS</code>가 없음</td>
+<td><strong>Auto Detect</strong>로 두 장치를 모두 띄운 뒤 <code>5CSEMA5</code>에 .sof를 지정한다</td>
+</tr>
+<tr>
+<td>실습 2에서 HEX는 바뀌는데 터미널에 <code>FPGA -&gt; MCU</code>가 없다</td>
+<td>D2 선이 빠짐</td>
+<td>D2와 JP1 2번 핀을 연결한다</td>
+</tr>
+<tr>
+<td>실습 2에서 터미널 출력이 멈추지 않고 쏟아진다</td>
+<td><code>__io_putchar</code>가 아직 USART1로도 송신함</td>
+<td>3단계의 첫째 수정을 다시 확인한다</td>
+</tr>
+<tr>
+<td>실습 2에서 HEX 값이 보낸 글자와 다르다</td>
+<td><code>CLKS_PER_BIT</code> 값 착오, 선이 길거나 접지 불량</td>
+<td>434인지 확인하고 선을 짧게 한다</td>
+</tr>
+<tr>
+<td>실습 3에서 HEX가 <code>000000</code>에서 변하지 않는다</td>
+<td>D7 선이 빠짐, 최상위 모듈이 <code>lab3_top</code>이 아님</td>
+<td>LEDR0이 희미하게 켜지는지 보고 최상위 모듈을 확인한다</td>
+</tr>
+<tr>
+<td>실습 3에서 값이 멈춰 있다</td>
+<td>듀티 0 % 또는 100 %라서 엣지가 없음</td>
+<td>이 회로는 엣지가 있어야 값을 갱신한다. 설계상 한계이다</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="설계상-한계">설계상 한계</h3>
+<ul>
+<li>실습 3의 카운터는 6자리이므로 99 999.9 us까지 잰다. 주파수가 10 Hz보다 낮으면 카운터가 한 바퀴 돌아 틀린 값이 나온다.</li>
+<li>실습 3의 측정값은 ±1카운트(0.1 us) 흔들린다. 입력 엣지가 <code>tick</code>과 무관한 시점에 오기 때문이다.</li>
+<li>실습 2의 수신기는 비트당 한 번만 표본화한다. 잡음에 강하게 하려면 비트당 여러 번 읽어 다수결로 정한다.</li>
+<li>실습 2의 MCU 코드는 폴링 방식이다. <code>printf</code>가 출력하는 동안 두 바이트 이상이 들어오면 앞의 것을 잃는다. 빠르게 연속으로 받으려면 수신 인터럽트(<code>02_USART_Interrupt</code>)나 링 버퍼(<code>03_USART_RingBuffer</code>)를 쓴다.</li>
+</ul>
+<h3 id="확인-문제">확인 문제</h3>
+<ol>
+<li>보레이트를 9600 bps로 바꾸면 <code>CLKS_PER_BIT</code>는 얼마인가? <code>cnt</code>의 16비트 폭으로 충분한가?</li>
+<li>수신기가 START 상태에서 반 비트를 기다리지 않고 바로 DATA로 가면 표본화 시점은 비트의 어디가 되는가? 왜 위험한가?</li>
+<li>송신측과 수신측의 클럭이 2 % 다르면 마지막 데이터 비트(D7)에서 표본화 시점은 가운데에서 몇 비트만큼 밀리는가?</li>
+<li><code>sync2</code>를 빼고 <code>MCU_TX</code>를 상태기계에 직접 넣으면 어떤 문제가 생길 수 있는가?</li>
+<li>실습 3에서 TIM1의 PSC를 63에서 0으로 바꾸면 PWM 주파수와 HEX 표시값은 어떻게 되는가?</li>
+</ol>
+<p>답은 다음과 같다.</p>
+<ol>
+<li>50 000 000 / 9600 = 5208. 16비트는 65 535까지 세므로 충분하다.</li>
+<li>비트의 경계(엣지) 근처가 된다. 값이 바뀌는 순간이라 작은 클럭 차이나 잡음에도 옆 비트를 읽는다.</li>
+<li>시작 비트 가운데에서 D7 가운데까지 8비트이므로 8 × 0.02 = 0.16비트 밀린다. 가운데에서 0.5비트 안쪽이라 정상 수신된다.</li>
+<li>입력이 클럭 엣지 근처에서 변하면 플립플롭이 준안정(metastable) 상태가 될 수 있고, 상태 레지스터의 비트들이 서로 다른 값을 보고 잘못된 상태로 갈 수 있다.</li>
+<li>타이머 클럭이 64 MHz가 되어 주파수는 64 kHz, 주기는 15.625 us이다. 표시값은 <code>000156</code> 부근이다.</li>
+</ol>
+<h2 id="부록">부록</h2>
+<h3 id="핀-배치-명령-tcl-console에-붙여-넣는다">핀 배치 명령 (Tcl Console에 붙여 넣는다)</h3>
+<p>핀 이름은 <a href="https://people.ece.cornell.edu/land/courses/ece5760/DE1_SOC/DE1-SoC_User_manualv.1.2.2_revE.pdf">DE1-SoC User Manual</a>의 Table 3-5(클럭), 3-6(스위치), 3-8(LED), 3-9(7세그먼트), 3-11(GPIO)에서 옮겼다.</p>
+<pre data-lang="tcl"><code># 이름[번호] 형태의 버스 핀을 한 줄로 배치하는 보조 절차
+proc pins {name list} {
+    set i 0
+    foreach p $list {
+        set_location_assignment PIN_$p -to &quot;${name}\[$i\]&quot;
+        incr i
+    }
+}
+
+# 클럭과 MCU 연결 핀
+set_location_assignment PIN_AF14 -to CLOCK_50
+set_location_assignment PIN_AC18 -to MCU_TX
+set_location_assignment PIN_Y17  -to MCU_RX
+set_location_assignment PIN_AD17 -to MCU_PWM
+
+# 선이 빠져도 입력이 뜨지 않게 약한 풀업을 켠다
+set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to MCU_TX
+set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to MCU_PWM
+
+# 스위치, LED, 7세그먼트
+set_location_assignment PIN_AB12 -to &quot;SW\[0\]&quot;
+pins LEDR {V16 W16 V17 V18 W17 W19 Y19 W20 W21 Y21}
+pins HEX0 {AE26 AE27 AE28 AG27 AF28 AG28 AH28}
+pins HEX1 {AJ29 AH29 AH30 AG30 AF29 AF30 AD27}
+pins HEX2 {AB23 AE29 AD29 AC28 AD30 AC29 AC30}
+pins HEX3 {AD26 AC27 AD25 AC25 AB28 AB25 AB22}
+pins HEX4 {AA24 Y23 Y24 W22 W24 V23 W25}
+pins HEX5 {V25 AA28 Y27 AB27 AB26 AA26 AA25}
+
+# 모든 핀의 기본 I/O 표준을 3.3 V로 둔다
+set_global_assignment -name STRATIX_DEVICE_IO_STANDARD &quot;3.3-V LVTTL&quot;
+export_assignments
+</code></pre>
+<p>실행한 뒤 <strong>Assignments &gt; Pin Planner</strong>를 열어 <code>MCU_TX</code>가 PIN_AC18에 배치되었는지 확인한다. 현재 최상위 모듈에 없는 핀 이름은 무시된다.</p>
+<h3 id="파일-목록">파일 목록</h3>
+<div class="scroll"><table>
+<thead>
+<tr>
+<th>파일</th>
+<th>내용</th>
+<th>쓰는 실습</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fpga/common.v</code></td>
+<td><code>sync2</code>, <code>hex7seg</code></td>
+<td>1, 2, 3</td>
+</tr>
+<tr>
+<td><code>fpga/frame_leds.v</code>, <code>fpga/lab1_top.v</code></td>
+<td>프레임 캡처 + LED 표시</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>fpga/uart_rx.v</code>, <code>fpga/uart_tx.v</code></td>
+<td>UART 수신기·송신기</td>
+<td>2</td>
+</tr>
+<tr>
+<td><code>fpga/lab2_top.v</code></td>
+<td>수신 표시 + 되돌려 보내기</td>
+<td>2</td>
+</tr>
+<tr>
+<td><code>fpga/lab3_top.v</code></td>
+<td>주기·High 시간 측정기</td>
+<td>3</td>
+</tr>
+<tr>
+<td><code>fpga/pins.tcl</code></td>
+<td>핀 배치 명령(위와 같은 내용)</td>
+<td>1, 2, 3</td>
+</tr>
+<tr>
+<td><code>01_Link_UART_Frame_HAL_c/</code></td>
+<td><code>02_USART/08_USART_printf_Dual</code>에서 만든 MCU 프로젝트</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>02_Link_UART_Echo_HAL_c/</code></td>
+<td>같은 예제에서 만든 MCU 프로젝트</td>
+<td>2</td>
+</tr>
+<tr>
+<td><code>03_Link_PWM_Meter_HAL_c/</code></td>
+<td><code>06_Timers_RTC/05_TIM_PWM</code>에서 만든 MCU 프로젝트</td>
+<td>3</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="검증-상태">검증 상태</h3>
+<ul>
+<li>Verilog 코드는 Icarus Verilog 12.0 시뮬레이션으로 확인했다. 실습 1은 0x41 입력에서 LEDR9~0이 0100000101이었다. 실습 2는 0x41 → 표시 <code>41</code>, 응답 0x42이고 보레이트가 ±2 % 어긋나도 정상 수신했다. 실습 3은 1 kHz, 25 % 입력에서 주기 <code>010000</code>, High <code>002500</code>이었다.</li>
+<li>MCU 프로젝트 세 개는 원본 예제의 <code>main.c</code>에서 <code>USER CODE</code> 영역만 고친 것이며, 빌드해 보지는 않았다.</li>
+<li><strong>Quartus 컴파일과 실제 보드 동작은 확인하지 않았다.</strong> 수업 전에 한 번 끝까지 수행해 본다.</li>
+<li><strong>JP1 헤더의 핀 번호 위치(1번 = GPIO_0[0], 11번 = 5 V, 12번 = GND, 29번 = 3.3 V, 30번 = GND)는 매뉴얼의 그림에만 있어 본문으로 대조하지 못했다.</strong> FPGA 핀 이름(PIN_AC18 등)은 표에서 확인했다. 배선 전에 매뉴얼의 GPIO 헤더 그림과 멀티미터로 확인한다.</li>
+<li>SignalTap과 Programmer의 메뉴 이름은 Quartus Prime Lite 18.1 기준으로 적었으나 화면을 보며 대조하지는 못했다. 버전에 따라 표기가 조금 다를 수 있다.</li>
+</ul>
+<h3 id="근거-문서">근거 문서</h3>
+<ul>
+<li><a href="https://people.ece.cornell.edu/land/courses/ece5760/DE1_SOC/DE1-SoC_User_manualv.1.2.2_revE.pdf">DE1-SoC User Manual</a> (Terasic, 2015-04-02): 핀 배치표, GPIO 헤더 전압, 7세그먼트가 0에서 켜진다는 설명</li>
+<li><a href="https://intel.com/content/www/us/en/docs/programmable/683552/18-1/hardware-and-software-requirements-74411.html">Signal Tap Logic Analyzer: Hardware and Software Requirements</a> (Intel): Lite Edition에서 SignalTap 사용 가능</li>
+<li>저장소 <code>Stm32NucleoF103RB</code>의 <code>Examples/02_USART/08_USART_printf_Dual</code>과 <code>Examples/06_Timers_RTC/05_TIM_PWM</code>: MCU 쪽 핀, 클럭(64 MHz), 보레이트, 타이머 설정</li>
+</ul>
+</main>
+<script>
+// 코드 블록마다 복사 단추를 단다
+document.querySelectorAll('pre').forEach(function (pre) {
+  var b = document.createElement('button');
+  b.className = 'copy'; b.type = 'button'; b.textContent = '복사';
+  b.addEventListener('click', function () {
+    var text = pre.querySelector('code').textContent;
+    var done = function () { b.textContent = '복사됨'; setTimeout(function () { b.textContent = '복사'; }, 1200); };
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, function () {}); }
+    else { var t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); done(); } catch (e) {} t.remove(); }
+  });
+  pre.appendChild(b);
+});
+// 확인 목록의 체크 상태를 이 브라우저에 기억한다 (저장이 막혀 있어도 동작한다)
+document.querySelectorAll('li.task input').forEach(function (box, i) {
+  var key = 'de1soc-link-check-' + i;
+  try { box.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  box.addEventListener('change', function () { try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch (e) {} });
+});
+
+</script>
+</body>
+</html>

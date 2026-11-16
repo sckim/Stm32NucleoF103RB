@@ -224,7 +224,7 @@ footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:v
   </div>
   <div class="box">
     <div class="label">이 저장소에서의 위치</div>
-    <p>DMA 수신 자체는 이미 봤다. <code>02_USART/04_USART_DMA_IdleLine_c</code>는 UART 수신 바이트를, <code>03_ADC/04_ADC_DMA_TimTrigger</code>는 ADC 결과를 DMA로 옮겼다. 이 예제는 같은 원리를 I2C에 적용한다. 차이는 I2C가 <b>마스터가 시작해야 바이트가 오는</b> 버스라는 점이다. 그래서 DMA를 켜기 전에 START, 주소, 레지스터 번호를 누군가 보내야 하고, 마지막 바이트에서 NACK과 STOP을 정확히 내야 한다.</p>
+    <p>DMA 수신 자체는 이미 봤다. <code>02_USART/04_USART_DMA_IdleLine</code>는 UART 수신 바이트를, <code>03_ADC/04_ADC_DMA_TimTrigger</code>는 ADC 결과를 DMA로 옮겼다. 이 예제는 같은 원리를 I2C에 적용한다. 차이는 I2C가 <b>마스터가 시작해야 바이트가 오는</b> 버스라는 점이다. 그래서 DMA를 켜기 전에 START, 주소, 레지스터 번호를 누군가 보내야 하고, 마지막 바이트에서 NACK과 STOP을 정확히 내야 한다.</p>
   </div>
   <h3 id="wiring">회로 연결도</h3>
   <p>이 예제는 <code>04_I2C_MPU6050_c</code>와 배선이 같다. 선 4개(3.3V, GND, SCL, SDA)만 잇고, DMA는 MCU 안의 일이라 배선에 영향을 주지 않는다.</p>

@@ -1,4 +1,4 @@
-# 04_USART_DMA_IdleLine_c
+# 04_USART_DMA_IdleLine
 
 > 계층: **HAL** + DMA — 검토 전 (컴파일만 확인)
 

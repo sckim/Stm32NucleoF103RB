@@ -40,4 +40,4 @@ PA9(USART1_TX) ── PB10(USART3_TX) ── PB11(USART3_RX) 세 핀을 점퍼�
 
 ## 관련 예제
 
-`02_USART_Interrupt`(전이중 수신), `04_USART_DMA_IdleLine_c`.
+`02_USART_Interrupt`(전이중 수신), `04_USART_DMA_IdleLine`.

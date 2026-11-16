@@ -128,6 +128,7 @@ button.plain:hover{background:var(--surface2)}
 .wave svg{display:block;width:100%;height:auto}
 .wave .sig{stroke:var(--muted);stroke-width:1.2;fill:none;opacity:.7}
 .wave .smp{fill:var(--c0)} .wave .rec{stroke:var(--c0);stroke-width:1.6;fill:none}
+.wave .lost{stroke:var(--bad);stroke-width:2;fill:none}
 .wave .gl{stroke:var(--line);stroke-width:1}
 .wave .lab{font-family:var(--font-mono);font-size:10px;fill:var(--muted)}
 .calc{font-family:var(--font-mono);font-size:13.5px;line-height:1.65;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-height:4.2em;white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0 0}
@@ -232,6 +233,25 @@ footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:v
     </svg>
   </div>
   <p>두 채널은 같은 트리거에서 약 6.4 µs 차이로 변환된다. 그래서 매 주기 두 채널의 &lsquo;스냅샷&rsquo;을 얻는다. 채널당 샘플링 주파수는 1 kHz이고, 나이퀴스트 주파수는 그 절반인 500 Hz이다.</p>
+
+  <h3>스캔 모드와 불연속 모드: 트리거 한 번에 몇 채널을 변환하나</h3>
+  <p>ADC의 규칙 그룹(regular group)은 SQR 레지스터에 "변환할 채널의 순서"를 적어 둔다. 이 예제는 CH0(PA0), CH1(PA1) 두 개이고 순서의 길이는 <code>SQR1.L[3:0]</code>이 정한다. 스캔 모드(<code>CR1.SCAN = 1</code>)는 이 순서를 끝까지 이어서 변환한다. <b>불연속 모드(discontinuous mode)</b>는 이 순서를 한 번에 다 변환하지 않고, 트리거 한 번에 <b>n개씩</b> 끊어서 변환한다.</p>
+  <ul>
+    <li><code>CR1.DISCEN = 1</code>로 켜고, n은 <code>CR1.DISCNUM[2:0]</code>이 정한다. 000이면 1채널, 001이면 2채널, … 111이면 8채널이다(n ≤ 8).</li>
+    <li>외부 트리거가 올 때마다 SQR에 적힌 변환 중 <b>다음 n개</b>를 변환한다. 변환이 하나 끝날 때마다 EOC 사건이 생긴다.</li>
+    <li>순서의 끝까지 다 변환하면 다음 트리거는 처음부터 다시 시작한다. 중간에 쉬었다가 이어 가거나 되감는 일은 없다("no rollover").</li>
+  </ul>
+  <p>RM0008의 예: n = 3, 순서가 0, 1, 2, 3, 6, 7, 9, 10일 때, 첫 트리거는 0·1·2, 둘째는 3·6·7, 셋째는 9·10, 넷째는 다시 0·1·2를 변환한다(RM0008 11.3.10, <a href="../../../Docs/RM0008_Reference_manual.pdf#page=222">p.222~223</a>).</p>
+  <p>이 예제의 순서는 CH0, CH1 두 개뿐이므로 n = 1이면 아래처럼 된다.</p>
+  <div class="tablewrap"><table>
+    <tr><th>항목</th><th>스캔, DISCEN = 0 (이 예제)</th><th>스캔 + 불연속 n = 1</th></tr>
+    <tr><td>설정</td><td><code>SCAN = 1</code>, <code>DISCEN = 0</code></td><td><code>SCAN = 1</code>, <code>DISCEN = 1</code>, <code>DISCNUM = 000</code>(HAL: <code>DiscontinuousConvMode = ENABLE</code>, <code>NbrOfDiscConversion = 1</code>)</td></tr>
+    <tr><td>트리거 한 번에</td><td>CH0, CH1을 이어서 변환(약 6.4 µs 간격)</td><td>한 채널만 변환. 1번째 트리거는 CH0, 2번째는 CH1, 3번째는 다시 CH0 …</td></tr>
+    <tr><td>채널당 샘플링</td><td>1 kHz</td><td>500 Hz (채널마다 2 ms에 한 번)</td></tr>
+    <tr><td>두 채널의 측정 시점 차이</td><td>약 6.4 µs (거의 동시, 스냅샷)</td><td>1 ms</td></tr>
+    <tr><td>버퍼 128칸이 한 바퀴 도는 시간</td><td>64 ms (HT, TC 각 약 15.6회/초)</td><td>128 ms (HT, TC 각 약 7.8회/초)</td></tr>
+  </table></div>
+  <p>버퍼 배치(CH0, CH1이 번갈아 쌓임)는 두 모드가 같다. 달라지는 것은 변환이 일어나는 시점과, 칸이 차는 속도이다. 03_ADC_Multi도 불연속 모드를 쓰지만 시작을 소프트웨어(SWSTART)로 하고 랭크 하나씩 폴링한다. 이 예제의 불연속 모드는 같은 방식에서 시작 신호만 타이머 트리거로 바꾼 것이다.</p>
   <div class="box warn">
     <div class="label">불연속 모드를 켜면?</div>
     <p>DMA는 불연속 모드에서도 정상 동작한다. 다만 <code>DISCEN = 1</code>, n = 1이면 트리거마다 1채널만 변환되어 CH0, CH1이 번갈아 가며 1 ms 간격으로 측정된다. 채널당 샘플링은 500 Hz로 떨어지고 두 채널의 측정 시점이 1 ms 벌어진다. 이 예제는 스냅샷을 원하므로 불연속 모드를 끈다. 시뮬레이터에서 두 모드를 비교할 수 있다.</p>
@@ -318,8 +338,9 @@ footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);color:v
       <button class="plain" id="bReset" type="button">초기화</button>
     </div>
 
-    <div class="subhead">CH0 파형: 실제 입력(회색)과 샘플(파랑 점)</div>
-    <div class="wave"><svg id="wave" viewBox="0 0 640 140" role="img" aria-label="최근 64 ms 동안 CH0 실제 입력과 샘플 점"></svg></div>
+    <div class="subhead">CH0 파형: 실제 입력(회색), 샘플(파랑 점), 덮어쓰인 샘플(빨간 ×)</div>
+    <div class="wave"><svg id="wave" viewBox="0 0 640 140" role="img" aria-label="최근 128 ms 동안 CH0 실제 입력, 샘플 점, 덮어쓰인 샘플의 빨간 X 표시"></svg></div>
+    <p class="note">빨간 ×는 콜백이 그 절반을 처리하는 동안 DMA가 같은 칸에 새 값을 써서 사라진 옛 샘플이다. 사라진 샘플은 새로 쓴 값보다 버퍼 한 바퀴(64 ms) 앞선 시각에 있으므로, 파형 창을 128 ms로 두었다. 이 그림은 CH0만 보여 준다(위의 "덮어쓴 칸" 수에는 CH1도 들어 있다).</p>
 
     <div class="calc" id="calc" aria-live="polite">재생 또는 TRGO 1회를 눌러 시작한다.</div>
     <div class="label" style="margin-top:12px">UART 출력 (1초마다, 115200 8N1)</div>
@@ -557,7 +578,7 @@ CH0=2049 CH1= 993  (half 15/s, full 16/s)</code></pre>
     if(S&&S.playing)stop();
     S={t:0,trig:0,idx:0,buf:new Array(BUF).fill(null),ht:0,tc:0,disc:0,
        q:[],lost:0,ovr:0,ovrSet:{},avg:[null,null],lastH:0,lastF:0,uart:[],
-       samples:[],log:[],msg:''};
+       samples:[],lostPts:[],log:[],msg:''};
     $('log').textContent='';$('uart').textContent='';
     $('calc').textContent='재생 또는 TRGO 1회를 눌러 시작한다. 첫 TRGO는 TIM3 시작 1 ms 뒤에 나온다.';
     buildGrid();render();
@@ -566,7 +587,7 @@ CH0=2049 CH1= 993  (half 15/s, full 16/s)</code></pre>
   /* DMA 전송 1회: DR → adc_buf[idx] */
   function dmaWrite(ch,raw){
     var i=S.idx,h=i<HALF?0:1,lines=[];
-    if(S.q.some(function(w){return w.half===h&&w.start<=S.t&&S.t<w.until})){S.ovr++;S.ovrSet[i]=true;}
+    if(S.q.some(function(w){return w.half===h&&w.start<=S.t&&S.t<w.until})){S.ovr++;S.ovrSet[i]=true;var old=S.buf[i];if(old&&old.ch===0){S.lostPts.push({t:old.t,v:old.v});if(S.lostPts.length>200)S.lostPts.shift()}}
     else delete S.ovrSet[i];
     S.buf[i]={v:raw,ch:ch,t:S.t};
     S.idx=i+1;
@@ -677,16 +698,20 @@ CH0=2049 CH1= 993  (half 15/s, full 16/s)</code></pre>
     $('vOvr').textContent=S.ovr+' / '+S.lost;$('sOvr').className='stat'+(S.ovr||S.lost?' bad':'');
     drawWave();
   }
-  /* 최근 64 ms의 CH0: 실제 입력(연속)과 샘플(점) */
+  /* 최근 128 ms의 CH0: 실제 입력(연속), 샘플(점), 덮어쓰여 사라진 샘플(빨간 ×).
+     사라진 샘플은 덮어쓴 값보다 버퍼 한 바퀴(64 ms) 앞선 시각에 있어 창이 64 ms보다 길어야 보인다. */
   function drawWave(){
-    var W=640,H=140,pad=8,span=64,t1=Math.max(S.t,span),t0=t1-span;
+    var W=640,H=140,pad=8,span=128,t1=Math.max(S.t,span),t0=t1-span;
     var x=function(t){return pad+(t-t0)/span*(W-2*pad)},y=function(mvv){return H-pad-mvv/3300*(H-2*pad)};
     var g='<line class="gl" x1="'+pad+'" y1="'+y(1650)+'" x2="'+(W-pad)+'" y2="'+y(1650)+'"/>';
     var d='';for(var k=0;k<=400;k++){var tt=t0+span*k/400;d+=(k?'L':'M')+x(tt).toFixed(1)+','+y(a0At(tt)).toFixed(1)}
     g+='<path class="sig" d="'+d+'"/>';
     var pts=S.samples.filter(function(s){return s.t>=t0&&s.t<=t1});
     if(pts.length>1){var r='';pts.forEach(function(s,k){r+=(k?'L':'M')+x(s.t).toFixed(1)+','+y(s.v/4095*3300).toFixed(1)});g+='<path class="rec" d="'+r+'"/>'}
-    pts.forEach(function(s){g+='<circle class="smp" cx="'+x(s.t).toFixed(1)+'" cy="'+y(s.v/4095*3300).toFixed(1)+'" r="2.6"/>'});
+    pts.forEach(function(s){g+='<circle class="smp" cx="'+x(s.t).toFixed(1)+'" cy="'+y(s.v/4095*3300).toFixed(1)+'" r="2.2"/>'});
+    S.lostPts.filter(function(s){return s.t>=t0&&s.t<=t1}).forEach(function(s){
+      var cx=x(s.t),cy=y(s.v/4095*3300);
+      g+='<path class="lost" d="M'+(cx-4).toFixed(1)+','+(cy-4).toFixed(1)+' L'+(cx+4).toFixed(1)+','+(cy+4).toFixed(1)+' M'+(cx-4).toFixed(1)+','+(cy+4).toFixed(1)+' L'+(cx+4).toFixed(1)+','+(cy-4).toFixed(1)+'"/>'});
     g+='<text class="lab" x="'+pad+'" y="12">'+t0.toFixed(0)+' ms</text><text class="lab" x="'+(W-pad-50)+'" y="12">'+t1.toFixed(0)+' ms</text>';
     $('wave').innerHTML=g;
   }

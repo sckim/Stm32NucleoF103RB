@@ -7,7 +7,7 @@ ST-Link 가상 COM 포트(USART2: PA2=TX, PA3=RX)로 PC와 통신한다. 단순 
 | 01 | [01_USART_printf](01_USART_printf) | HAL | `printf`를 UART로 리다이렉션 (115200bps) |
 | 02 | [02_USART_Interrupt](02_USART_Interrupt) | HAL, NVIC | 1바이트 수신 인터럽트, 콜백→플래그→main |
 | 03 | [03_USART_RingBuffer](03_USART_RingBuffer) | HAL | ISR→main lock-free 링 버퍼, 오버플로 실험 |
-| 04 | [04_USART_DMA_IdleLine_c](04_USART_DMA_IdleLine_c) | HAL, DMA | DMA 원형 수신 + IDLE 라인으로 가변 길이 패킷 |
+| 04 | [04_USART_DMA_IdleLine](04_USART_DMA_IdleLine) | HAL, DMA | DMA 원형 수신 + IDLE 라인으로 가변 길이 패킷 |
 | 05 | [05_UART_CLI_c](05_UART_CLI_c) | HAL | 줄 편집, 명령 테이블 파서 |
 | 06 | [06_USART_HalfDuplex_c](06_USART_HalfDuplex_c) | HAL | 단선 반이중, 방향 전환, 오픈드레인 버스 |
 | 07 | [07_USART_Stack](07_USART_Stack) | HAL, CMSIS | 스택(LIFO) 괄호 검사기, ISR 공유 시 경쟁 상태와 PRIMASK 임계 구역 |
@@ -26,7 +26,7 @@ ST-Link 가상 COM 포트(USART2: PA2=TX, PA3=RX)로 PC와 통신한다. 단순 
 
 **개념설명**: [02_USART 개념설명.html](02_USART%20개념설명.html)은 USART 하드웨어를 RM0008의 원본 블록도로 설명한다. 다루는 내용은 프레임과 오버샘플링, 보레이트 계산, 플래그·인터럽트·DMA, 설계상 한계, 확인 문제이며, 각 예제가 어느 경로를 쓰는지 연결한다. 그림 원본은 `img/` 폴더에 있다.
 
-예제설명(HTML): 각 예제 폴더의 `<예제명> 예제설명.html` (폴더명 끝의 `_c`는 파일명에서 뺀다. 예: `04_USART_DMA_IdleLine_c/04_USART_DMA_IdleLine 예제설명.html`). 03과 07은 `03_USART_RingBuffer/UART 링 버퍼 예제설명.html`, `07_USART_Stack/스택 예제설명.html`이다.
+예제설명(HTML): 각 예제 폴더의 `<예제명> 예제설명.html` (폴더명 끝의 `_c`는 파일명에서 뺀다. 예: `05_UART_CLI_c/05_UART_CLI 예제설명.html`). 03과 07은 `03_USART_RingBuffer/UART 링 버퍼 예제설명.html`, `07_USART_Stack/스택 예제설명.html`이다.
 
 ## 공통
 

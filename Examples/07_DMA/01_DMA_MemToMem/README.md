@@ -25,4 +25,4 @@
 
 ## 관련 예제
 
-`08_Clock_System/10_DWT_Profiling_Reg_c`(DWT 원리), 주변장치 DMA `02_USART/04_USART_DMA_IdleLine_c`, `03_ADC/04_ADC_DMA_TimTrigger`, `05_SPI/02_SPI_DMA_Fullduplex_c`.
+`08_Clock_System/10_DWT_Profiling_Reg_c`(DWT 원리), 주변장치 DMA `02_USART/04_USART_DMA_IdleLine`, `03_ADC/04_ADC_DMA_TimTrigger`, `05_SPI/02_SPI_DMA_Fullduplex_c`.

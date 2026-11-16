@@ -181,7 +181,7 @@ footer ul{max-width:none}
 <p>"비동기"는 송신기와 수신기가 클럭 선을 공유하지 않는다는 뜻이다. 대신 양쪽이 같은 속도(보레이트)를 미리 약속하고, 송신기는 바이트마다 앞뒤에 표지를 붙인다. 이 묶음을 <b>프레임</b>이라고 한다.</p>
 <ul>
   <li><b>유휴(idle)</b>: 보낼 것이 없을 때 선은 High(1)이다.</li>
-  <li><b>시작 비트</b>: 1비트 동안 Low(0). High → Low 하강 엣지가 "지금부터 프레임"이라는 신호이며, 수신기는 이 엣지로 매번 박자를 다시 맞춘다.</li>
+  <li><b>시작 비트</b>: 1비트 동안 Low(0). High → Low 하강 엣지가 "지금부터 프레임"이라는 신호이며, 수신기는 이 엣지로 매번 비트 타이밍(샘플링 시점)을 다시 맞춘다.</li>
   <li><b>데이터 비트</b>: LSB(Least Significant Bit, 최하위 비트)부터 보낸다. 전압 부호화는 NRZ(Non-Return-to-Zero: 비트 구간 내내 1 = High, 0 = Low 유지)이다.</li>
   <li><b>패리티 비트(선택)</b>: 1의 개수를 짝수(또는 홀수)로 맞추는 비트. 모든 데이터 비트의 XOR이다.</li>
   <li><b>정지 비트</b>: 1 또는 2비트 동안 High. 다음 시작 비트의 하강 엣지가 생기도록 선을 High로 되돌린다.</li>
@@ -212,7 +212,7 @@ footer ul{max-width:none}
   <p class="note" id="f_note"></p>
 </div>
 
-<h3>수신기의 문제: 박자를 모르고 비트 한가운데를 찾기</h3>
+<h3>수신기의 문제: 비트 타이밍을 모르고 비트 한가운데를 찾기</h3>
 <p>수신기는 시작 비트의 하강 엣지를 기준으로 시계를 맞춘다. 그 뒤로는 자기 클럭으로 비트 중앙을 짐작해 읽는다. 양쪽 클럭이 조금씩 다르면 비트를 거듭할수록 읽는 위치가 중앙에서 밀려난다. 프레임 끝의 정지 비트까지 밀림이 반 비트를 넘지 않아야 올바르게 읽힌다. 프레임마다 시작 비트에서 다시 맞추므로 오차는 프레임 안에서만 쌓인다. 이것이 UART가 클럭 선 없이 동작하는 이유이며, 동시에 양쪽 클럭의 허용 오차가 몇 % 수준으로 제한되는 이유이다(4장).</p>
 <p>비트를 한 번만 읽으면 잡음 펄스 하나에 값이 뒤집힌다. 그래서 수신기는 한 비트 시간을 여러 조각(보통 16)으로 나누어 빠르게 샘플링한다. 이것을 <b>오버샘플링</b>이라고 한다. 비트 중앙 근처의 샘플 세 개로 <b>다수결</b>을 내리고, 세 값이 일치하지 않으면 "잡음이 있었다"고 표시한다. 다수결은 디지털논리의 2-of-3 회로 <code>maj(a,b,c) = ab + bc + ca</code>이고, 불일치 검출은 <code>¬(a=b=c)</code>이다.</p>
 
@@ -321,7 +321,7 @@ f_CK = PCLK2 (USART1) 또는 PCLK1 (USART2, USART3)</div>
 <p>36 MHz와 72 MHz 행은 RM0008 Table 192(<a href="../../Docs/RM0008_Reference_manual.pdf#page=799">p.799</a>)와 같다. 32·64 MHz 행은 같은 식으로 계산했다. 32 MHz와 64 MHz는 USARTDIV가 정확히 두 배라 BRR은 달라도 실제 보레이트와 오차는 같다.</p>
 
 <h3>오차가 얼마까지 괜찮은가</h3>
-<p>수신기는 프레임마다 시작 비트에서 박자를 다시 맞추지만, 정지 비트 샘플링 지점까지 오차가 쌓인다. RM0008 27.3.5는 네 가지 오차의 합이 수신기 허용치보다 작아야 한다고 말한다.</p>
+<p>수신기는 프레임마다 시작 비트에서 샘플링 시점을 다시 맞추지만, 정지 비트 샘플링 지점까지 오차가 쌓인다. RM0008 27.3.5는 네 가지 오차의 합이 수신기 허용치보다 작아야 한다고 말한다.</p>
 <div class="eq">D_TRA(송신측 오차) + D_QUANT(수신측 BRR 양자화) + D_REC(수신측 발진기) + D_TCL(선로 비대칭) &lt; 수신기 허용치
 수신기 허용치 (M = 0, 잡음을 오류로 볼 때):  DIV_Fraction = 0 → 3.75 %,   DIV_Fraction ≠ 0 → 3.33 %</div>
 <p>근거: RM0008 Table 193·194(<a href="../../Docs/RM0008_Reference_manual.pdf#page=800">p.800</a>). 위 표의 −0.08 %는 D_QUANT 한 항목일 뿐이다. 양쪽의 발진기 오차까지 더해 3 % 남짓 안에 들어야 한다.</p>
@@ -532,7 +532,7 @@ RXNE가 선 뒤 다음 바이트의 RDR 복사까지 ≈ 프레임 1개 시간  
 <tr><td><a href="01_USART_printf/01_USART_printf%20예제설명.html">01_USART_printf</a></td><td>송신 경로: DR 쓰기 → TDR → 시프트 → TX. TXE를 폴링하며 한 바이트씩 넣는다. BRR 계산</td><td><a href="#s3">3</a>, <a href="#s4">4</a>, <a href="#s7">7②</a></td></tr>
 <tr><td><a href="02_USART_Interrupt/02_USART_Interrupt%20예제설명.html">02_USART_Interrupt</a></td><td>수신 경로 → RXNE → RXNEIE AND → USART 벡터 → ISR에서 DR 읽기</td><td><a href="#s6">6①</a>, <a href="#s7">7①</a></td></tr>
 <tr><td><a href="03_USART_RingBuffer/UART%20링%20버퍼%20예제설명.html">03_USART_RingBuffer</a></td><td>RDR 한 칸의 마감 시간 문제를 소프트웨어 FIFO로 늘린다. 오버런 실험</td><td><a href="#s4">4</a>, <a href="#s7">7③</a>, <a href="#s8">8</a></td></tr>
-<tr><td><a href="04_USART_DMA_IdleLine_c/04_USART_DMA_IdleLine%20예제설명.html">04_USART_DMA_IdleLine_c</a></td><td>RXNE → DMA 요청(DMAR, DMA1 채널 6)으로 원형 버퍼에 저장, IDLE 인터럽트로 메시지 경계 검출</td><td><a href="#s6">6②③</a></td></tr>
+<tr><td><a href="04_USART_DMA_IdleLine/04_USART_DMA_IdleLine%20예제설명.html">04_USART_DMA_IdleLine</a></td><td>RXNE → DMA 요청(DMAR, DMA1 채널 6)으로 원형 버퍼에 저장, IDLE 인터럽트로 메시지 경계 검출</td><td><a href="#s6">6②③</a></td></tr>
 <tr><td><a href="05_UART_CLI_c/05_UART_CLI%20예제설명.html">05_UART_CLI_c</a></td><td>수신 인터럽트 + 링 버퍼 위에 줄 단위 처리. 송신 경로로 에코</td><td><a href="#s6">6①</a>, <a href="#s8">8</a></td></tr>
 <tr><td><a href="06_USART_HalfDuplex_c/06_USART_HalfDuplex%20예제설명.html">06_USART_HalfDuplex_c</a></td><td>HDSEL로 TX·RX 내부 연결, 오픈드레인 + 풀업 선, 소프트웨어가 말할 차례를 정함</td><td><a href="#s5">5</a>, <a href="#s8">8</a></td></tr>
 <tr><td><a href="07_USART_Stack/스택%20예제설명.html">07_USART_Stack</a></td><td>수신 인터럽트로 받은 문자를 LIFO 자료구조로 처리. ISR과 주 프로그램의 공유 데이터</td><td><a href="#s6">6①</a></td></tr>

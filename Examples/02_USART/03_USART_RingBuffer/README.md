@@ -23,4 +23,4 @@
 
 ## 관련 예제
 
-`02_USART_Interrupt`(단일 변수 방식의 한계), `05_UART_CLI_c`(이 링 버퍼 위에 CLI 구축), `04_USART_DMA_IdleLine_c`(DMA 방식).
+`02_USART_Interrupt`(단일 변수 방식의 한계), `05_UART_CLI_c`(이 링 버퍼 위에 CLI 구축), `04_USART_DMA_IdleLine`(DMA 방식).

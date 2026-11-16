@@ -133,3 +133,6 @@ Examples/13_DE1SoC_Link/*/Quartus/*.bsf
 Examples/13_DE1SoC_Link/*/Quartus/*.bak
 Examples/13_DE1SoC_Link/*/Quartus/*.qdf
 Examples/13_DE1SoC_Link/*/Quartus/c5_pin_model_dump.txt
+
+# Claude Code 로컬 설정(.claude, .claude12 등)은 올리지 않는다
+.claude*/

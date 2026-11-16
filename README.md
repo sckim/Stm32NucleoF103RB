@@ -116,7 +116,7 @@
 | 01 | [`02_USART/01_USART_printf`](Examples/02_USART/01_USART_printf) | HAL, UART | `printf` 출력을 USART로 리다이렉션 |
 | 02 | [`02_USART/02_USART_Interrupt`](Examples/02_USART/02_USART_Interrupt) | HAL, UART, NVIC | USART2 수신 인터럽트(`HAL_UART_RxCpltCallback`)로 에코 및 LED 제어 |
 | 03 | [`02_USART/03_USART_RingBuffer`](Examples/02_USART/03_USART_RingBuffer) | HAL, UART | ISR->main 링 버퍼(lock-free), 오버플로 시험(B1로 main 정지) |
-| 04 | [`02_USART/04_USART_DMA_IdleLine_c`](Examples/02_USART/04_USART_DMA_IdleLine_c) | HAL, UART, DMA | (검토 전) DMA 원형 수신 + IDLE 라인 감지로 가변 길이 패킷 처리 |
+| 04 | [`02_USART/04_USART_DMA_IdleLine`](Examples/02_USART/04_USART_DMA_IdleLine) | HAL, UART, DMA | (검토 전) DMA 원형 수신 + IDLE 라인 감지로 가변 길이 패킷 처리 |
 | 05 | [`02_USART/05_UART_CLI_c`](Examples/02_USART/05_UART_CLI_c) | HAL, UART | (검토 전) 명령줄 인터페이스: 줄 편집, 명령 테이블(help/led/uptime/echo/peek/reset) |
 | 06 | [`02_USART/06_USART_HalfDuplex_c`](Examples/02_USART/06_USART_HalfDuplex_c) | HAL, UART | (검토 전) USART 단선 반이중(PA9 한 선), 방향 전환, 오픈드레인 버스 |
 | 07 | [`02_USART/07_USART_Stack`](Examples/02_USART/07_USART_Stack) | HAL, UART, CMSIS | 스택(LIFO) 괄호 검사기, ISR 공유 시 경쟁 상태와 PRIMASK 임계 구역 |

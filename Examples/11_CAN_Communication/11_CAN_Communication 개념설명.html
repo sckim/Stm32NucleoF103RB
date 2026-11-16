@@ -178,7 +178,7 @@ footer ul{max-width:none}
 <p>자동차나 공장 설비에는 제어기가 수십 개 있다. 이들을 일대일로 다 잇는 대신 선 한 쌍을 함께 쓰게 하려면 세 가지가 필요하다. 첫째, 누구나 아무 때나 말을 걸 수 있어야 한다(마스터가 따로 없음). 둘째, 둘 이상이 동시에 말을 시작해도 중요한 메시지가 <b>깨지지 않고</b> 먼저 나가야 한다. 셋째, 고장 난 한 노드가 버스 전체를 망가뜨리지 못해야 한다. CAN 제어기가 없다면 CPU가 GPIO 핀 하나로 이 모든 것을 비트 단위로 처리해야 한다.</p>
 <div class="tablewrap"><table>
 <tr><th>풀어야 할 문제</th><th>bxCAN이 없다면 CPU가 하는 일</th><th>bxCAN이 대신하는 소자</th></tr>
-<tr><td>정확한 비트 시간과 박자 맞추기</td><td>비트마다 정해진 지점에서 핀을 읽고, 상대 클럭과 어긋나면 기다리는 시간을 조금씩 고친다</td><td>분주기(BRP) + 시간 양자 카운터(SYNC_SEG/BS1/BS2) + 재동기 논리(SJW)</td></tr>
+<tr><td>정확한 비트 시간과 재동기(resynchronization)</td><td>비트마다 정해진 지점에서 핀을 읽고, 상대 클럭과 어긋나면 기다리는 시간을 조금씩 고친다</td><td>분주기(BRP) + 시간 양자 카운터(SYNC_SEG/BS1/BS2) + 재동기 논리(SJW)</td></tr>
 <tr><td>동시 송신 정리(중재)</td><td>ID 비트를 하나 낼 때마다 버스를 다시 읽어, 내가 1을 냈는데 0이 보이면 즉시 송신을 멈춘다</td><td>송신 비트와 버스 비트의 비교기 → ALST 플래그</td></tr>
 <tr><td>프레임 조립과 검사</td><td>ID·DLC·데이터를 비트열로 펴고 CRC를 계산하고, 받는 쪽은 다시 계산해 비교한다</td><td>CAN 2.0B 액티브 코어(프레임 시프트 레지스터, CRC, 오류 검출)</td></tr>
 <tr><td>필요한 메시지만 받기</td><td>버스의 모든 프레임마다 인터럽트를 받아 ID를 소프트웨어로 비교한다</td><td>수용 필터 14뱅크(마스크 비교기, 리스트 비교기)</td></tr>
@@ -236,7 +236,7 @@ footer ul{max-width:none}
     <li><b>차동 전압과 종단</b>: 트랜시버는 우성일 때 CANH와 CANL 사이에 전압차를 만들고, 열성일 때는 두 선을 같은 전위로 놓아 둔다. 버스 양 끝에는 종단 저항을 둔다. 실제 버스에 연결하려면 칩 밖에 CAN 트랜시버가 반드시 필요하다. 전압값과 저항값은 이 네 문서에 없다.</li>
     <li><b>비트 스터핑</b>: 같은 값이 5비트 이어지면 송신자가 반대 값 1비트를 끼워 넣고 수신자가 빼낸다. 재동기용 엣지를 보장하기 위해서이다. RM0008에는 규칙이 없고, LEC의 "Stuff Error" 코드로만 존재가 드러난다(<a href="../../Docs/RM0008_Reference_manual.pdf#page=682">p.682</a>). Figure 235의 비트 수는 스터핑 비트를 뺀 값이다.</li>
     <li><b>CRC</b>: CRC 필드 16비트는 15비트 CRC와 구분자 1비트이다. 다항식은 RM0008에 없다.</li>
-    <li><b>재동기 엣지 방향</b>: 일반적인 CAN 설명에서는 열성→우성 엣지로 박자를 다시 맞춘다. RM0008 24.7.7은 유효 엣지를 "from dominant to recessive bus level"로 적어 방향이 반대이다(4장). 이 개념설명은 문서 문장을 그대로 옮기되, 방향 차이는 확인되지 않은 문서 오류 후보로 남긴다.</li>
+    <li><b>재동기 엣지 방향</b>: 일반적인 CAN 설명과 RM0008 24.7.7이 재동기에 쓰는 엣지의 방향이 서로 반대이다(4장). 일반 설명은 열성→우성 엣지를 쓰고, RM0008은 유효 엣지를 "from dominant to recessive bus level"로 적는다. 이 개념설명은 문서 문장을 그대로 옮기되, 방향 차이는 확인되지 않은 문서 오류 후보로 남긴다.</li>
   </ul>
 </div>
 </section>
@@ -361,7 +361,7 @@ t_BS2   = tq × (TS2[2:0] + 1)              1 ~ 8 tq
 </table></div>
 <p>첫 줄이 하부 예제 두 개의 설정이다. 32 MHz / 4 = 8 MHz이므로 tq = 125 ns이고, 1 + 13 + 2 = 16 tq = 2 µs이므로 500 kbit/s이다. 샘플 지점은 14/16 = 87.5 %이다. 같은 보레이트라도 BRP와 tq 수의 조합이 여러 개 있고, 샘플 지점이 그 조합에 따라 달라진다. RM0008에는 권장 샘플 지점 값이나 SJW와 BS2 사이의 제약이 적혀 있지 않다. 버스의 모든 노드가 비슷한 샘플 지점을 쓰도록 맞추는 것은 시스템 설계의 몫이다.</p>
 
-<h3>재동기: 어긋난 박자를 비트마다 고친다</h3>
+<h3>재동기: 어긋난 비트 타이밍을 비트마다 고친다</h3>
 <p>양쪽 클럭이 조금 다르면 엣지가 SYNC_SEG가 아닌 곳에서 나타난다. RM0008 24.7.7은 이렇게 적는다. 엣지가 BS1에서 보이면 "BS1 is extended by up to SJW so that the sample point is delayed", BS2에서 보이면 "BS2 is shortened by up to SJW so that the transmit point is moved earlier"(<a href="../../Docs/RM0008_Reference_manual.pdf#page=671">p.671</a>). SJW는 1~4 tq이다(t_RJW = tq × (SJW[1:0] + 1), <a href="../../Docs/RM0008_Reference_manual.pdf#page=683">p.683</a>). 문서는 유효 엣지를 "the first transition in a bit time from dominant to recessive bus level provided the controller itself does not send a recessive bit"로 정의한다(방향에 관해서는 2장 일반 개념 상자 참고).</p>
 <figure class="diag"><svg viewBox="0 0 680 230" role="img" aria-label="재동기에 따른 BS1 늘이기와 BS2 줄이기">
 <text class="s" x="8" y="20">tq 눈금 (SYNC 1 + BS1 6 + BS2 3 = 10 tq, SJW = 1 tq인 예)</text>

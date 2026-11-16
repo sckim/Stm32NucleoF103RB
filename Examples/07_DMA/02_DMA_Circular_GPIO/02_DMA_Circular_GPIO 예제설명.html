@@ -609,7 +609,7 @@ pattern=knight-rider  HT=~469 TC=~469 ...</code></pre>
   <h3>역할 분담</h3>
   <div class="tablewrap"><table>
     <tr><th>역할</th><th>담당</th><th>핵심 설정</th></tr>
-    <tr><td>10 kHz 박자</td><td class="kt">TIM2</td><td><code>PSC = 63</code>, <code>ARR = 99</code>, <code>DIER.UDE</code></td></tr>
+    <tr><td>10 kHz 요청 주기 만들기</td><td class="kt">TIM2</td><td><code>PSC = 63</code>, <code>ARR = 99</code>, <code>DIER.UDE</code></td></tr>
     <tr><td>샘플을 ODR에 쓰기</td><td class="kd">DMA1 채널2</td><td><code>DIR=1</code>, <code>MINC=1</code>, 16비트, <code>CIRC=1</code></td></tr>
     <tr><td>반 / 전체 완료 알림</td><td class="k1">HT/TC ISR → 콜백</td><td><code>HTIF2</code>, <code>TCIF2</code>, <code>HTIE|TCIE</code></td></tr>
     <tr><td>비워진 절반 채우기</td><td class="k1">half_cb / full_cb</td><td><code>fill_half()</code>, 마감 3.2 ms</td></tr>

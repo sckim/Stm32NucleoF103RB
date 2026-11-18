@@ -12,7 +12,7 @@ STM32F103의 범용 타이머(TIM2~4)와 고급 타이머(TIM1)를 시간 기준
 | 03 | [03_TIM_Overflow_Counter](03_TIM_Overflow_Counter) | HAL+레지스터 | 오버플로 횟수로 32비트 µs 시계, 읽기 경쟁 조건 |
 | 04 | [04_TIM_OutputCompare](04_TIM_OutputCompare) | HAL | 출력 비교 Toggle/Timing 모드, CCR 전진으로 채널별 주파수 |
 | 05 | [05_TIM_PWM](05_TIM_PWM) | HAL | PWM 출력, LED 밝기 |
-| 06 | [06_TIM_InputCapture_c](06_TIM_InputCapture_c) | HAL | 입력 캡처로 주파수 측정 |
+| 06 | [06_TIM_InputCapture](06_TIM_InputCapture) | HAL | 입력 캡처로 주파수 측정 |
 | 07 | [07_TIM_PWMInput_c](07_TIM_PWMInput_c) | HAL | PWM 입력 모드(주기+듀티) |
 | 08 | [08_TIM1_DeadTime_Break_c](08_TIM1_DeadTime_Break_c) | HAL | 상보 PWM, 데드타임, 브레이크 |
 | 09 | [09_TIM_Encoder_c](09_TIM_Encoder_c) | HAL | 엔코더 인터페이스 모드 |
@@ -38,7 +38,7 @@ STM32F103의 범용 타이머(TIM2~4)와 고급 타이머(TIM1)를 시간 기준
 
 ## 참고
 
-여러 예제가 테스트 신호를 스스로 만든다. TIM3 PWM을 PA6로 내보내 PA0로 되먹임하는 방식이다 (`06_TIM_InputCapture_c`, `07_TIM_PWMInput_c`). 배선은 각 README를 참고한다.
+여러 예제가 테스트 신호를 스스로 만든다. TIM3 PWM을 PA6로 내보내 PA0로 되먹임하는 방식이다 (`06_TIM_InputCapture`, `07_TIM_PWMInput_c`). 배선은 각 README를 참고한다.
 
 ### 번호 재배치 (2026-11-03)
 
@@ -48,7 +48,7 @@ STM32F103의 범용 타이머(TIM2~4)와 고급 타이머(TIM1)를 시간 기준
 | — | 03_TIM_Overflow_Counter (신규) |
 | — | 04_TIM_OutputCompare (신규) |
 | 02_TIM_PWM | 05_TIM_PWM |
-| 03_TIM_InputCapture_c | 06_TIM_InputCapture_c |
+| 03_TIM_InputCapture_c | 06_TIM_InputCapture |
 | 06_TIM_PWMInput_c | 07_TIM_PWMInput_c |
 | 04_TIM1_DeadTime_Break_c | 08_TIM1_DeadTime_Break_c |
 | 07_TIM_Encoder_c | 09_TIM_Encoder_c |
@@ -58,3 +58,7 @@ STM32F103의 범용 타이머(TIM2~4)와 고급 타이머(TIM1)를 시간 기준
 | 05_RTC_Calendar_c | 13_RTC_Calendar_c |
 
 다른 그룹의 문서나 강의자료에 옛 번호가 남아 있으면 이 표를 보고 고친다.
+
+### 폴더명 변경 (2026-11-18)
+
+`06_TIM_InputCapture_c` → `06_TIM_InputCapture` (접미사 `_c` 제거, 교안 작성 완료). 이 저장소 안의 참조는 모두 고쳤다. 저장소 밖 강의자료에 옛 이름이 남아 있으면 고친다.

@@ -147,7 +147,7 @@
 | 03 | [`06_Timers_RTC/03_TIM_Overflow_Counter`](Examples/06_Timers_RTC/03_TIM_Overflow_Counter) | HAL+레지스터, TIM | 오버플로 횟수(`gOvf`)를 상위 16비트로 붙인 32비트 µs 시계, 두 번 읽기 경쟁 조건과 UIF 보정
 | 04 | [`06_Timers_RTC/04_TIM_OutputCompare`](Examples/06_Timers_RTC/04_TIM_OutputCompare) | HAL, TIM | 출력 비교 Toggle/Timing 모드, CCR 전진으로 채널별 주파수
 | 05 | [`06_Timers_RTC/05_TIM_PWM`](Examples/06_Timers_RTC/05_TIM_PWM) | HAL, TIM | TIM2_CH1(PA0) 1kHz PWM, LED 밝기 왕복 |
-| 06 | [`06_Timers_RTC/06_TIM_InputCapture_c`](Examples/06_Timers_RTC/06_TIM_InputCapture_c) | HAL, TIM | (검토 전) 입력 캡처로 주기/주파수 측정 (TIM3 PWM 테스트 신호 포함) |
+| 06 | [`06_Timers_RTC/06_TIM_InputCapture`](Examples/06_Timers_RTC/06_TIM_InputCapture) | HAL, TIM | (검토 전) 입력 캡처로 주기/주파수 측정 (TIM3 PWM 테스트 신호 포함) |
 | 07 | [`06_Timers_RTC/07_TIM_PWMInput_c`](Examples/06_Timers_RTC/07_TIM_PWMInput_c) | HAL, TIM | (검토 전) PWM 입력 모드(슬레이브 리셋)로 주파수/듀티 하드웨어 측정 |
 | 08 | [`06_Timers_RTC/08_TIM1_DeadTime_Break_c`](Examples/06_Timers_RTC/08_TIM1_DeadTime_Break_c) | HAL, TIM1 | (검토 전) 상보 PWM + 데드타임(약 1us) + 브레이크 입력/소프트웨어 브레이크 |
 | 09 | [`06_Timers_RTC/09_TIM_Encoder_c`](Examples/06_Timers_RTC/09_TIM_Encoder_c) | HAL, TIM | (검토 전) 엔코더 인터페이스 모드(x4), 소프트웨어 직교 신호 시뮬레이션 포함 |

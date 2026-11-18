@@ -2,7 +2,7 @@
 
 > 계층: **HAL** + TIM
 
-> CubeMX(`TIM_OutputCompare.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `06_TIM_InputCapture_c`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+> CubeMX(`TIM_OutputCompare.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `06_TIM_InputCapture`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
 
 **출력 비교(Output Compare, OC)**: 카운터가 `CNT == CCRx`가 되는 순간 하드웨어가 핀의 출력 상태를 바꾸거나(토글/High/Low) 인터럽트를 낸다. 다음 예제인 PWM(`05_TIM_PWM`)도 출력 비교의 한 모드(`OCxM = 110`)이다. 이 예제에서는 그보다 기본이 되는 **Toggle 모드**와 **Timing 모드**를 다룬다.
 

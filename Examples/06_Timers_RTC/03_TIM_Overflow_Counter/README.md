@@ -2,7 +2,7 @@
 
 > 계층: **HAL** + TIM 레지스터 직접 읽기(`TIM2->CNT`, `TIM2->SR`)
 
-> CubeMX(`TIM_Overflow_Counter.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `06_TIM_InputCapture_c`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
+> CubeMX(`TIM_Overflow_Counter.ioc`) 생성 코드 기반. 사용자 코드는 `/* USER CODE BEGIN ... */` 영역 안에만 있다. `.ioc`는 `06_TIM_InputCapture`를 기반으로 직접 편집했으므로 CubeMX에서 열어 한 번 Generate 해 확인할 것.
 
 01·02에서는 오버플로(업데이트 이벤트)를 **"주기 신호"**로만 썼다. 이 예제는 **카운터 값(`CNT`) 자체를 시간으로 읽는다.** 16비트 카운터에 오버플로 횟수를 붙여 **32비트 µs 시계**로 확장하고, 두 값을 따로 읽을 때 생기는 **경쟁 조건(race condition)**을 관찰한다.
 
@@ -52,7 +52,7 @@ TIM2 overflow counter start (1us tick, 16bit CNT + overflow count = 32bit us)
 
 1. `main.c`의 `NAIVE_GAP_NOPS`를 `50`으로 바꾼다. 두 읽기 사이가 길어지면 `naive` 횟수가 매초 여러 번으로 늘어난다. **창이 짧으면 드물게 틀릴 뿐, 틀린다는 사실은 그대로이다.**
 2. 32비트 대신 64비트 시계가 필요하면 `uint64_t`로 `(gOvf << 16) | CNT`를 계산하면 된다. 이때 `gOvf`(32비트)를 한 번에 읽는 것은 Cortex-M3에서 원자적이다.
-3. 이 확장 기법을 입력 캡처에 쓰면, `06_TIM_InputCapture_c`의 측정 하한(15.3Hz)보다 느린 신호도 잴 수 있다. 캡처 값과 오버플로 횟수를 함께 쓰면 된다.
+3. 이 확장 기법을 입력 캡처에 쓰면, `06_TIM_InputCapture`의 측정 하한(15.3Hz)보다 느린 신호도 잴 수 있다. 캡처 값과 오버플로 횟수를 함께 쓰면 된다.
 
 ## ISR vs 콜백
 
@@ -60,4 +60,4 @@ TIM2 overflow counter start (1us tick, 16bit CNT + overflow count = 32bit us)
 
 ## 관련 예제
 
-이전 `02_TIM_TimeBase_Polling`(UIF 폴링, 틱 누락), 다음 `04_TIM_OutputCompare`(CNT와 CCR의 비교), 응용 `06_TIM_InputCapture_c`(캡처 시각 차로 주기 측정).
+이전 `02_TIM_TimeBase_Polling`(UIF 폴링, 틱 누락), 다음 `04_TIM_OutputCompare`(CNT와 CCR의 비교), 응용 `06_TIM_InputCapture`(캡처 시각 차로 주기 측정).

@@ -378,7 +378,7 @@ PA10 (D2) ── 330 Ω ── 외부 LED 2 ── GND</code></pre><p>적색 LED
 <section>
   <h2>정리</h2>
   <div class="tablewrap"><table><tr><th>예제</th><th>타이머</th><th>이벤트 처리</th><th>타이머를 쓰는 방식</th></tr><tr><td class="m"><a href="../01_TIM_TimeBase/01_TIM_TimeBase%20예제설명.html">01_TIM_TimeBase</a></td><td>TIM3</td><td>인터럽트(UIE)</td><td>주기 신호 (1 ms)</td></tr><tr><td class="m"><a href="../02_TIM_TimeBase_Polling/02_TIM_TimeBase_Polling%20예제설명.html">02_TIM_TimeBase_Polling</a></td><td>TIM3</td><td>폴링(UIF)</td><td>주기 신호 (1 ms)</td></tr><tr><td class="m"><a href="../03_TIM_Overflow_Counter/03_TIM_Overflow_Counter%20예제설명.html">03_TIM_Overflow_Counter</a></td><td>TIM2</td><td>UEV 인터럽트</td><td>CNT 값 자체 (1 µs)</td></tr><tr><td class="m"><a href="../04_TIM_OutputCompare/04_TIM_OutputCompare%20예제설명.html">04_TIM_OutputCompare</a></td><td>TIM2</td><td>CCx 인터럽트</td><td>CNT == CCR 일치</td></tr><tr><td class="m"><b>05_TIM_PWM (이 예제설명)</b></td><td>TIM1</td><td>없음 (하드웨어)</td><td>CNT &lt; CCR 비교</td></tr></table></div>
-  <div class="nextprev"><a href="../04_TIM_OutputCompare/04_TIM_OutputCompare%20예제설명.html">← 04_TIM_OutputCompare</a><a href="../06_TIM_InputCapture_c/06_TIM_InputCapture%20예제설명.html">06_TIM_InputCapture →</a></div>
+  <div class="nextprev"><a href="../04_TIM_OutputCompare/04_TIM_OutputCompare%20예제설명.html">← 04_TIM_OutputCompare</a><a href="../06_TIM_InputCapture/06_TIM_InputCapture%20예제설명.html">06_TIM_InputCapture →</a></div>
   <footer>근거: 05_TIM_PWM 소스. 계층: HAL. 레지스터·비트 이름은 RM0008(STM32F101xx~F107xx 레퍼런스 매뉴얼) 기준이다. 타이머 클럭은 SYSCLK 64 MHz(HSI/2 × PLL16), APB1 ÷2, APB2 ÷1 구성을 기준으로 한다. 코드는 해당 폴더의 소스에서 발췌한 것이며 일부 줄이 생략되어 있다.</footer>
 </section>
 </div>

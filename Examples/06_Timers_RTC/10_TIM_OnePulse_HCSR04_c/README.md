@@ -29,4 +29,4 @@
 
 ## 관련 예제
 
-`06_TIM_InputCapture_c`(입력 캡처), `07_TIM_PWMInput_c`(PWM 입력 모드).
+`06_TIM_InputCapture`(입력 캡처), `07_TIM_PWMInput_c`(PWM 입력 모드).

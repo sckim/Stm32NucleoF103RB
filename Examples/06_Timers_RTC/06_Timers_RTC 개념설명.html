@@ -725,7 +725,7 @@ RTC:  f_TR_CLK = f_RTCCLK / (PRL + 1)                     (RM0008 18.4.3, p.489)
 <tr><td><a href="03_TIM_Overflow_Counter/03_TIM_Overflow_Counter%20예제설명.html">03_TIM_Overflow_Counter</a></td><td>자유 계수 CNT를 시간으로 읽고 넘침 횟수로 32비트 확장. 두 값 읽기 사이의 경쟁</td><td><a href="#s2">2</a>, <a href="#s8">8</a></td></tr>
 <tr><td><a href="04_TIM_OutputCompare/04_TIM_OutputCompare%20예제설명.html">04_TIM_OutputCompare</a></td><td>CNT = CCRx 일치 → 토글(OCxM = 011) / Frozen. CCR 전진으로 채널마다 다른 주파수</td><td><a href="#s5">5</a>, <a href="#s8">8</a>(ES096 2.6.3)</td></tr>
 <tr><td><a href="05_TIM_PWM/05_TIM_PWM%20예제설명.html">05_TIM_PWM</a></td><td>TIM1 CH1·CH3 PWM 모드 1, OCxPE·ARPE, MOE</td><td><a href="#s2">2</a>, <a href="#s5">5</a>, <a href="#s7">7①</a></td></tr>
-<tr><td><a href="06_TIM_InputCapture_c/06_TIM_InputCapture%20예제설명.html">06_TIM_InputCapture_c</a></td><td>TI1 상승 엣지 → CNT를 CCR1에 캡처 → CC1IF 인터럽트, 두 캡처값의 차로 주기. 다른 타이머가 시험 신호를 만든다</td><td><a href="#s2">2</a>, <a href="#s7">7②</a></td></tr>
+<tr><td><a href="06_TIM_InputCapture/06_TIM_InputCapture%20예제설명.html">06_TIM_InputCapture</a></td><td>TI1 상승 엣지 → CNT를 CCR1에 캡처 → CC1IF 인터럽트, 두 캡처값의 차로 주기. 다른 타이머가 시험 신호를 만든다</td><td><a href="#s2">2</a>, <a href="#s7">7②</a></td></tr>
 <tr><td><a href="07_TIM_PWMInput_c/">07_TIM_PWMInput_c</a></td><td>TI1을 IC1(상승)·IC2(하강)가 함께 보고 슬레이브 리셋 모드로 주기·High 폭을 하드웨어로</td><td><a href="#s7">7③</a></td></tr>
 <tr><td><a href="08_TIM1_DeadTime_Break_c/">08_TIM1_DeadTime_Break_c</a></td><td>TIM1 상보 출력 CH1/CH1N, DTG = 64(약 1 µs), BKIN·소프트웨어 브레이크 → MOE = 0, BIF</td><td><a href="#s5">5 확장</a>, <a href="#s6">6①</a></td></tr>
 <tr><td><a href="09_TIM_Encoder_c/">09_TIM_Encoder_c</a></td><td>SMS = 011 직교 디코더, ICxF 필터, 16비트 부호 있는 차로 이동량</td><td><a href="#s7">7⑤</a></td></tr>

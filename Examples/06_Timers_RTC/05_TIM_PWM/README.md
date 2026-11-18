@@ -32,4 +32,4 @@ PA8과 PA10의 LED가 어두움→밝음→어두움으로 숨쉬듯 함께 변�
 
 ## 관련 예제
 
-이전 `04_TIM_OutputCompare`(출력 비교 기본), 다음 `06_TIM_InputCapture_c`(입력 쪽), `08_TIM1_DeadTime_Break_c`(상보 PWM), `11_TIM_Servo_c`(서보), `08_Clock_System/07_AFIO_Remap_Reg_c`(PWM 핀 리맵).
+이전 `04_TIM_OutputCompare`(출력 비교 기본), 다음 `06_TIM_InputCapture`(입력 쪽), `08_TIM1_DeadTime_Break_c`(상보 PWM), `11_TIM_Servo_c`(서보), `08_Clock_System/07_AFIO_Remap_Reg_c`(PWM 핀 리맵).

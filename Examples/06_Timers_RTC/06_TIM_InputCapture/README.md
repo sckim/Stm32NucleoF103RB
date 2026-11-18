@@ -1,4 +1,4 @@
-# 06_TIM_InputCapture_c
+# 06_TIM_InputCapture
 
 > 계층: **HAL** + TIM — 검토 전 (컴파일만 확인)
 

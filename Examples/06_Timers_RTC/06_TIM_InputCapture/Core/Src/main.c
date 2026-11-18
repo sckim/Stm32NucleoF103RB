@@ -16,7 +16,7 @@
  ******************************************************************************
  */
 /**
- * 06_TIM_InputCapture_c  —  [계층: HAL]  TIM2 입력 캡처로 주파수 측정
+ * 06_TIM_InputCapture  —  [계층: HAL]  TIM2 입력 캡처로 주파수 측정
  *
  * 동작
  *   - TIM3_CH1(PA6, 'D12')이 100Hz/50% PWM 테스트 신호를 출력한다.
@@ -255,7 +255,7 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 63;
+  htim3.Init.Prescaler = 127;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim3.Init.Period = 9999;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;

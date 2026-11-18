@@ -210,7 +210,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <header>
   <div class="kicker">STM32 Nucleo-F103RB · 타이머 · 예제설명 · <a href="../06_Timers_RTC%20개념설명.html" style="color:inherit">↑ 06_Timers_RTC 개념설명</a></div>
   <h1>입력 캡처: 엣지가 온 순간의 카운터 값으로 주파수를 잰다</h1>
-  <p class="lead">04와 05는 타이머가 핀의 파형을 만드는 쪽이었다. 이 예제설명은 반대 방향을 다룬다. 핀으로 들어오는 신호의 상승 에지가 온 순간 TIM2의 카운터 값을 CCR1에 붙잡아 두고(캡처), 연속된 두 값의 차로 주기와 주파수를 계산한다. TIM3이 스스로 만든 PWM(PA6)을 점퍼선으로 PA0에 되먹임해 시험하는 <code>06_TIM_InputCapture_c</code> 예제를 해석한다. 테스트 신호는 TIM3이 만드는 100 Hz PWM이다.</p>
+  <p class="lead">04와 05는 타이머가 핀의 파형을 만드는 쪽이었다. 이 예제설명은 반대 방향을 다룬다. 핀으로 들어오는 신호의 상승 에지가 온 순간 TIM2의 카운터 값을 CCR1에 붙잡아 두고(캡처), 연속된 두 값의 차로 주기와 주파수를 계산한다. TIM3이 스스로 만든 PWM(PA6)을 점퍼선으로 PA0에 되먹임해 시험하는 <code>06_TIM_InputCapture</code> 예제를 해석한다. 테스트 신호는 TIM3이 만드는 100 Hz PWM이다.</p>
   <nav class="toc" aria-label="목차">
     <a href="#s1">1. 문제: 주파수 측정</a><a href="#s2">2. 입력 캡처의 원리</a><a href="#s3">3. 클럭과 측정 범위</a><a href="#s4">4. 직접 만져 보기</a><a href="#s5">5. 레지스터 분석</a><a href="#s6">6. HAL이 해 주는 일</a><a href="#s7">7. 코드 읽기</a><a href="#s8">8. 실험</a><a href="#s9">9. 트러블슈팅</a><a href="#s10">10. 확인 문제</a>
   </nav>
@@ -531,7 +531,7 @@ TIM3_CH1 (PWM 출력)       TIM2_CH1 (입력 캡처)</code></pre>
   <h2>정리</h2>
   <div class="tablewrap"><table><tr><th>예제</th><th>타이머</th><th>이벤트 처리</th><th>타이머를 쓰는 방식</th></tr><tr><td class="m"><a href="../01_TIM_TimeBase/01_TIM_TimeBase%20예제설명.html">01_TIM_TimeBase</a></td><td>TIM3</td><td>인터럽트(UIE)</td><td>주기 신호 (1 ms)</td></tr><tr><td class="m"><a href="../02_TIM_TimeBase_Polling/02_TIM_TimeBase_Polling%20예제설명.html">02_TIM_TimeBase_Polling</a></td><td>TIM3</td><td>폴링(UIF)</td><td>주기 신호 (1 ms)</td></tr><tr><td class="m"><a href="../03_TIM_Overflow_Counter/03_TIM_Overflow_Counter%20예제설명.html">03_TIM_Overflow_Counter</a></td><td>TIM2</td><td>UEV 인터럽트</td><td>CNT 값 자체 (1 µs)</td></tr><tr><td class="m"><a href="../04_TIM_OutputCompare/04_TIM_OutputCompare%20예제설명.html">04_TIM_OutputCompare</a></td><td>TIM2</td><td>CCx 인터럽트</td><td>CNT == CCR 일치</td></tr><tr><td class="m"><a href="../05_TIM_PWM/05_TIM_PWM%20예제설명.html">05_TIM_PWM</a></td><td>TIM1</td><td>없음 (하드웨어)</td><td>CNT &lt; CCR 비교</td></tr><tr><td class="m"><b>06_TIM_InputCapture (이 예제설명)</b></td><td>TIM2 (+ TIM3 시험 신호)</td><td>CC1 인터럽트</td><td>엣지 순간의 CNT를 CCR1에 래치</td></tr></table></div>
   <div class="nextprev"><a href="../05_TIM_PWM/05_TIM_PWM%20예제설명.html">← 05_TIM_PWM</a><a href="../07_TIM_PWMInput_c/">07_TIM_PWMInput_c →</a></div>
-  <footer>근거: 06_TIM_InputCapture_c 소스(main.c, stm32f1xx_hal_msp.c, stm32f1xx_it.c)와 TIM_InputCapture.ioc. HAL 동작은 01_TIM_TimeBase/Drivers의 stm32f1xx_hal_tim.c에서 확인했다. 계층: HAL. 레지스터·비트 이름은 RM0008(STM32F101xx~F107xx 레퍼런스 매뉴얼) 기준이다. 타이머 클럭은 SYSCLK 64 MHz(HSI/2 × PLL16), APB1 ÷2, APB2 ÷1 구성을 기준으로 한다. 이 예제는 컴파일만 확인했으므로 출력은 예상값이다. 코드는 해당 폴더의 소스에서 발췌한 것이며 일부 줄이 생략되어 있다.</footer>
+  <footer>근거: 06_TIM_InputCapture 소스(main.c, stm32f1xx_hal_msp.c, stm32f1xx_it.c)와 TIM_InputCapture.ioc. HAL 동작은 01_TIM_TimeBase/Drivers의 stm32f1xx_hal_tim.c에서 확인했다. 계층: HAL. 레지스터·비트 이름은 RM0008(STM32F101xx~F107xx 레퍼런스 매뉴얼) 기준이다. 타이머 클럭은 SYSCLK 64 MHz(HSI/2 × PLL16), APB1 ÷2, APB2 ÷1 구성을 기준으로 한다. 이 예제는 컴파일만 확인했으므로 출력은 예상값이다. 코드는 해당 폴더의 소스에서 발췌한 것이며 일부 줄이 생략되어 있다.</footer>
 </section>
 </div>
 

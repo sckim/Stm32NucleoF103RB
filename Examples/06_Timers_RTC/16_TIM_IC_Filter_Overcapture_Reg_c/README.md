@@ -46,4 +46,4 @@ B) overcapture with polling (interrupt off, 500 us pulses at 1 kHz)
 
 ## 관련 예제
 
-`06_TIM_InputCapture_c`(HAL 입력 캡처로 주파수 측정), `07_TIM_PWMInput_c`(PWM 입력 모드), `09_TIM_Encoder_c`(입력 필터로 접점 튐 제거).
+`06_TIM_InputCapture`(HAL 입력 캡처로 주파수 측정), `07_TIM_PWMInput_c`(PWM 입력 모드), `09_TIM_Encoder_c`(입력 필터로 접점 튐 제거).

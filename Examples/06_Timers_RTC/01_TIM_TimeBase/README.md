@@ -30,4 +30,4 @@ printf는 UART 블로킹 송신이라 콜백(ISR 문맥)에서 직접 부르지 
 
 ## 관련 예제
 
-다음 `02_TIM_TimeBase_Polling`(같은 시간 기준을 폴링으로), 이어서 `03_TIM_Overflow_Counter`(CNT를 시간으로 읽기), `04_TIM_OutputCompare`(출력 비교), `05_TIM_PWM`, `06_TIM_InputCapture_c`. 인터럽트 우선순위 `08_Clock_System/06_NVIC_Priority_c`.
+다음 `02_TIM_TimeBase_Polling`(같은 시간 기준을 폴링으로), 이어서 `03_TIM_Overflow_Counter`(CNT를 시간으로 읽기), `04_TIM_OutputCompare`(출력 비교), `05_TIM_PWM`, `06_TIM_InputCapture`. 인터럽트 우선순위 `08_Clock_System/06_NVIC_Priority_c`.

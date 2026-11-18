@@ -8,7 +8,7 @@
 
 ## 핵심 학습 내용
 
-- **`06_TIM_InputCapture_c`와의 차이**: `06_TIM_InputCapture_c`는 CPU가 두 캡처 값을 빼서 주기를 계산했다. PWM 입력 모드는 이를 하드웨어로 자동화한다.
+- **`06_TIM_InputCapture`와의 차이**: `06_TIM_InputCapture`는 CPU가 두 캡처 값을 빼서 주기를 계산했다. PWM 입력 모드는 이를 하드웨어로 자동화한다.
 - **원리** (RM0008 15.3.6, TIM2, 입력 PA0 = TI1):
   - CH1: `TI1FP1` 상승 에지 캡처 → `CCR1` = **주기**, 그리고 슬레이브 모드 **리셋**이 상승 에지마다 카운터를 0으로 되돌린다.
   - CH2: `TI1FP2` 하강 에지 캡처(간접 선택, `CC2S=10`) → `CCR2` = **하이 구간 폭**.
@@ -27,4 +27,4 @@
 
 ## 관련 예제
 
-`06_TIM_InputCapture_c`(CPU 계산 방식), `09_TIM_Encoder_c`, `10_TIM_OnePulse_HCSR04_c`.
+`06_TIM_InputCapture`(CPU 계산 방식), `09_TIM_Encoder_c`, `10_TIM_OnePulse_HCSR04_c`.

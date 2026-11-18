@@ -210,7 +210,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <header>
   <div class="kicker">STM32 Nucleo-F103RB · 타이머 · 예제설명 · <a href="../06_Timers_RTC%20개념설명.html" style="color:inherit">↑ 06_Timers_RTC 개념설명</a></div>
   <h1>입력 캡처: 엣지가 온 순간의 카운터 값으로 주파수를 잰다</h1>
-  <p class="lead">04와 05는 타이머가 핀의 파형을 만드는 쪽이었다. 이 예제설명은 반대 방향을 다룬다. 핀으로 들어오는 신호의 상승 에지가 온 순간 TIM2의 카운터 값을 CCR1에 붙잡아 두고(캡처), 연속된 두 값의 차로 주기와 주파수를 계산한다. TIM3이 스스로 만든 PWM(PA6)을 점퍼선으로 PA0에 되먹임해 시험하는 <code>06_TIM_InputCapture_c</code> 예제를 해석한다. 이 예제의 테스트 신호 주파수는 소스와 설정 파일이 서로 다르다(7장의 경고 상자).</p>
+  <p class="lead">04와 05는 타이머가 핀의 파형을 만드는 쪽이었다. 이 예제설명은 반대 방향을 다룬다. 핀으로 들어오는 신호의 상승 에지가 온 순간 TIM2의 카운터 값을 CCR1에 붙잡아 두고(캡처), 연속된 두 값의 차로 주기와 주파수를 계산한다. TIM3이 스스로 만든 PWM(PA6)을 점퍼선으로 PA0에 되먹임해 시험하는 <code>06_TIM_InputCapture_c</code> 예제를 해석한다. 테스트 신호는 TIM3이 만드는 100 Hz PWM이다.</p>
   <nav class="toc" aria-label="목차">
     <a href="#s1">1. 문제: 주파수 측정</a><a href="#s2">2. 입력 캡처의 원리</a><a href="#s3">3. 클럭과 측정 범위</a><a href="#s4">4. 직접 만져 보기</a><a href="#s5">5. 레지스터 분석</a><a href="#s6">6. HAL이 해 주는 일</a><a href="#s7">7. 코드 읽기</a><a href="#s8">8. 실험</a><a href="#s9">9. 트러블슈팅</a><a href="#s10">10. 확인 문제</a>
   </nav>
@@ -294,8 +294,8 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
   <div class="subhead">입력</div>
   <div class="ctl">
     <div><label for="selF">입력 신호 예시</label><select id="selF">
-      <option value="100" selected>100 Hz — main.c가 만드는 신호 (ARR = 9999)</option>
-      <option value="1000">1 kHz — .ioc·주석이 말하는 신호 (ARR = 999)</option>
+      <option value="100" selected>100 Hz — 이 예제의 테스트 신호 (TIM3 ARR = 9999)</option>
+      <option value="1000">1 kHz — TIM3 ARR = 999로 바꾼 경우 (실험 B)</option>
       <option value="3000">3 kHz — 주기가 정수 µs가 아님</option>
       <option value="10000">10 kHz</option>
       <option value="100000">100 kHz</option>
@@ -342,9 +342,9 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 </table></div>
 <h3>TIM3: 시험 신호 (PA6)</h3>
 <div class="tablewrap"><table>
-<tr><th>HAL 필드</th><th>main.c 값</th><th>레지스터/비트</th><th>의미</th></tr>
+<tr><th>HAL 필드</th><th>값</th><th>레지스터/비트</th><th>의미</th></tr>
 <tr><td><code>Prescaler</code></td><td>63</td><td><code>PSC</code></td><td>1 MHz</td></tr>
-<tr><td><code>Period</code></td><td class="hl">9999</td><td><code>ARR</code></td><td>주기 10 000카운트 = 10 ms = <b>100 Hz</b> (7장 경고 상자)</td></tr>
+<tr><td><code>Period</code></td><td class="hl">9999</td><td><code>ARR</code></td><td>주기 10 000카운트 = 10 ms = <b>100 Hz</b></td></tr>
 <tr><td><code>Pulse</code></td><td class="hl">5000</td><td><code>CCR1</code></td><td>듀티 50 %</td></tr>
 <tr><td><code>OCMode</code></td><td>PWM1</td><td><code>CCMR1.OC1M</code> = 110</td><td>CNT &lt; CCR1이면 High</td></tr>
 <tr><td><code>OCPolarity</code></td><td>HIGH</td><td><code>CCER.CC1P</code> = 0</td><td>활성 레벨 High</td></tr>
@@ -378,15 +378,7 @@ td.ok{color:var(--ok);font-weight:700} td.bad{color:var(--warn);font-weight:700}
 <pre><code>PA6 (D12) ── 점퍼선 ── PA0 (A0)
 TIM3_CH1 (PWM 출력)       TIM2_CH1 (입력 캡처)</code></pre>
 <p>다른 신호를 재려면 점퍼를 빼고 PA0에 직접 연결한다. 입력은 0 ~ 3.3 V 신호여야 한다.</p>
-<div class="box warn"><div class="label">소스와 설정의 불일치: 테스트 신호는 100 Hz인가 1 kHz인가</div>
-<div class="tablewrap"><table>
-<tr><th>자료</th><th>TIM3 설정</th><th>주파수</th></tr>
-<tr><td><code>main.c</code> 코드(<code>MX_TIM3_Init</code>)</td><td><code>Period</code> = 9999, <code>Pulse</code> = 5000</td><td class="n">100 Hz</td></tr>
-<tr><td><code>main.c</code> 주석</td><td>"PSC=64-1, ARR=1000-1, CCR1=500"</td><td class="n">1 kHz</td></tr>
-<tr><td><code>TIM_InputCapture.ioc</code></td><td><code>TIM3.Period</code> = 999, <code>Pulse</code> = 500</td><td class="n">1 kHz</td></tr>
-<tr><td><code>README.md</code></td><td>"1kHz/50% PWM", 출력은 "1000Hz 근처"</td><td class="n">1 kHz</td></tr>
-</table></div>
-<p>코드는 100 Hz이고 나머지 세 곳은 1 kHz이다. <code>MX_TIM3_Init</code>은 <code>USER CODE</code> 영역 밖이라 CubeMX에서 다시 Generate하면 <code>.ioc</code> 값(1 kHz)으로 덮어써진다. 이 예제설명은 지금의 <code>main.c</code>를 기준으로 쓴다. 따라서 점퍼를 연결하면 <code>period=10000 us  freq=100 Hz</code>가 나올 것으로 예상한다(예상 출력이며 실측하지 않았다). 어느 쪽이 의도인지는 아직 정해지지 않았다. 1 kHz로 맞추면 이 문서의 10000은 1000으로, 100 Hz는 1000 Hz로 읽으면 된다. 이 문서에서 수치에 의존하는 곳은 이 상자, 5장 TIM3 표, 8장 실험 A·B, 4장 시뮬레이터의 첫 예시뿐이다.</p></div>
+<div class="box"><div class="label">테스트 신호: 100 Hz</div><p>TIM3은 <code>Period</code> = 9999, <code>Pulse</code> = 5000으로 100 Hz, 듀티 50 % PWM을 만든다(PSC = 63이므로 1 µs 눈금에서 10 000카운트). 점퍼를 연결하면 <code>period=10000 us  freq=100 Hz</code>가 나올 것으로 예상한다(예상 출력이며 실측하지 않았다). 한 주기가 10 000카운트이므로 ±1 카운트의 상대 오차는 0.01 %이다(3장 표). 1 kHz로 바꾸려면 <code>Period</code>를 999로, <code>Pulse</code>를 500으로 고친다(8장 실험 B).</p><p>이 예제의 소스 주석, <code>TIM_InputCapture.ioc</code>, <code>README.md</code>는 이전에 1 kHz로 적혀 있었고 코드는 100 Hz였다. 지금은 코드 값(100 Hz)에 맞추어 세 곳을 모두 고쳤다.</p></div>
 <div class="file">main.c — TIM2 입력 캡처 초기화</div>
 <div class="codepair">
 <pre><code>  htim2.Instance = TIM2;
@@ -423,8 +415,8 @@ TIM3_CH1 (PWM 출력)       TIM2_CH1 (입력 캡처)</code></pre>
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   ...
-  <span class="cm">/* TIM3_CH1 = PA6 : 1kHz, 듀티 50% (PSC=64-1 -&gt; 1MHz, ARR=1000-1, CCR1=500) */</span></code></pre>
-<ol><li><code>Period</code> 9999와 <code>Pulse</code> 5000은 100 Hz, 듀티 50 %이다. 아래 주석은 1 kHz라고 말한다(위의 경고 상자).</li><li>TIM3은 인터럽트를 쓰지 않는다. 시작하면 하드웨어가 파형을 계속 낸다(05와 같다).</li></ol>
+  <span class="cm">/* TIM3_CH1 = PA6 : 100Hz, 듀티 50% (PSC=64-1 -&gt; 1MHz, ARR=10000-1, CCR1=5000) */</span></code></pre>
+<ol><li><code>Period</code> 9999와 <code>Pulse</code> 5000은 100 Hz, 듀티 50 %이다. 아래 주석도 같은 값을 적는다.</li><li>TIM3은 인터럽트를 쓰지 않는다. 시작하면 하드웨어가 파형을 계속 낸다(05와 같다).</li></ol>
 </div>
 <div class="file">main.c — 시작과 0.5초마다 출력</div>
 <div class="codepair">
@@ -497,8 +489,8 @@ TIM3_CH1 (PWM 출력)       TIM2_CH1 (입력 캡처)</code></pre>
 
 <section id="s8">
 <h2>8. 실험</h2>
-<h3>실험 A. 기본 출력 확인</h3><p>PA6과 PA0을 점퍼선으로 잇고 터미널(115200 8N1)을 연다. 지금의 <code>main.c</code>로는 0.5초마다 <code>period=10000 us  freq=100 Hz</code>가 나올 것으로 예상한다. 두 타이머가 같은 클럭에서 나오므로 값이 매번 같은지 본다. 다르게 나오면 알려진 오차의 범위(±1카운트)와 비교한다.</p>
-<h3>실험 B. 테스트 신호를 1 kHz로 맞추기</h3><p><code>htim3.Init.Period</code>를 999로, <code>sConfigOC.Pulse</code>를 500으로 바꾼다(<code>.ioc</code>·주석의 값). <code>period=1000 us  freq=1000 Hz</code>가 나와야 한다. 100 Hz일 때보다 ±1 카운트의 상대 오차가 10배 커진다(3장 표).</p>
+<h3>실험 A. 기본 출력 확인</h3><p>PA6과 PA0을 점퍼선으로 잇고 터미널(115200 8N1)을 연다. 0.5초마다 <code>period=10000 us  freq=100 Hz</code>가 나올 것으로 예상한다. 두 타이머가 같은 클럭에서 나오므로 값이 매번 같은지 본다. 다르게 나오면 알려진 오차의 범위(±1카운트)와 비교한다.</p>
+<h3>실험 B. 테스트 신호를 1 kHz로 바꾸기</h3><p><code>htim3.Init.Period</code>를 999로, <code>sConfigOC.Pulse</code>를 500으로 바꾼다(.ioc도 같은 값으로 고친다). <code>period=1000 us  freq=1000 Hz</code>가 나와야 한다. 100 Hz일 때보다 ±1 카운트의 상대 오차가 10배 커진다(3장 표).</p>
 <h3>실험 C. 점퍼 빼기</h3><p>점퍼를 빼면 <code>no signal on PA0</code>가 나올 것으로 예상하지만 확정할 수 없다. PA0은 풀업·풀다운이 없는 입력이라 떠 있는 핀이 잡음 엣지를 캡처할 수 있다. 확실히 보려면 PA0을 저항(예: 10 kΩ)으로 GND에 연결한다.</p>
 <h3>실험 D. 느린 신호 (넘침)</h3><p>TIM3의 <code>Prescaler</code>를 639로 바꾸면(10 µs 눈금, 9999 → 10 Hz) 신호 주기가 100 000 µs이다. 이것은 TIM2의 65 536 µs 한 바퀴를 넘는다. 시뮬레이터로 예측한 출력은 <code>period=34464 us  freq=29 Hz</code>이다. 프로그램은 경고 없이 틀린 값을 낸다.</p>
 <h3>실험 E. PSC를 바꾸어 분해능 높이기</h3><p>TIM2의 <code>Prescaler</code>를 7로 바꾸면 f_CNT = 8 MHz이다. 100 Hz 신호의 한 주기는 80 000카운트라서 한 바퀴를 넘는다. 1 kHz 신호(실험 B)에서는 8 000카운트로 분해능이 8배 좋아진다. 어느 경우든 출력식은 <code>8000000UL / p</code>로 고쳐야 맞다.</p>
@@ -510,7 +502,6 @@ TIM3_CH1 (PWM 출력)       TIM2_CH1 (입력 캡처)</code></pre>
 <div class="tablewrap"><table>
 <tr><th>증상</th><th>원인</th><th>점검/조치</th></tr>
 <tr><td><code>no signal on PA0</code>만 나온다</td><td>점퍼 누락, <code>HAL_TIM_PWM_Start</code> 누락, 캡처 시작 함수가 <code>_IT</code>가 아님, NVIC 미허용</td><td>PA6 → PA0 배선, 두 Start 호출, <code>DIER.CC1IE</code>와 NVIC 확인</td></tr>
-<tr><td>1 kHz를 기대했는데 100 Hz가 나온다</td><td>소스(9999/5000)와 <code>.ioc</code>·주석(999/500)의 불일치</td><td>7장 경고 상자. 둘 중 하나로 맞춘다</td></tr>
 <tr><td>PSC를 바꾸자 출력이 틀리다</td><td>코드가 <code>1000000UL / p</code>로 1 MHz를 가정한다</td><td>f = f_CNT / p로 고친다</td></tr>
 <tr><td>느린 신호에서 값이 엉뚱하고 경고도 없다</td><td>한 주기가 65 536카운트를 넘으면 한 번의 넘침 보정이 맞지 않는다</td><td>PSC를 키우거나 03 예제처럼 넘침 횟수를 센다</td></tr>
 <tr><td>빠른 신호에서 값이 흔들리거나 줄어든다</td><td>±1 카운트 분해능, ISR이 엣지를 따라가지 못함(한계는 문서에 없다)</td><td>PSC를 줄이거나 07 예제(하드웨어로 측정)를 쓴다</td></tr>

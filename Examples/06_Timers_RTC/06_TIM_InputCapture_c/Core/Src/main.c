@@ -19,7 +19,7 @@
  * 06_TIM_InputCapture_c  —  [계층: HAL]  TIM2 입력 캡처로 주파수 측정
  *
  * 동작
- *   - TIM3_CH1(PA6, 'D12')이 1kHz/50% PWM 테스트 신호를 출력한다.
+ *   - TIM3_CH1(PA6, 'D12')이 100Hz/50% PWM 테스트 신호를 출력한다.
  *   - TIM2_CH1(PA0, 'A0')이 상승 에지마다 CNT 값을 CCR1 에 래치(캡처)한다.
  *   - 연속된 두 캡처 값의 차 = 신호 주기(카운트) -> 주파수 계산 후 USART2(115200)로 0.5초마다 출력.
  *
@@ -279,7 +279,7 @@ static void MX_TIM3_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN TIM3_Init 2 */
-  /* TIM3_CH1 = PA6 : 1kHz, 듀티 50% (PSC=64-1 -> 1MHz, ARR=1000-1, CCR1=500) */
+  /* TIM3_CH1 = PA6 : 100Hz, 듀티 50% (PSC=64-1 -> 1MHz, ARR=10000-1, CCR1=5000) */
   /* USER CODE END TIM3_Init 2 */
   HAL_TIM_MspPostInit(&htim3);
 

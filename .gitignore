@@ -7,6 +7,11 @@ Project Backups/
 *.Soochan Kim.workspace
 # 예제 폴더마다 PlatformIO가 만드는 .gitignore(루트 규칙과 중복)는 올리지 않는다
 Examples/**/.gitignore
+Projects/**/.gitignore
+
+# Python 실행 때 생기는 바이트코드 캐시 (Projects/*/host_pc)
+__pycache__/
+*.py[cod]
 
 .metadata/
 .cproject

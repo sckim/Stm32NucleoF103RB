@@ -15,7 +15,7 @@
 |---|---|
 | `Docs/` | 데이터시트, 레퍼런스 매뉴얼 등 STM32F103 관련 공식 문서(PDF) |
 | `Examples/` | 실습 예제 프로젝트 모음 |
-| `Schematics/AD2_extension/` | AD2 확장 키트 KiCad 회로도/PCB ([README](Schematics/AD2_extension/README.md)) — 2026-10 `01_Lectures` 저장소의 `Schematics/AD2_extension`에서 이동 |
+| (AD2 확장 키트) | KiCad 회로도/PCB는 2026-11 [KiCAD 저장소의 `80_Applications/AD2_extension`](https://github.com/sckim/KiCAD/tree/main/80_Applications/AD2_extension)으로 옮겼다. 이 저장소에는 없다 |
 
 ## 문서 활용법
 
